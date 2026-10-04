@@ -1,0 +1,15 @@
+{
+  "accountId": "codex",
+  "label": "Lorelei",
+  "home": "C:\\Users\\dirty\\.codex",
+  "model": "gpt-6-astra",
+  "effort": "medium",
+  "sandbox": "read-only",
+  "approval": "never",
+  "repo": "C:\\Users\\dirty\\projects\\docket",
+  "outputFile": "C:\\Users\\dirty\\projects\\docket\\docs\\PLAN.md",
+  "sessionId": "01a1081e-2a2f-7660-98c5-1963ad6d3fdb",
+  "startedAt": "2026-10-04T18:12:33.261Z",
+  "exitCode": 0,
+  "finishedAt": "2026-10-04T18:22:01.056Z"
+}

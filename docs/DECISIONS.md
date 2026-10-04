@@ -1,0 +1,110 @@
+# DECISIONS
+
+ADRs, newest first. All dated 2026-10-04 (project inception); order below is by relevance, not time.
+Evidence paths are relative to `docs/research/`.
+
+## ADR-11: No central database
+
+- **Context:** Several repos, each with its own history; a central store would own data that belongs to
+  repos and cannot branch or merge with them.
+- **Decision:** Items live only in their owning repo. The registry (`%LOCALAPPDATA%/Docket/`) holds
+  paths and aliases, never items; indexes are per checkout.
+- **Rejected:** a machine-wide SQLite/server store (loses branch semantics, needs sync); aggregating
+  items into one repo.
+- **Evidence:** `markdown-vs-db-project-docs.md`, `round2-md-vs-db-workflow.md`.
+
+## ADR-10: EvilEye portal retired at M2
+
+- **Context:** The EvilEye backlog portal is the only writable frontend for legacy shards. Owner ruling
+  2026-10-04: the portal is not in active use.
+- **Decision:** Stop and retire it at the M2b cutover (startup retired, mutation path returns 410),
+  before the viewer exists. The CLI is the early usable slice; no second writable frontend.
+- **Rejected:** keeping the portal alive until the M4 viewer ships (two writers on one data set).
+- **Evidence:** `PLAN.md` sections 2, 3 and 7; owner ruling 2026-10-04.
+
+## ADR-09: Merge driver deferred; log conflicts for two weeks first
+
+- **Context:** Remaining conflicts are same-field edits and concurrent relation-list appends; volume is
+  unknown and probably low.
+- **Decision:** No custom merge driver. From the EvilEye cutover, record real conflicts
+  (`docket conflicts`) for two weeks, then decide in `docs/records/conflicts/`.
+- **Rejected:** building a field-level driver now (unproven need, installation burden on every clone).
+- **Evidence:** `MERGE-TEST-RESULTS.md` implication 4, scenarios c5, g1, g2.
+
+## ADR-08: Last-good gate for self-hosting
+
+- **Context:** Docket validates its own items in pre-push; a broken working tree must not block or
+  silently pass pushes.
+- **Decision:** Pre-push runs a tested checker promoted into `%LOCALAPPDATA%/Docket/gate/versions/`,
+  previous version retained, never a build or working-tree import. A quarantined prototype copy
+  bridges M0 to M1b.
+- **Rejected:** running the checkout's code in the hook; linking the working tree globally.
+- **Evidence:** `PLAN.md` section 3 (M1b, M1c) and section 7.
+
+## ADR-07: `add` assigns ID and rank
+
+- **Context:** In the agent test, hand-written ranks collided immediately; hand-written IDs risk the
+  same.
+- **Decision:** `docket add` generates the ID (4 random bytes, collision retry) and the end-of-priority
+  rank. Agents never supply either; reordering takes relative placement. Duplicate rank stays a
+  warning because git cannot catch it.
+- **Rejected:** agent-chosen ranks; sequential counters (merge hot spot).
+- **Evidence:** `MERGE-TEST-RESULTS.md` implications 5 and 6, scenario i2; `ITEM-SPEC.md` Settled.
+
+## ADR-06: Final field order
+
+- **Context:** Order decides which same-item edits conflict in git.
+- **Decision:** `id, type, created, status, since, area, priority, rank, parent, fixes, blocked_by,
+relates`. Status moves (the most frequent concurrent edit) are fenced by near-immutable fields;
+  `priority`/`rank` are normally edited together as one hunk.
+- **Rejected:** the old order (8/28 conflicts but worse for status vs `type`); the "alt" order fencing
+  `since` with `parent` (ties at 9/28, just moves the conflict).
+- **Evidence:** `MERGE-TEST-RESULTS.md` "Re-test (field order)": old 8, new 9, alt 9 of 28; c2 and c4
+  flip to clean.
+
+## ADR-05: `.docket/index.json` before SQLite
+
+- **Context:** Reverse relations and filtered lists need an index; scale is hundreds of items per repo.
+- **Decision:** A per-worktree JSON cache rebuilt from source hashes, queried in memory. `check` never
+  reads it.
+- **Rejected:** SQLite now (native dependency, Windows install friction); a cache shared across
+  worktrees (branches differ).
+- **Evidence:** `PLAN.md` section 2; `ITEM-SPEC.md` Relations. Revisit if scale outgrows memory.
+
+## ADR-04: CLI with JSON over MCP
+
+- **Context:** Agents need to read and mutate items; MCP adds a server, schema surface and context cost.
+- **Decision:** A CLI (`docket` and `dk`) with `--repo`, bounded `--json` output and stable exit codes.
+  No MCP server in this scope; a short snippet in each repo's CLAUDE.md/AGENTS.md teaches it.
+- **Rejected:** Backlog.md's MCP; an HTTP-only API.
+- **Evidence:** `existing-solutions-survey.md`; `PLAN.md` section 2.
+
+## ADR-03: Name Docket, `dk-<8hex>` prefix, EvilEye `bl-` IDs preserved indefinitely
+
+- **Context:** The prototype used `bl-` IDs, already present throughout EvilEye history and references.
+- **Decision:** The product is Docket; new IDs are `dk-<8hex>`. Existing `bl-<8hex>` IDs stay valid,
+  immutable identities (not aliases needing lookup), at the cost of permanent dual-prefix support.
+  ITEM-SPEC amended accordingly.
+- **Rejected:** rewriting `bl-` to `dk-` (breaks historical references); continuing to mint `bl-`.
+- **Evidence:** `PLAN.md` sections 2 and 7; `ITEM-SPEC.md` amendment note.
+
+## ADR-02: Borrow Backlog.md's file-per-item format, not its sequential IDs or MCP
+
+- **Context:** Backlog.md already proves Markdown-file-per-task with frontmatter.
+- **Decision:** Adopt the shape (one file per item, frontmatter plus body). Reject sequential numeric IDs
+  (two branches adding items both take the next number) and the MCP server.
+- **Rejected:** adopting Backlog.md wholesale (ID scheme, schema vocabulary, MCP); building a different
+  format.
+- **Evidence:** `existing-solutions-survey.md`; scenarios a1 and a2 in `MERGE-TEST-RESULTS.md`.
+
+## ADR-01: Markdown file-per-item over SQLite or JSONL as source of truth
+
+- **Context:** Items must branch, merge and diff with the code they describe, and be readable by
+  agents without tooling.
+- **Decision:** One Markdown file per item, strict 12-key frontmatter, git as history; every cache is
+  rebuildable.
+- **Rejected:** SQLite (binary, unmergeable); JSONL (line-per-item still conflicts on adjacent edits);
+  one BACKLOG.md (17 of 21 shared merge scenarios conflict).
+- **Evidence:** merge test, file-per-item 8 of 25 conflicts vs one-file 17 of 21 (silent-wrong: 0),
+  `MERGE-TEST-RESULTS.md`; research rounds 1 and 2 (`markdown-vs-db-project-docs.md`,
+  `round2-md-vs-db-workflow.md`).

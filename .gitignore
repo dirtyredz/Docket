@@ -1,0 +1,9 @@
+# Review gate markers
+.structure-review-pending*
+.structure-review-paused
+
+# Docket local state
+.docket/
+
+node_modules/
+dist/
