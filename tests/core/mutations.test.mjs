@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, describe, test } from "node:test";
 import { localDate } from "../../src/core/identity/date.mjs";
 import { planAdd } from "../../src/core/items/add.mjs";
+import { planAddBatch } from "../../src/core/items/batch.mjs";
 import { planLink } from "../../src/core/items/link.mjs";
 import {
   compareItems,
@@ -348,5 +349,46 @@ describe("isBlocked", () => {
     assert.equal(isBlocked({ blocked_by: ["a", "b"] }, statusOf), false);
     assert.equal(isBlocked({ blocked_by: ["a", "c"] }, statusOf), true);
     assert.equal(isBlocked({ blocked_by: ["d"] }, statusOf), true);
+  });
+});
+
+describe("field-named add errors", () => {
+  const ctx = { today: TODAY };
+  const store = { records: [] };
+  const bad = (input) =>
+    planAdd(store, { type: "task", priority: "P2", title: "t", ...input }, ctx);
+
+  test("core names the field, not a CLI flag", () => {
+    assert.throws(
+      () => bad({ type: "nope" }),
+      (e) => e.message.startsWith("type must be one of"),
+    );
+    assert.throws(
+      () => bad({ priority: "P9" }),
+      (e) => e.message.startsWith("priority must be one of"),
+    );
+    assert.throws(
+      () => bad({ status: "x" }),
+      (e) => e.message.startsWith("status must be one of"),
+    );
+    assert.throws(
+      () => bad({ title: "a\nb" }),
+      (e) => e.message === "title must be one non-empty line",
+    );
+  });
+
+  test("batch prefixes the entry index only", () => {
+    assert.throws(
+      () =>
+        planAddBatch(
+          store,
+          [
+            { type: "task", priority: "P2", title: "ok" },
+            { type: "zz", priority: "P2", title: "t" },
+          ],
+          ctx,
+        ),
+      (e) => e.message.startsWith("batch[1]: type must be one of"),
+    );
   });
 });

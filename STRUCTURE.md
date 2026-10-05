@@ -12,7 +12,7 @@ Last full review: 2026-10-05
 ```
 src/
   bootstrap/            quarantined recovered validator (not shipped)
-  cli/                  main, args, output, help         commands/  one adapter per command family
+  cli/                  main, args, output, report, help (overview + per-command)        commands/  one adapter per command family
   core/                 errors.mjs                  format/ validation/ identity/ items/
   integration/          agent snippet, init         gate/  promote, smoke, install, launcher, pre-push
   repository/           checkout facts: context, config, snapshot, paths
@@ -54,7 +54,7 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `src/state/index/` — rebuildable per-worktree JSON cache
 - `src/state/registry/` — per-machine repo registry and document-location overrides (planned, M3+)
 - `src/state/observability/` — local merge-conflict recording and reporting (planned, M3+)
-- `src/cli/` — dispatch, argument handling, output contracts
+- `src/cli/` — dispatch, argument handling, output contracts, shared report vocabulary, help
 - `src/cli/commands/` — thin adapters per command family (items, validation, coordination, init, gate; registry, viewer, conflicts planned)
 - `src/integration/` — agent CLAUDE.md/AGENTS.md snippet and `docket init` (`init.mjs`)
 - `src/integration/gate/` — gate promotion, smoke test, repo opt-in, stable launcher, tarball reader, pre-push validation
@@ -63,14 +63,14 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `src/viewer/documents/` — living-doc catalog and read-only Markdown rendering (planned, M3+)
 - `src/tooling/` — distributable build and layout/size checker
 - `tests/` — responsibility-matched suites: format, core, storage, cli, state, integration, packaging
-- `tests/helpers/` — disposable-repo and clock support
+- `tests/helpers/` — disposable-repo, clock and gate support
 - `tests/fixtures/` — bounded fixtures: hooks
 - `docs/` — living docs and research evidence
 - `docs/items/` — Docket's own work items (created in M0; flat, permanent paths)
 - `docs/records/` — migration evidence and conflict-review history
 
-`docs/research/merge-test/` holds frozen historical evidence (the prototype run); it is not a code home
-and is never edited or linted as one.
+`docs/research/MERGE-TEST-RESULTS.md` is the canonical merge-test result; `docs/research/merge-test/` holds
+the raw runs behind it (frozen historical evidence). It is not a code home and is never edited or linted as one.
 
 ## Components
 
@@ -80,7 +80,7 @@ and is never edited or linted as one.
 | `core/format`      | The only code that reads or writes item frontmatter; body bytes pass through unchanged.   |
 | `core/validation`  | The nine ITEM-SPEC check groups; `checkStore` runs them over a checkout or a Git ref.     |
 | `core/identity`    | `dk-<8hex>` allocation with collision retry, LexoRank-style `[a-z]+` ranks, local dates.  |
-| `core/items`       | Mutations and queries; `transaction.mjs` is the one lock/validate/write path.             |
+| `core/items`       | Mutations (incl. `batch` add) and queries; `transaction.mjs` is the one lock/write path.  |
 | `storage`          | Revision check, temp-write/fsync/rename, per-worktree lock.                               |
 | `repository`       | Resolves checkout, `git rev-parse --git-common-dir`, reads a working tree or a Git ref.   |
 | `state/index`      | `.docket/index.json`, rebuilt from source hashes; `check` never trusts it.                |

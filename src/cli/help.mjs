@@ -60,6 +60,37 @@ Last-good pre-push gate. install writes the managed pre-push hook and local git 
 --dry-run reports without writing.`,
 };
 
+// One line per command, in display order; the top-level overview is built from this.
+const SUMMARY = {
+  init: "make this repo a Docket repo (idempotent)",
+  check: "validate every item (errors fail, warnings print)",
+  add: "create an item (ID and rank are assigned), or many with --batch",
+  set: "change fields or reorder an item",
+  link: "add or remove relations",
+  list: "list items (filters, --count-by)",
+  show: "print one item with its claim and relations",
+  index: "refresh the per-worktree cache",
+  claim: "advisory claim for this worktree",
+  release: "release a claim",
+  gate: "last-good pre-push gate (promote | install | status)",
+};
+
+/** Top-level overview: one line per command; `docket <command> --help` has the options. */
+export function overview() {
+  const width = Math.max(...Object.keys(SUMMARY).map((c) => c.length));
+  return [
+    "docket (dk) - Markdown work items per repo",
+    "",
+    "Usage: docket <command> [options]      every command takes --repo <path> and --json",
+    "",
+    ...Object.entries(SUMMARY).map(([c, s]) => `  ${c.padEnd(width)}  ${s}`),
+    "",
+    "  docket <command> --help   options and allowed values for one command",
+    "",
+    "  --version, -v   print the version",
+  ].join("\n");
+}
+
 /** Help text for one command, or null when unknown. */
 export function commandHelp(command) {
   const text = HELP[command];

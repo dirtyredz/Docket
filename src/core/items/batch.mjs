@@ -1,10 +1,10 @@
 // `add --batch`: validate a whole JSON array of new items first, then plan them as one transaction.
 // Nothing is written unless every entry is valid; ranks within a band follow array order.
 import { CODES, docketError } from "../errors.mjs";
-import { planAdd } from "./add.mjs";
+import { planAddOne } from "./add.mjs";
 
-const ALLOWED = ["type", "priority", "status", "title", "body", "area"];
-const STRING_KEYS = ["type", "priority", "status", "title", "body", "area"];
+// Every batch key is a string; these are also the only keys an entry may carry.
+const KEYS = ["type", "priority", "status", "title", "body", "area"];
 const invalid = (message) => docketError(CODES.INVALID, message);
 
 /** Parse batch JSON text into add inputs. Throws DOCKET_INVALID naming the entry index. */
@@ -22,11 +22,11 @@ export function parseBatch(text) {
       throw invalid(`batch[${i}] must be an object`);
     }
     for (const k of Object.keys(entry)) {
-      if (!ALLOWED.includes(k)) {
-        throw invalid(`batch[${i}] has unknown key "${k}" (allowed: ${ALLOWED.join(", ")})`);
+      if (!KEYS.includes(k)) {
+        throw invalid(`batch[${i}] has unknown key "${k}" (allowed: ${KEYS.join(", ")})`);
       }
     }
-    for (const k of STRING_KEYS) {
+    for (const k of KEYS) {
       if (entry[k] !== undefined && typeof entry[k] !== "string") {
         throw invalid(`batch[${i}].${k} must be a string`);
       }
@@ -46,14 +46,13 @@ export function planAddBatch({ records }, inputs, ctx) {
   inputs.forEach((input, i) => {
     let plan;
     try {
-      plan = planAdd({ records: view }, input, ctx);
+      plan = planAddOne({ records: view }, input, ctx);
     } catch (err) {
       err.message = `batch[${i}]: ${err.message}`;
       throw err;
     }
-    const [write] = plan.writes;
-    view.push({ id: write.id, fields: write.fields });
-    writes.push(write);
+    view.push({ id: plan.write.id, fields: plan.write.fields });
+    writes.push(plan.write);
     value.push(plan.value);
   });
   return { writes, value };

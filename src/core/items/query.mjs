@@ -1,4 +1,5 @@
 // Read-side operations shared by CLI and viewer: filtering, deterministic ordering, derived "blocked".
+import { CODES, docketError } from "../errors.mjs";
 import { CLOSED_STATUSES, ENUMS } from "../format/schema.mjs";
 
 const PRIORITY_INDEX = Object.fromEntries(ENUMS.priority.map((p, i) => [p, i]));
@@ -46,8 +47,14 @@ export function listItems(records, filters = {}) {
   };
 }
 
-/** Counts of summaries per value of `field` (status, type or priority): every enum value, zeros included. */
+/** Fields `countBy` accepts. */
+export const COUNT_FIELDS = ["status", "type", "priority"];
+
+/** Counts of summaries per value of `field` (one of COUNT_FIELDS): every enum value, zeros included. */
 export function countBy(items, field) {
+  if (!COUNT_FIELDS.includes(field)) {
+    throw docketError(CODES.INVALID, `field must be one of ${COUNT_FIELDS.join(", ")}`);
+  }
   const counts = Object.fromEntries(ENUMS[field].map((v) => [v, 0]));
   for (const item of items) counts[item[field]] += 1;
   return counts;

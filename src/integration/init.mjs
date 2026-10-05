@@ -16,25 +16,25 @@ const AGENT_FILES = ["CLAUDE.md", "AGENTS.md"];
 
 const read = (file) => (fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null);
 
-/** Each step returns "created" | "updated" | "unchanged" and writes only when `write` is true. */
-function ensureItemsDir(ctx, write) {
+/** Each step returns "created" | "updated" | "unchanged" and writes nothing when `dryRun` is true. */
+function ensureItemsDir(ctx, dryRun) {
   if (fs.existsSync(ctx.itemsDir)) return "unchanged";
-  if (write) fs.mkdirSync(ctx.itemsDir, { recursive: true });
+  if (!dryRun) fs.mkdirSync(ctx.itemsDir, { recursive: true });
   return "created";
 }
 
-function ensureConfig(ctx, write) {
+function ensureConfig(ctx, dryRun) {
   if (fs.existsSync(ctx.configPath)) return "unchanged";
-  if (write) writeConfig(ctx, DEFAULT_CONFIG);
+  if (!dryRun) writeConfig(ctx, DEFAULT_CONFIG);
   return "created";
 }
 
-function ensureIgnore(ctx, write) {
+function ensureIgnore(ctx, dryRun) {
   const file = path.join(ctx.root, ".gitignore");
   const text = read(file);
   if ((text ?? "").split(/\r?\n/).some((l) => /^\/?\.docket\/?$/.test(l.trim())))
     return "unchanged";
-  if (write) {
+  if (!dryRun) {
     const base = text ?? "";
     const eol = base.includes("\r\n") ? "\r\n" : "\n";
     const sep = base === "" || base.endsWith("\n") ? "" : eol;
@@ -44,11 +44,11 @@ function ensureIgnore(ctx, write) {
 }
 
 /** Append the snippet (in the file's own line endings) to each agent file; create CLAUDE.md if none. */
-function ensureAgentSnippet(ctx, write) {
+function ensureAgentSnippet(ctx, dryRun) {
   const snippet = fs.readFileSync(SNIPPET_FILE, "utf8").replace(/\r\n/g, "\n");
   const present = AGENT_FILES.filter((n) => fs.existsSync(path.join(ctx.root, n)));
   if (!present.length) {
-    if (write) {
+    if (!dryRun) {
       const title = path.basename(ctx.root);
       atomicWrite(path.join(ctx.root, "CLAUDE.md"), `# ${title}\n\n${snippet}`);
     }
@@ -58,7 +58,7 @@ function ensureAgentSnippet(ctx, write) {
     const file = path.join(ctx.root, name);
     const text = read(file);
     if (text.includes(SNIPPET_MARKER)) return { path: name, state: "unchanged" };
-    if (write) {
+    if (!dryRun) {
       const eol = text.includes("\r\n") ? "\r\n" : "\n";
       const lf = text.replace(/\r\n/g, "\n");
       const joined = lf === "" ? snippet : `${lf.replace(/\n+$/, "")}\n\n${snippet}`;
@@ -75,12 +75,11 @@ function ensureAgentSnippet(ctx, write) {
  */
 export function initRepo(start, { gate = false, dryRun = false, gateOptions = {} } = {}) {
   const ctx = resolveRepo(start);
-  const write = !dryRun;
   const files = [
-    { path: "docs/items/", state: ensureItemsDir(ctx, write) },
-    { path: "docket.json", state: ensureConfig(ctx, write) },
-    { path: ".gitignore", state: ensureIgnore(ctx, write) },
-    ...ensureAgentSnippet(ctx, write),
+    { path: "docs/items/", state: ensureItemsDir(ctx, dryRun) },
+    { path: "docket.json", state: ensureConfig(ctx, dryRun) },
+    { path: ".gitignore", state: ensureIgnore(ctx, dryRun) },
+    ...ensureAgentSnippet(ctx, dryRun),
   ];
   const changed = files.filter((f) => f.state !== "unchanged");
   const agentFiles = changed.map((f) => f.path).filter((n) => AGENT_FILES.includes(n));

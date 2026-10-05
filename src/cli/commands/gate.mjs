@@ -3,21 +3,7 @@ import path from "node:path";
 import { gateStatus, installRepo } from "../../integration/gate/install.mjs";
 import { promoteTarball } from "../../integration/gate/promote.mjs";
 import { parseCommand, usageError } from "../args.mjs";
-
-const HOOK_WORD = { installed: "created", current: "unchanged", updated: "updated" };
-
-/** Report lines for an installRepo result: git config keys and the hook, each created/updated/unchanged. */
-export function gateReport(result) {
-  const would = result.dryRun ? "would be " : "";
-  const hook = result.hook;
-  const hookWord = HOOK_WORD[hook.state];
-  return [
-    ...result.config.map((c) => `  git config ${c.key}: ${c.state}`),
-    hookWord
-      ? `  hook ${hook.path}: ${hookWord === "unchanged" ? "" : would}${hookWord}`
-      : `  hook ${hook.path}: foreign, left alone`,
-  ];
-}
+import { gateReport } from "../report.mjs";
 
 export async function gate(argv, io) {
   const [sub, ...rest] = argv;

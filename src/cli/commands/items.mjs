@@ -1,5 +1,6 @@
 // Item commands: add, set, link, list, show, index. Thin adapters over core/items and the index.
 import fs from "node:fs";
+import { CODES } from "../../core/errors.mjs";
 import { ENUMS } from "../../core/format/schema.mjs";
 import { localDate } from "../../core/identity/date.mjs";
 import { planAdd } from "../../core/items/add.mjs";
@@ -7,7 +8,7 @@ import { parseBatch, planAddBatch } from "../../core/items/batch.mjs";
 import { setItem } from "../../core/items/complete.mjs";
 import { readItem } from "../../core/items/detail.mjs";
 import { planLink } from "../../core/items/link.mjs";
-import { countBy, listItems } from "../../core/items/query.mjs";
+import { COUNT_FIELDS, countBy, listItems } from "../../core/items/query.mjs";
 import { mutateStore } from "../../core/items/transaction.mjs";
 import { resolveRepo } from "../../repository/context.mjs";
 import * as claims from "../../state/claims/store.mjs";
@@ -19,7 +20,6 @@ const repeat = { type: "string", multiple: true };
 const bool = { type: "boolean" };
 const LIST_LIMIT_DEFAULT = 50;
 const LIST_LIMIT_MAX = 500;
-const COUNT_FIELDS = ["status", "type", "priority"];
 
 const repoOf = (args, io) => resolveRepo(args.repo ?? io.cwd);
 
@@ -28,6 +28,18 @@ function checkEnum(name, values, allowed) {
     if (!allowed.includes(v)) throw usageError(`--${name} must be one of ${allowed.join(", ")}`);
   }
   return values;
+}
+
+// Core names the field ("type must be ..."); the CLI shows the flag and exits as a usage error.
+function flagNamed(run) {
+  try {
+    return run();
+  } catch (err) {
+    if (err.code === CODES.INVALID && /^(type|priority|status|title) must /.test(err.message)) {
+      throw usageError(`--${err.message}`);
+    }
+    throw err;
+  }
 }
 
 /** Read a file, or all of stdin for "-" (the caller's stdin, UTF-8). */
@@ -93,9 +105,6 @@ export async function add(argv, io) {
   });
   if (args.batch !== undefined) return addBatch(args, io);
   for (const k of ["type", "priority", "title"]) if (!args[k]) throw usageError(`missing --${k}`);
-  checkEnum("type", [args.type], ENUMS.type);
-  checkEnum("priority", [args.priority], ENUMS.priority);
-  if (args.status) checkEnum("status", [args.status], ENUMS.status);
   const input = {
     type: args.type,
     priority: args.priority,
@@ -109,7 +118,9 @@ export async function add(argv, io) {
     relates: many(args.relates),
   };
   const ctx = repoOf(args, io);
-  const { value, written } = mutateStore(ctx, (s) => planAdd(s, input, { today: localDate() }));
+  const { value, written } = flagNamed(() =>
+    mutateStore(ctx, (s) => planAdd(s, input, { today: localDate() })),
+  );
   return {
     data: created(value, written[0].revision),
     text: `${value.id}  ${value.title}`,

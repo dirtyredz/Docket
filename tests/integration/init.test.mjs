@@ -116,10 +116,12 @@ describe("docket init", () => {
       const first = runCli(["init", "--gate", "--json", "--repo", r.root], { env });
       assert.equal(first.status, 0, first.stdout + first.stderr);
       assert.equal(first.json.data.gate.hook.state, "installed");
+      assert.equal(first.json.data.gate.hook.change, "created");
       assert.match(git(r.root, "config", "--get", "docket.gateLauncher"), /launcher\.mjs/);
       const second = runCli(["init", "--gate", "--json", "--repo", r.root], { env });
       assert.equal(second.json.data.initialised, false);
       assert.equal(second.json.data.gate.hook.state, "current");
+      assert.equal(second.json.data.gate.hook.change, "unchanged");
     },
   );
 });

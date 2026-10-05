@@ -18,17 +18,23 @@ export function bandRanks(records, priority, exceptId = null) {
  * Plan an add. input: {type, priority, title, body?, area?, status?, parent?, fixes?, blocked_by?,
  * relates?}. ctx: {today, random?}. Returns a transaction plan result.
  */
-export function planAdd({ records }, input, { today, random }) {
+export function planAdd(store, input, ctx) {
+  const { write, value } = planAddOne(store, input, ctx);
+  return { writes: [write], value };
+}
+
+/** Plan one add. Returns {write, value}; planAdd wraps it as a transaction plan, batch collects many. */
+export function planAddOne({ records }, input, { today, random }) {
   if (!ENUMS.type.includes(input.type))
-    throw invalid(`--type must be one of ${ENUMS.type.join(", ")}`);
+    throw invalid(`type must be one of ${ENUMS.type.join(", ")}`);
   if (!ENUMS.priority.includes(input.priority)) {
-    throw invalid(`--priority must be one of ${ENUMS.priority.join(", ")}`);
+    throw invalid(`priority must be one of ${ENUMS.priority.join(", ")}`);
   }
   if (input.status !== undefined && !ENUMS.status.includes(input.status)) {
-    throw invalid(`--status must be one of ${ENUMS.status.join(", ")}`);
+    throw invalid(`status must be one of ${ENUMS.status.join(", ")}`);
   }
   const title = (input.title ?? "").trim();
-  if (!title || /[\r\n]/.test(title)) throw invalid("--title must be one non-empty line");
+  if (!title || /[\r\n]/.test(title)) throw invalid("title must be one non-empty line");
   const taken = new Set(records.map((r) => r.id));
   const id = allocateId({ taken: (x) => taken.has(x), random });
   const fields = {
@@ -46,5 +52,5 @@ export function planAdd({ records }, input, { today, random }) {
     relates: unique(input.relates),
   };
   const rest = newItemRest(title, input.body ?? "");
-  return { writes: [{ id, fields, rest, expectedRevision: null }], value: { id, fields, title } };
+  return { write: { id, fields, rest, expectedRevision: null }, value: { id, fields, title } };
 }

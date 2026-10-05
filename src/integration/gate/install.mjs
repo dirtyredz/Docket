@@ -21,7 +21,8 @@ export function defaultTemplatePath(env = process.env) {
 const isManaged = (text) => MANAGED_MARKERS.some((m) => text.includes(m));
 
 /**
- * Opt `repo` into the last-good gate: local git config docket.gateLauncher / docket.gateNode, and the
+ * Opt `repo` into the last-good gate (hook.state keeps installed/current/updated/foreign; hook.change
+ * is the shared created/updated/unchanged/foreign vocabulary): local git config docket.gateLauncher / docket.gateNode, and the
  * managed pre-push hook refreshed from the template. `dryRun` computes the same report and writes nothing. Foreign hooks and core.hooksPath are never
  * modified; their state is reported so the owner can wire delegation.
  */
@@ -59,6 +60,7 @@ export function installRepo(
 
   const hookFile = path.join(ctx.commonDir, "hooks", "pre-push");
   let state;
+  let change;
   let current = null;
   try {
     current = fs.readFileSync(hookFile, "utf8");
@@ -76,14 +78,18 @@ export function installRepo(
       }
     }
     state = current === null ? "installed" : "updated";
-  } else state = isManaged(current) ? "current" : "foreign";
+    change = current === null ? "created" : "updated";
+  } else {
+    state = isManaged(current) ? "current" : "foreign";
+    change = isManaged(current) ? "unchanged" : "foreign";
+  }
 
   return {
     dryRun,
     config,
     launcher: toSlash(launcher),
     node: toSlash(nodePath),
-    hook: { path: toSlash(hookFile), state },
+    hook: { path: toSlash(hookFile), state, change },
     hooksPath: hooksPathState(ctx),
     active,
   };
