@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
+import { addNote, resolveNote } from "../../src/core/items/content/notes.mjs";
 import { INDEX_VERSION, indexPath, loadIndex } from "../../src/state/index/build.mjs";
 import { resolveRepo } from "../../src/repository/context.mjs";
 import { git, itemText, makeRepo, runCli } from "../helpers/repository.mjs";
@@ -170,4 +171,118 @@ test("the index command reports stats; --rebuild parses everything", { timeout: 
   const rebuilt = runCli(["index", "--repo", root, "--rebuild", "--json"]);
   assert.equal(rebuilt.json.data.parsed, IDS.length);
   assert.equal(rebuilt.json.data.reused, 0);
+});
+
+// --- 0.6.0: open-note counts in the index (version 2) ---
+
+const MARK = "ZQXMARKER7731";
+const REF1 = "2026-10-05T10:00:00.000Z";
+const REF2 = "2026-10-05T10:00:01.000Z";
+const noteBlock = (ref, state, author, text) => `### ${ref} · ${state} · ${author}\n\n${text}\n`;
+const withNotes = (id, ...notes) =>
+  itemText({ id }, { title: "Noted", body: `Facts ${MARK}.\n\n## Notes\n\n${notes.join("\n")}` });
+const countOf = (ctx, id) => byId(loadIndex(ctx).records)[id].openNoteCount;
+const itemFile = (root, id) => path.join(root, "docs", "items", `${id}.md`);
+
+test("a version 1 cache is rebuilt although the files are unchanged", (t) => {
+  const { ctx } = repoWith(t);
+  loadIndex(ctx);
+  const data = readIndex(ctx);
+  for (const f of Object.values(data.files)) delete f.openNoteCount;
+  writeIndex(ctx, { version: 1, builtAt: Date.now() + 100000, files: data.files });
+  const { records, stats } = loadIndex(ctx);
+  assert.equal(INDEX_VERSION, 2);
+  assert.equal(stats.cache, "corrupt");
+  assert.equal(stats.parsed, IDS.length);
+  assert.ok(records.every((r) => r.openNoteCount === 0));
+  assert.equal(readIndex(ctx).version, 2);
+});
+
+test("open-note counts are exact after addNote and resolveNote", (t) => {
+  const { ctx } = repoWith(t);
+  assert.equal(countOf(ctx, "dk-00000001"), 0);
+  const a = addNote(ctx, "dk-00000001", { text: "first" }, { now: new Date(REF1) });
+  const b = addNote(
+    ctx,
+    "dk-00000001",
+    { text: "second", author: "agent" },
+    { now: new Date(REF2) },
+  );
+  assert.equal(countOf(ctx, "dk-00000001"), 2);
+  assert.equal(countOf(ctx, "dk-00000002"), 0);
+  resolveNote(ctx, "dk-00000001", a.ref);
+  assert.equal(countOf(ctx, "dk-00000001"), 1);
+  resolveNote(ctx, "dk-00000001", b.ref);
+  assert.equal(countOf(ctx, "dk-00000001"), 0);
+  assert.equal(readIndex(ctx).files["dk-00000001.md"].openNoteCount, 0);
+});
+
+test("a same-size rewrite that flips a note state is still counted exactly", (t) => {
+  const { ctx, root, write } = repoWith(t);
+  const id = "dk-00000001";
+  write(
+    id,
+    withNotes(
+      id,
+      noteBlock(REF1, "open", "owner", "a"),
+      noteBlock(REF2, "open", "owner", "bbbbbb"),
+    ),
+  );
+  assert.equal(countOf(ctx, id), 2);
+  const size = fs.statSync(itemFile(root, id)).size;
+  // "resolved" is 4 bytes longer than "open"; the second note's text is 4 bytes shorter.
+  write(
+    id,
+    withNotes(
+      id,
+      noteBlock(REF1, "resolved", "owner", "a"),
+      noteBlock(REF2, "open", "owner", "bb"),
+    ),
+  );
+  assert.equal(fs.statSync(itemFile(root, id)).size, size);
+  assert.equal(countOf(ctx, id), 1);
+  // Author flip (owner -> agent, equal length) leaves the count alone.
+  write(
+    id,
+    withNotes(
+      id,
+      noteBlock(REF1, "resolved", "agent", "a"),
+      noteBlock(REF2, "open", "owner", "bb"),
+    ),
+  );
+  assert.equal(fs.statSync(itemFile(root, id)).size, size);
+  assert.equal(countOf(ctx, id), 1);
+});
+
+test("a malformed Notes section yields a record error and a zero count", (t) => {
+  const { ctx, write } = repoWith(t);
+  write(
+    "dk-00000009",
+    itemText(
+      { id: "dk-00000009" },
+      { body: `Facts.\n\n## Notes\n\n### not a valid header\n\nstuff\n` },
+    ),
+  );
+  const rec = byId(loadIndex(ctx).records)["dk-00000009"];
+  assert.ok(rec.errors.length > 0, "rule-10 error present");
+  assert.equal(rec.openNoteCount, 0);
+  assert.equal(readIndex(ctx).files["dk-00000009.md"].errors.length, rec.errors.length);
+});
+
+test("the raw index file holds no body text and no note text", (t) => {
+  const { ctx, write } = repoWith(t);
+  write(
+    "dk-00000001",
+    itemText(
+      { id: "dk-00000001" },
+      {
+        body: `Facts ${MARK} body.\n\n## Notes\n\n${noteBlock(REF1, "open", "owner", `note ${MARK}`)}`,
+      },
+    ),
+  );
+  assert.equal(countOf(ctx, "dk-00000001"), 1);
+  const raw = fs.readFileSync(indexPath(ctx), "utf8");
+  assert.ok(!raw.includes(MARK), "marker leaked into index.json");
+  assert.ok(!raw.includes("Facts"));
+  assert.match(raw, /"openNoteCount":1/);
 });

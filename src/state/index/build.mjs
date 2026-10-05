@@ -1,5 +1,6 @@
 // Per-worktree disposable cache: <repo>/.docket/index.json. Rebuilt from source hashes; a missing,
-// stale, corrupt or foreign-version cache just rebuilds. `check` never reads it.
+// stale, corrupt or foreign-version cache just rebuilds. `check` never reads it. It holds summaries only
+// (fields, title, errors, open-note count): never body or note text.
 // A file is reused by (size, mtime) only when its mtime is safely older than the cache itself (the
 // racy-git rule); otherwise it is re-hashed, so a same-size rewrite inside one clock tick is caught.
 import fs from "node:fs";
@@ -9,7 +10,7 @@ import { atomicWrite } from "../../storage/atomic-write.mjs";
 import { listItemEntries } from "../../storage/item-store.mjs";
 import { revisionOf } from "../../storage/revision.mjs";
 
-export const INDEX_VERSION = 1;
+export const INDEX_VERSION = 2; // 2: openNoteCount (0.6.0)
 const RACY_MS = 2000;
 
 export const indexPath = (ctx) => path.join(ctx.docketDir, "index.json");
@@ -63,6 +64,7 @@ export function loadIndex(ctx, { rebuild = false } = {}) {
       fields: record.fields,
       title: record.title,
       errors: record.errors,
+      openNoteCount: record.openNoteCount,
     };
     stats.parsed++;
   }
@@ -81,6 +83,7 @@ export function loadIndex(ctx, { rebuild = false } = {}) {
     fields: f.fields,
     title: f.title,
     errors: f.errors,
+    openNoteCount: f.openNoteCount ?? 0,
     revision: f.hash,
   }));
   return { records, stats };

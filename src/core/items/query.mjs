@@ -20,8 +20,9 @@ export function isBlocked(fields, statusOf) {
 }
 
 /**
- * Filter and sort valid records. filters: {status[], type[], priority[], area, parent, blocked, all}.
- * Without --all or an explicit status filter, done and dropped items are hidden.
+ * Filter and sort valid records. filters: {status[], type[], priority[], area, parent, blocked, all,
+ * notes}. Without --all or an explicit status filter, done and dropped items are hidden. notes: "open"
+ * keeps items with at least one open note (intersected with the other filters).
  * Returns {items: [summary], invalid: [{id, file, errors}]}; malformed files are never dropped silently.
  */
 export function listItems(records, filters = {}) {
@@ -37,6 +38,7 @@ export function listItems(records, filters = {}) {
     if (filters.area !== undefined && f.area !== filters.area) return false;
     if (filters.parent !== undefined && f.parent !== filters.parent) return false;
     if (filters.blocked && !isBlocked(f, statusOf)) return false;
+    if (filters.notes === "open" && !(r.openNoteCount > 0)) return false;
     return true;
   });
   return {
@@ -62,7 +64,12 @@ export function countBy(items, field) {
 
 export function summarize(record, statusOf) {
   const { fields } = record;
-  return { ...fields, title: record.title, blocked: isBlocked(fields, statusOf) };
+  return {
+    ...fields,
+    title: record.title,
+    blocked: isBlocked(fields, statusOf),
+    openNoteCount: record.openNoteCount ?? 0,
+  };
 }
 
 // Reverse relations: stored on the source item only, derived here.
