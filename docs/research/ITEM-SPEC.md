@@ -30,7 +30,7 @@ free markdown body
 | `type` | enum | `feature \| bug \| task \| idea` |
 | `created` | date | immutable |
 | `status` | enum | `todo \| wip \| done \| dropped` (`dropped` is the tombstone; never delete files). "Blocked" is derived from `blocked_by` containing any item not `done`/`dropped`; never stored |
-| `since` | date | date the current status began; `docket set status` rewrites it, nothing else does |
+| `since` | date | date the current status began; `docket set status` rewrites it, nothing else does (except a batch move-in, which may set historical `created`/`since`, ADR-21) |
 | `area` | token | free kebab token (`eng`, `ui`); empty allowed |
 | `priority` | enum | `P0 \| P1 \| P2 \| P3` |
 | `rank` | token `[a-z]+` | fractional (LexoRank-style) order within a priority; assigned by `docket add` (end of the priority band), never hand-written; re-ranking edits one file |

@@ -26,7 +26,7 @@ Create an item; the ID and rank are assigned. Prints "<id>  <title>" (--json: th
   --body TEXT | --body-file F   body text; --body-file - reads stdin
   --area A  --status S  --parent ID
   --fixes ID  --blocked-by ID  --relates ID   (repeatable)
-  --batch F   create many from a JSON array of {type, priority, status?, title, body?, area?}
+  --batch F   create many from a JSON array of {type, priority, status?, title, body?, area?, created?, since?}
               (F or - for stdin). Everything is validated before anything is written; prints
               "<id>  <title>" lines (--json: {count, items}, the full created items). Not combinable with the single-item options.
 ${VALUES}`,

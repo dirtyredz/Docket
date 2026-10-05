@@ -1,10 +1,11 @@
 // `add --batch`: validate a whole JSON array of new items first, then plan them as one transaction.
 // Nothing is written unless every entry is valid; ranks within a band follow array order.
 import { CODES, docketError } from "../errors.mjs";
+import { isRealDate } from "../identity/date.mjs";
 import { planAddOne } from "./add.mjs";
 
 // Every batch key is a string; these are also the only keys an entry may carry.
-const KEYS = ["type", "priority", "status", "title", "body", "area"];
+const KEYS = ["type", "priority", "status", "title", "body", "area", "created", "since"];
 const invalid = (message) => docketError(CODES.INVALID, message);
 
 /** Parse batch JSON text into add inputs. Throws DOCKET_INVALID naming the entry index. */
@@ -36,6 +37,27 @@ export function parseBatch(text) {
 }
 
 /**
+ * Resolve optional historical dates for a move-in entry: real calendar dates, not after today, since >=
+ * created. Only one given means both are that date; none keeps today (the planner default).
+ */
+export function withDates(input, today) {
+  const { created, since } = input;
+  if (created === undefined && since === undefined) return input;
+  for (const [k, v] of [
+    ["created", created],
+    ["since", since],
+  ]) {
+    if (v === undefined) continue;
+    if (!isRealDate(v)) throw invalid(`${k} must be a real YYYY-MM-DD date`);
+    if (v > today) throw invalid(`${k} ${v} is in the future`);
+  }
+  const c = created ?? since;
+  const s = since ?? created;
+  if (s < c) throw invalid(`since ${s} is before created ${c}`);
+  return { ...input, created: c, since: s };
+}
+
+/**
  * Plan every input in order against a growing view of the store so ranks and IDs never collide.
  * Returns a transaction plan: {writes, value: [{id, fields, title}]}. Throws on the first bad entry.
  */
@@ -46,7 +68,7 @@ export function planAddBatch({ records }, inputs, ctx) {
   inputs.forEach((input, i) => {
     let plan;
     try {
-      plan = planAddOne({ records: view }, input, ctx);
+      plan = planAddOne({ records: view }, withDates(input, ctx.today), ctx);
     } catch (err) {
       err.message = `batch[${i}]: ${err.message}`;
       throw err;

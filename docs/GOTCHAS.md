@@ -62,8 +62,11 @@ Non-obvious traps, from `PLAN.md` sections 6 and 7, the merge test, and building
 - **Batch add is validate-all, then write-each.** `add --batch` plans every entry before writing, so bad input
   writes nothing; the files themselves are still separate atomic writes (a crash mid-write could leave some).
   `--body-file -` and `--batch -` read stdin: do not use both in one call.
-- **`add --batch` prints `id  title` lines unless `--json`**, which returns `{count, items}`. Agents driving a
+- **`add --batch` prints `id  title` lines unless `--json`**, which returns the envelope `{ok, command, data: {count, items}}`. Agents driving a
   move-in must pass `--json`.
+- **Batch dates are batch-only.** `created`/`since` in a batch entry must be real, not future, `since >= created`
+  (one alone fills both). Single `add` has no date flags and `set status` stamps today, so a historical
+  date can only come from a move-in batch.
 - **`gate install` / `--dry-run` wording.** Dry runs write nothing, including git config; changed steps read
   "would be created/updated" (verified: `git config --get docket.gateLauncher` is empty after a dry run).
 - **`npm install --global` needs an absolute tarball path**; a relative one is read as a GitHub spec.

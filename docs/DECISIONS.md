@@ -1,7 +1,17 @@
 # DECISIONS
 
-ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-20 are 2026-10-05.
+ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-21 are 2026-10-05.
 Evidence paths are relative to `docs/research/`.
+
+## ADR-21: Batch entries may set historical dates
+
+- **Context:** Moved-in items lost their real dates (everything read as created today), and agents were
+  tempted to hand-edit item files to fix it.
+- **Decision:** `add --batch` entries may carry `created` and/or `since` (ISO dates): real calendar dates,
+  not in the future, `since >= created`; one given fills the other, none keeps today. IDs and ranks stay
+  tool-assigned. Single-item `add` has no such flags; `set status` still stamps today.
+- **Rejected:** hand-edited dates (re-opens hand-written files); date flags on single `add`.
+- **Evidence:** second real move-in batch, 2026-10-05.
 
 ## ADR-20: Batch add is the move-in path; every write command can report before it writes
 
@@ -125,60 +135,4 @@ Evidence paths are relative to `docs/research/`.
 - **Rejected:** agent-chosen ranks; sequential counters (merge hot spot).
 - **Evidence:** `MERGE-TEST-RESULTS.md` implications 5 and 6, scenario i2; `ITEM-SPEC.md` Settled.
 
-## ADR-06: Final field order
-
-- **Context:** Order decides which same-item edits conflict in git.
-- **Decision:** `id, type, created, status, since, area, priority, rank, parent, fixes, blocked_by,
-relates`. Status moves (the most frequent concurrent edit) are fenced by near-immutable fields;
-  `priority`/`rank` are normally edited together as one hunk.
-- **Rejected:** the old order (8/28 conflicts but worse for status vs `type`); the "alt" order fencing
-  `since` with `parent` (ties at 9/28, just moves the conflict).
-- **Evidence:** `MERGE-TEST-RESULTS.md` "Re-test (field order)": old 8, new 9, alt 9 of 28; c2 and c4
-  flip to clean.
-
-## ADR-05: `.docket/index.json` before SQLite
-
-- **Context:** Reverse relations and filtered lists need an index; scale is hundreds of items per repo.
-- **Decision:** A per-worktree JSON cache rebuilt from source hashes, queried in memory. `check` never
-  reads it.
-- **Rejected:** SQLite now (native dependency, Windows install friction); a cache shared across
-  worktrees (branches differ).
-- **Evidence:** `PLAN.md` section 2; `ITEM-SPEC.md` Relations. Revisit if scale outgrows memory.
-
-## ADR-04: CLI with JSON over MCP
-
-- **Context:** Agents need to read and mutate items; MCP adds a server, schema surface and context cost.
-- **Decision:** A CLI (`docket` and `dk`) with `--repo`, bounded `--json` output and stable exit codes.
-  No MCP server in this scope; a short snippet in each repo's CLAUDE.md/AGENTS.md teaches it.
-- **Rejected:** Backlog.md's MCP; an HTTP-only API.
-- **Evidence:** `existing-solutions-survey.md`; `PLAN.md` section 2.
-
-## ADR-03: Name Docket, `dk-<8hex>` prefix, the first adopter `bl-` IDs preserved indefinitely
-
-- **Context:** The prototype used `bl-` IDs, already present throughout the first adopter history and references.
-- **Decision:** The product is Docket; new IDs are `dk-<8hex>`. Existing `bl-<8hex>` IDs stay valid,
-  immutable identities (not aliases needing lookup), at the cost of permanent dual-prefix support.
-  ITEM-SPEC amended accordingly.
-- **Rejected:** rewriting `bl-` to `dk-` (breaks historical references); continuing to mint `bl-`.
-- **Evidence:** `PLAN.md` sections 2 and 7; `ITEM-SPEC.md` amendment note.
-
-## ADR-02: Borrow Backlog.md's file-per-item format, not its sequential IDs or MCP
-
-- **Context:** Backlog.md already proves Markdown-file-per-task with frontmatter.
-- **Decision:** Adopt the shape (one file per item, frontmatter plus body). Reject sequential numeric IDs
-  (two branches adding items both take the next number) and the MCP server.
-- **Rejected:** adopting Backlog.md wholesale (ID scheme, schema vocabulary, MCP); building a different
-  format.
-- **Evidence:** `existing-solutions-survey.md`; scenarios a1 and a2 in `MERGE-TEST-RESULTS.md`.
-
-## ADR-01: Markdown file-per-item over SQLite or JSONL as source of truth
-
-- **Context:** Items must branch, merge and diff with the code they describe, and be readable by
-  agents without tooling.
-- **Decision:** One Markdown file per item, strict 12-key frontmatter, git as history; every cache is
-  rebuildable.
-- **Rejected:** SQLite (binary, unmergeable); JSONL (line-per-item still conflicts on adjacent edits);
-  one BACKLOG.md (17 of 21 shared merge scenarios conflict).
-- **Evidence:** merge test, file-per-item 8 of 25 conflicts vs one-file 17 of 21 (silent-wrong: 0),
-  `MERGE-TEST-RESULTS.md`; research rounds 1 and 2 (`markdown-vs-db-project-docs.md`,
-  `round2-md-vs-db-workflow.md`).
+> ADRs 01-06 (inception: storage format, naming, CLI vs MCP, index, field order, `add`) moved to `records/decisions/2026-10.md`.

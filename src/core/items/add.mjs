@@ -16,7 +16,7 @@ export function bandRanks(records, priority, exceptId = null) {
 
 /**
  * Plan an add. input: {type, priority, title, body?, area?, status?, parent?, fixes?, blocked_by?,
- * relates?}. ctx: {today, random?}. Returns a transaction plan result.
+ * relates?, created?, since?}. created/since come from batch move-ins (already validated). ctx: {today, random?}. Returns a transaction plan result.
  */
 export function planAdd(store, input, ctx) {
   const { write, value } = planAddOne(store, input, ctx);
@@ -40,9 +40,9 @@ export function planAddOne({ records }, input, { today, random }) {
   const fields = {
     id,
     type: input.type,
-    created: today,
+    created: input.created ?? today,
     status: input.status ?? "todo",
-    since: today,
+    since: input.since ?? input.created ?? today,
     area: input.area ?? "",
     priority: input.priority,
     rank: rankAtEnd(bandRanks(records, input.priority)),
