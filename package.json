@@ -1,6 +1,6 @@
 {
   "name": "docket",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "private": true,
   "type": "module",
   "description": "Windows CLI and local viewer over per-repo Markdown work items.",

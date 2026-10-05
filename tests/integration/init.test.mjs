@@ -225,3 +225,66 @@ function spawnGit(r, ...args) {
     return "";
   }
 }
+
+describe("docket init: Prettier (0.4.4)", () => {
+  const mk = () => {
+    const r = makeRepo();
+    cleanups.push(r.cleanup);
+    return r;
+  };
+  const run = (r, ...extra) => runCli(["init", "--json", "--repo", r.root, ...extra], { env: {} });
+  const state = (out) => out.json.data.files.find((f) => f.path === ".prettierignore")?.state;
+  const ignorePath = (r) => path.join(r.root, ".prettierignore");
+
+  test("no Prettier: .prettierignore is neither created nor reported", () => {
+    const r = mk();
+    assert.equal(state(run(r)), undefined);
+    assert.equal(fs.existsSync(ignorePath(r)), false);
+  });
+
+  for (const [label, file, body] of [
+    [".prettierrc", ".prettierrc", "{}"],
+    [".prettierrc.json", ".prettierrc.json", "{}"],
+    ["prettier.config.mjs", "prettier.config.mjs", "export default {};"],
+    ["package.json key", "package.json", '{"prettier":{}}'],
+    ["package.json devDependencies", "package.json", '{"devDependencies":{"prettier":"^3"}}'],
+  ]) {
+    test(`detects Prettier via ${label}: creates .prettierignore`, () => {
+      const r = mk();
+      fs.writeFileSync(path.join(r.root, file), body);
+      const out = run(r);
+      assert.equal(state(out), "created");
+      assert.ok(out.json.data.created.includes(".prettierignore"));
+      assert.equal(fs.readFileSync(ignorePath(r), "utf8"), "docs/items/\n");
+    });
+  }
+
+  test("existing .prettierignore is appended to (CRLF kept); re-run is unchanged", () => {
+    const r = mk();
+    fs.writeFileSync(path.join(r.root, ".prettierrc"), "{}");
+    fs.writeFileSync(ignorePath(r), "dist\r\ncoverage");
+    assert.equal(state(run(r)), "updated");
+    assert.equal(fs.readFileSync(ignorePath(r), "utf8"), "dist\r\ncoverage\r\ndocs/items/\r\n");
+    const again = run(r);
+    assert.equal(state(again), "unchanged");
+    assert.equal(fs.readFileSync(ignorePath(r), "utf8"), "dist\r\ncoverage\r\ndocs/items/\r\n");
+  });
+
+  test("an equivalent entry (/docs/items, docs/items/**) counts as already listed", () => {
+    for (const entry of ["/docs/items", "docs/items/**", "docs/items"]) {
+      const r = mk();
+      fs.writeFileSync(path.join(r.root, ".prettierrc"), "{}");
+      fs.writeFileSync(ignorePath(r), `${entry}\n`);
+      assert.equal(state(run(r)), "unchanged");
+      assert.equal(fs.readFileSync(ignorePath(r), "utf8"), `${entry}\n`);
+    }
+  });
+
+  test("dry-run reports would-be and writes nothing", () => {
+    const r = mk();
+    fs.writeFileSync(path.join(r.root, ".prettierrc"), "{}");
+    const out = runCli(["init", "--dry-run", "--repo", r.root], { env: {} });
+    assert.match(out.stdout, /\.prettierignore: would be created/);
+    assert.equal(fs.existsSync(ignorePath(r)), false);
+  });
+});

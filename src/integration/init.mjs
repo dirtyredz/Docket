@@ -43,6 +43,38 @@ function ensureIgnore(ctx, dryRun) {
   return text === null ? "created" : "updated";
 }
 
+/** True when the repo root configures Prettier: a config file, a package.json key, or a dependency. */
+function usesPrettier(ctx) {
+  const entries = fs.readdirSync(ctx.root);
+  if (entries.some((n) => /^\.prettierrc(\..+)?$/.test(n) || /^prettier\.config\..+$/.test(n)))
+    return true;
+  try {
+    const pkg = JSON.parse(read(path.join(ctx.root, "package.json")) ?? "null");
+    return Boolean(pkg?.prettier || pkg?.devDependencies?.prettier || pkg?.dependencies?.prettier);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Prettier re-wraps item files (a blank line after the frontmatter) on every commit, so a Prettier repo
+ * lists `docs/items/` in `.prettierignore`. Returns null (no entry in the report) when Prettier is absent.
+ */
+function ensurePrettierIgnore(ctx, dryRun) {
+  if (!usesPrettier(ctx)) return null;
+  const file = path.join(ctx.root, ".prettierignore");
+  const text = read(file);
+  if ((text ?? "").split(/\r?\n/).some((l) => /^\/?docs\/items(\/(\*\*)?)?$/.test(l.trim())))
+    return { path: ".prettierignore", state: "unchanged" };
+  if (!dryRun) {
+    const base = text ?? "";
+    const eol = base.includes("\r\n") ? "\r\n" : "\n";
+    const sep = base === "" || base.endsWith("\n") ? "" : eol;
+    atomicWrite(file, `${base}${sep}docs/items/${eol}`);
+  }
+  return { path: ".prettierignore", state: text === null ? "created" : "updated" };
+}
+
 /** Append the snippet (in the file's own line endings) to each agent file; create CLAUDE.md if none. */
 function ensureAgentSnippet(ctx, dryRun) {
   const snippet = fs.readFileSync(SNIPPET_FILE, "utf8").replace(/\r\n/g, "\n");
@@ -81,6 +113,8 @@ export function initRepo(start, { gate = false, dryRun = false, gateOptions = {}
     { path: ".gitignore", state: ensureIgnore(ctx, dryRun) },
     ...ensureAgentSnippet(ctx, dryRun),
   ];
+  const prettier = ensurePrettierIgnore(ctx, dryRun);
+  if (prettier) files.push(prettier);
   const changed = files.filter((f) => f.state !== "unchanged");
   const agentFiles = changed.map((f) => f.path).filter((n) => AGENT_FILES.includes(n));
   const gateResult = gate ? installRepo(ctx.root, { ...gateOptions, dryRun }) : null;

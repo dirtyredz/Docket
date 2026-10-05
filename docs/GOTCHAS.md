@@ -57,6 +57,9 @@ Non-obvious traps, from `PLAN.md` sections 6 and 7, the merge test, and building
 - **`init` leaves an empty `docs/items/`.** Git does not track empty directories; the folder appears in the
   repo with the first `dk add`. Re-running `init` is safe: the snippet is detected by its heading, so do not
   rename `## Work items (Docket)` in an agent file or it is appended again.
+- **Prettier rewrites item files.** Prettier on markdown (e.g. lint-staged) adds a blank line after the frontmatter
+  on every commit; `dk check` still passes but the bytes churn. `init` (0.4.4+) adds `docs/items/` to
+  `.prettierignore` when it detects Prettier; older Docket repos need `docket init` re-run.
 - **Legacy `bl-` IDs are valid, not special.** A repo moved in from an older backlog may keep `bl-<8hex>` IDs
   verbatim, but the move-in playbook mints fresh `dk-` IDs with `dk add`.
 - **Batch add is validate-all, then write-each.** `add --batch` plans every entry before writing, so bad input
