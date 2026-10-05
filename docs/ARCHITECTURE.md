@@ -1,7 +1,7 @@
 # ARCHITECTURE
 
-How Docket works. Code map is in `../STRUCTURE.md`; reasons are in `DECISIONS.md`. Status: design
-only, no code yet. Authority: `PLAN.md` and `research/ITEM-SPEC.md`.
+How Docket works. Code map is in `../STRUCTURE.md`; reasons are in `DECISIONS.md`. Status: M0 to M1c
+implemented (CLI, core, storage, index, claims, gate); M2+ is design only. Authority: `PLAN.md` and `research/ITEM-SPEC.md`.
 
 ## Truth and caches
 
@@ -35,6 +35,13 @@ conflict (CLI) or HTTP 409 (viewer). `add` never overwrites an existing destinat
 collisions. Only cooperating Docket writers lock; an external editor can still race between revision
 check and rename (see GOTCHAS).
 
+The lock is `.docket/items.lock` (exclusive create, `{pid, at, token}`). A waiter breaks a lock only
+when its owner is dead and the lock is over a second old, or it is over a minute old, and breaks it by
+rename-then-verify so a lock re-taken in between survives. "Candidate graph" validation compares the
+store's errors before and after the change: only errors the change introduces reject it, so an
+unrelated broken file never blocks an edit. Create-only writes hard-link the temp file (atomic
+no-overwrite); replacements rename it. Both retry transient Windows `EPERM`/`EBUSY`/`EACCES`.
+
 ## Claims
 
 Advisory, per clone: `docket-claims.json` in the git common dir, guarded by its own lock, atomic
@@ -56,6 +63,16 @@ Pre-push must not depend on the working tree being healthy. A tested tarball is 
 working-tree import. Pushed local tips are validated with `check --ref`, so a clean working tree cannot
 hide invalid committed items; deleted refs are skipped. Until the production checker passes its
 conformance suite, a quarantined copy of the merge-test prototype gates Docket itself (M0 to M1b).
+
+Wiring, per clone and opt-in: `docket gate install` sets `docket.gateLauncher` and `docket.gateNode`
+in the repo's local git config and refreshes the managed pre-push hook from the harness template
+(foreign hooks and `core.hooksPath` are reported, never changed). The template, only when that key is
+set, buffers the ref list once, replays it to LFS then to `node <gate>/launcher.mjs <root>`, and runs
+both before the structure pause/opt-out exits. The launcher reads `active.json` and runs
+`<version>/<entry> --repo <root> --pre-push` with the refs on stdin; the bootstrap and production
+versions share that contract. A missing launcher fails closed. Version directories are
+`<package version>-<tarball sha256 prefix>` (bootstrap: `bootstrap-<hash>`), so a promotion never
+overwrites an installed version.
 
 ## Viewer checkout targeting
 

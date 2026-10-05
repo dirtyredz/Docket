@@ -3,6 +3,54 @@
 ADRs, newest first. All dated 2026-10-04 (project inception); order below is by relevance, not time.
 Evidence paths are relative to `docs/research/`.
 
+## ADR-16: Grammar strictness applies to the frontmatter; the body is free Markdown
+
+- **Context:** ITEM-SPEC forbids tabs and trailing spaces in the strict YAML subset; the prototype
+  applied that to the whole file, which rejects code blocks and Markdown hard line breaks in bodies.
+- **Decision:** BOM, invalid UTF-8 and CR are rejected file-wide; tabs and trailing spaces only inside
+  the frontmatter. Body bytes are never rewritten.
+- **Rejected:** whole-file rule (punishes ordinary Markdown); no file-wide line-ending rule.
+- **Evidence:** `tests/core/conformance.test.mjs` pins this and every other prototype difference.
+
+## ADR-15: Gate opt-in is local git config, read by the managed template
+
+- **Context:** M1c needs a per-repo switch in a template shared by every gated repo, and un-opted repos
+  must behave exactly as before.
+- **Decision:** `docket gate install` writes `docket.gateLauncher` / `docket.gateNode` to the clone's
+  local git config (shared by its linked worktrees). The template branches on that key only; without it
+  the hook runs its old steps unchanged. The launcher contract (`<entry> --repo <root> --pre-push`,
+  refs on stdin) also carried the bootstrap checker, so the template change landed in M0, not M1c.
+- **Rejected:** a committed flag in `docket.json` (a fresh clone has no installed gate to run); appending
+  a call to installed hooks (hook-sync replaces managed hooks from the template); a Docket-owned
+  `core.hooksPath` (clobbers EvilEye's wrapper).
+- **Evidence:** `tests/integration/pre-push.test.mjs` "un-opted repos behave exactly as before" runs the
+  pre-change template from the harness repo's HEAD against the new one in six scenarios.
+
+## ADR-14: CLI output contract
+
+- **Decision:** `--json` prints exactly one document on stdout, `{ok, command, data, warnings}` or
+  `{ok:false, command, error:{code, message, details?}}`, and nothing on stderr. Exit codes: 0 ok,
+  1 failed, 2 usage, 3 conflict (revision, lock, claim, existing file), 4 not found, 5 internal. `list`
+  is bounded (default 50, max 500) and reports malformed files in `invalid` instead of hiding them.
+- **Rejected:** NDJSON streams; warnings on stderr in JSON mode (agents would have to merge streams).
+
+## ADR-13: Run on Node 22 LTS as well as 24
+
+- **Context:** PLAN chose Node 24, but this machine runs Node 22.20 and installing 24 is a system change
+  outside the milestone.
+- **Decision:** `engines` is `>=22`. Code uses only APIs stable in 22 (`util.parseArgs`, `fs.cpSync`,
+  `node --test` with quoted globs). Moving to 24 later needs no code change.
+- **Rejected:** requiring Node 24 now (blocks every install on this machine).
+
+## ADR-12: Fix the claims lock race with rename-then-verify
+
+- **Context:** The parallel-claims test lost 1-2 of 40 claims in about 1 run in 5: a waiter judged a
+  lock stale from a dead pid, the lock was released and re-taken, and the waiter deleted the new lock.
+- **Decision:** A stale lock is renamed aside and deleted only if its content (with a random token)
+  matches what was judged; a dead owner counts only after a 1-second grace; release removes only its
+  own lock.
+- **Evidence:** regression test in `tests/storage/atomic-write.test.mjs`.
+
 ## ADR-11: No central database
 
 - **Context:** Several repos, each with its own history; a central store would own data that belongs to

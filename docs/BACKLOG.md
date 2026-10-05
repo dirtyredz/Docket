@@ -20,3 +20,12 @@ item list, statuses or ranks; see `ROADMAP.md` for milestones.
 | Common-importer coverage (about 18 repos)? | Estimate only; verify shapes and defer exceptions.                                                              |
 | Global viewer semantics?                   | Registry and aggregation global; indexes per checkout; claims per clone.                                        |
 | Documentation migration?                   | Living prose docs stay intact and read-only in the viewer.                                                      |
+
+## Deferred from M0 to M1c (2026-10-04)
+
+- `src/integration/agent-snippet.md` (PLAN section 3 text) is not written yet; needed at M2 rollout.
+- `link` that edits two files (own list plus a reverse-stored `relates`) is two atomic writes, not one
+  transaction; a crash between them leaves half the change. Rare; revisit if it bites.
+- Move to Node 24 when it is installed here; no code change expected (ADR-13).
+- Harness: `/gate install` (skills/gate) does not know about `docket gate install`; a repo opting into
+  Docket runs both. Consider teaching the skill.

@@ -1,7 +1,6 @@
 # GOTCHAS
 
-Non-obvious traps, from `PLAN.md` sections 6 and 7 and the merge test. Design-time list; extend it as
-code lands.
+Non-obvious traps, from `PLAN.md` sections 6 and 7, the merge test, and building M0 to M1c.
 
 - **External-editor race.** Docket locks only cooperating Docket writers. An editor (or an agent
   writing the file directly) can save between the revision check and the rename; that write is lost or
@@ -33,3 +32,21 @@ code lands.
   the structure early returns; LFS runs first and stdin is buffered and replayed to each consumer.
 - **Dual ID prefixes forever.** `dk-` and `bl-` are both valid and immutable; code must never
   special-case one or treat `bl-` as an alias.
+- **Node 22 here, not 24.** The machine runs Node 22.20; `engines` is `>=22` and code avoids
+  24-only APIs (ADR-13). Keep `node --test` globs quoted in npm scripts: cmd.exe does not expand them,
+  Node does.
+- **Lock breaking must verify.** A check-then-delete of a "stale" lock deleted a lock re-taken in
+  between (lost claims under parallel load). Break by rename-then-verify only (ADR-12).
+- **Prettier must never touch `docs/items/`.** The style Stop hook formats changed files at turn end;
+  `.prettierignore` excludes `docs/items/`, `tests/fixtures/` and the recovered prototype.
+- **Claude's PreToolUse push guard matches any `git push` text**, even a push to a disposable bare
+  remote in a temp dir, while this repo has a pending structure review. Gate proofs with real pushes
+  therefore live in `tests/integration` and `tests/packaging` (spawned by node), not ad-hoc shells.
+- **Template changes reach every gated repo.** The harness hook-sync rewrites each managed
+  `.git/hooks/pre-push` from the template at session start. The Docket callback is inert without
+  `docket.gateLauncher` in local git config, so un-opted repos are unaffected.
+- **The prototype rejects a BOM only by accident** (the BOM breaks its line-1 fence match); its header
+  gaps list is otherwise accurate: no warnings, no real-date or `fixes`-target checks, whole-file
+  tab and trailing-space ban.
+- **`git push` from GUI clients may lack `node` on PATH.** The gate records `docket.gateNode` (an
+  absolute node path) at install; re-run `docket gate install` after moving Node.

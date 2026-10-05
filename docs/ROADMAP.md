@@ -2,20 +2,20 @@
 
 Milestones from `PLAN.md` section 3, in order. Concrete work is tracked as items in `docs/items/`.
 
-**M0 - Architecture and self-hosting bootstrap.** Write the architecture docs and Layout contract, amend
+**M0 - Architecture and self-hosting bootstrap.** (done 2026-10-04) Write the architecture docs and Layout contract, amend
 ITEM-SPEC (done 2026-10-04), recover the merge-test prototype, hand-write a few milestone items with
 valid IDs and distinct ranks (the one exception to tool-assigned identity), validate them with the
 adapted prototype and install it as an independent bootstrap pre-push checker.
 
-**M1a - Strict core and first CLI check.** Parser, serializer and every ITEM-SPEC check; `docket check`
+**M1a - Strict core and first CLI check.** (done 2026-10-04) Parser, serializer and every ITEM-SPEC check; `docket check`
 run against Docket itself. Errors fail, warnings print. Bootstrap validation stays independent until the
 production checker passes conformance.
 
-**M1b - Usable CLI, safe writes, last-good gate.** `add`, `set`, `link`, `list`, `show`, `index`,
+**M1b - Usable CLI, safe writes, last-good gate.** (done 2026-10-04) `add`, `set`, `link`, `list`, `show`, `index`,
 `claim`, `release`; locking and atomic writes; JSON index; claims; tested tarball install and the
 promoted last-good checker.
 
-**M1c - Real push gate.** Opt-in launcher in the managed hook template; stdin buffered and replayed to
+**M1c - Real push gate.** (done 2026-10-04) Opt-in launcher in the managed hook template; stdin buffered and replayed to
 LFS and Docket; Docket runs before structure early returns; `check --ref` on each pushed tip.
 
 **M2a - EvilEye importer and dry run.** Inventory, frozen source hashes, persisted plan, ID
