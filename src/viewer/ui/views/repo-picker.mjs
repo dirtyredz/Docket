@@ -37,3 +37,44 @@ export function renderRepoPicker(el, overview, current) {
     ),
   );
 }
+
+/**
+ * Header of a repo view: alias, the checkout selector (preferred marked; switching keeps the view) and
+ * the board / docs / worktrees tabs.
+ */
+export function repoHeader(repo, route, onCheckout) {
+  const base = `#/r/${repo.id}/${route.checkout}`;
+  const tab = (view, label) =>
+    h("a", { href: `${base}/${view}`, class: route.view === view ? "active" : "" }, label);
+  const select = h(
+    "select",
+    {
+      "aria-label": "Checkout",
+      "data-testid": "checkout-select",
+      onchange: (e) => onCheckout(e.target.value),
+    },
+    repo.checkouts.map((c) =>
+      h(
+        "option",
+        { value: c.id, selected: c.id === route.checkout },
+        `${c.path}${c.preferred ? " (preferred)" : ""}`,
+      ),
+    ),
+  );
+  return h(
+    "div",
+    { class: "toolbar" },
+    h("h1", {}, repo.alias),
+    select,
+    h(
+      "nav",
+      { class: "tabs" },
+      tab("board", "Board"),
+      tab("docs", "Docs"),
+      tab("worktrees", "Worktrees"),
+    ),
+    repo.state === "unavailable" && route.checkout === repo.preferred
+      ? h("span", { class: "error" }, `preferred checkout unavailable: ${repo.reason}`)
+      : null,
+  );
+}

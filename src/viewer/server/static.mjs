@@ -15,7 +15,12 @@ export const ASSETS = Object.freeze([
   "dom.mjs",
   "views/repo-picker.mjs",
   "views/overview.mjs",
+  "views/board.mjs",
+  "views/item-editor.mjs",
+  "views/relations.mjs",
+  "views/documents.mjs",
   "views/search.mjs",
+  "views/worktree-hints.mjs",
 ]);
 
 const TYPES = {

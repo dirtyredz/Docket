@@ -4,14 +4,29 @@
 // viewer's Markdown dependencies.
 import { randomBytes } from "node:crypto";
 import http from "node:http";
-import { checkRequest, httpError, readJsonBody, send, sendError, sendJson } from "./boundary.mjs";
+import {
+  checkRequest,
+  httpError,
+  readJsonBody,
+  send,
+  sendError,
+  sendJson,
+  statusFor,
+} from "./boundary.mjs";
 import { createCatalog } from "./catalog.mjs";
 import { createCheckoutOpener, createRegistrySource } from "./scope.mjs";
 import { loadAssets } from "./static.mjs";
+import { documentRoutes } from "./routes/documents.mjs";
+import { itemRoutes } from "./routes/items.mjs";
+import { relationRoutes } from "./routes/relations.mjs";
 import { repoRoutes } from "./routes/repos.mjs";
 import { searchRoutes } from "./routes/search.mjs";
 
 export const HOST = "127.0.0.1";
+
+const defaultLog = (err) =>
+  process.stderr.write(`docket serve: internal error: ${err.stack ?? err}
+`);
 
 function compile(routes) {
   return routes.map((r) => ({
@@ -33,16 +48,22 @@ function match(routes, method, pathname) {
 }
 
 /**
- * Start the viewer. options: {registryFile, port = 0 (any free port)}. Resolves after binding to
- * {url, port, token, close()}.
+ * Start the viewer. options: {registryFile, port = 0 (any free port), log (internal errors; stderr)}.
+ * Resolves after binding to {url, port, token, close()}.
  */
-export async function startServer({ registryFile, port = 0 } = {}) {
+export async function startServer({ registryFile, port = 0, log = defaultLog } = {}) {
   const token = randomBytes(24).toString("hex");
   const registrySource = createRegistrySource(registryFile);
   const openCheckout = createCheckoutOpener();
   const catalog = createCatalog({ registrySource, openCheckout });
   const deps = { registrySource, openCheckout, catalog };
-  const routes = compile([...repoRoutes(deps), ...searchRoutes(deps)]);
+  const routes = compile([
+    ...repoRoutes(deps),
+    ...searchRoutes(deps),
+    ...itemRoutes(deps),
+    ...relationRoutes(deps),
+    ...documentRoutes(deps),
+  ]);
   const asset = loadAssets(token);
   let actualPort = port;
 
@@ -59,8 +80,9 @@ export async function startServer({ registryFile, port = 0 } = {}) {
       const { route, params } = match(routes, req.method, url.pathname);
       const body = req.method === "POST" ? await readJsonBody(req) : {};
       const out = await route.handler({ params, query: url.searchParams, body });
-      sendJson(res, out?.status ?? 200, out?.json ?? out);
+      sendJson(res, 200, out); // handlers return the JSON body; failures are thrown
     } catch (err) {
+      if (statusFor(err) === 500) log(err);
       sendError(res, err);
     }
   });

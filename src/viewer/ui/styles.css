@@ -67,6 +67,10 @@ h2 {
   font-size: 14px;
   margin: 12px 0 6px;
 }
+h3 {
+  font-size: 12px;
+  margin: 8px 0 2px;
+}
 code {
   font:
     12px ui-monospace,

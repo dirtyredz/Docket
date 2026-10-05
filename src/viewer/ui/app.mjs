@@ -2,9 +2,13 @@
 // Routes: #/ (overview), #/search?q=..&closed=1, #/r/<repo>/<checkout>/<board|docs|worktrees>/...
 import { api } from "./api.mjs";
 import { h, replace } from "./dom.mjs";
+import { renderBoard } from "./views/board.mjs";
+import { renderDocuments } from "./views/documents.mjs";
+import { renderItemDetail } from "./views/item-editor.mjs";
 import { renderOverview } from "./views/overview.mjs";
-import { renderRepoPicker } from "./views/repo-picker.mjs";
+import { renderRepoPicker, repoHeader } from "./views/repo-picker.mjs";
 import { renderSearch } from "./views/search.mjs";
+import { renderWorktreeHints } from "./views/worktree-hints.mjs";
 
 const POLL_LOADING_MS = 400;
 const VISIBLE_REFRESH_MS = 30000;
@@ -81,7 +85,67 @@ async function render() {
     els.detail.hidden = true;
     return renderSearchRoute(route);
   }
-  replace(els.main, h("p", { class: "muted" }, "This view is not available yet."));
+  return renderRepoRoute(route);
+}
+
+const baseOf = (route) => `#/r/${route.repo}/${route.checkout}`;
+
+async function renderRepoRoute(route) {
+  if (!state.overview) await loadOverview();
+  const repo = state.overview?.repos.find((r) => r.id === route.repo);
+  if (!repo) {
+    els.detail.hidden = true;
+    return replace(
+      els.main,
+      h("p", { class: "error" }, "Unknown repo (removed from the registry?)."),
+    );
+  }
+  renderRepoPicker(els.sidebar, state.overview, repo.id);
+  const view = h("div", { class: "view" });
+  const header = repoHeader(repo, route, (checkout) => {
+    location.hash = `#/r/${repo.id}/${checkout}/${route.view}`;
+  });
+  replace(els.main, header, view);
+  try {
+    if (route.view === "board") await renderBoardRoute(view, route);
+    else if (route.view === "docs") await renderDocsRoute(view, route);
+    else if (route.view === "worktrees") {
+      els.detail.hidden = true;
+      renderWorktreeHints(view, await api.worktrees(route.repo), { repoId: route.repo });
+    }
+  } catch (err) {
+    replace(view, h("p", { class: "error", "data-testid": "view-error" }, err.message));
+  }
+}
+
+async function renderBoardRoute(view, route) {
+  const base = baseOf(route);
+  const selected = route.rest[0];
+  const board = await api.board(route.repo, route.checkout);
+  const rerender = () => renderBoard(view, board, { base, selected, rerender });
+  rerender();
+  if (!selected) {
+    els.detail.hidden = true;
+    return;
+  }
+  els.detail.hidden = false;
+  await renderDetail(route, base, selected);
+}
+
+export async function renderDetail(route, base, id) {
+  const [item, relations] = await Promise.all([
+    api.item(route.repo, route.checkout, id),
+    api.relations(route.repo, route.checkout, id).catch(() => null),
+  ]);
+  renderItemDetail(els.detail, { item, relations, base });
+}
+
+async function renderDocsRoute(view, route) {
+  els.detail.hidden = true;
+  const [name, mode] = route.rest;
+  const list = await api.documents(route.repo, route.checkout);
+  const doc = name ? await api.document(route.repo, route.checkout, name, mode === "source") : null;
+  renderDocuments(view, { list, doc, base: baseOf(route), name, source: mode === "source" });
 }
 
 function navigateSearch() {
@@ -110,6 +174,9 @@ function wire() {
       e.preventDefault();
       els.searchInput.focus();
     } else if (e.key === "r") refreshAll();
+    else if (e.key === "Escape" && state.route.view === "board" && state.route.rest[0]) {
+      location.hash = `${baseOf(state.route)}/board`;
+    }
   });
 }
 

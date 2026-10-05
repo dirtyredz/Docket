@@ -76,7 +76,8 @@ export function createCatalog({ registrySource, openCheckout, yieldTurn = defaul
     return load(repo, checkout);
   }
 
-  const invalidate = (checkoutId) => entries.delete(checkoutId);
+  /** After a save: reload that checkout's summaries now (cheap: the index re-hashes only changed files). */
+  const invalidate = (repo, checkout) => load(repo, checkout);
 
   function overview() {
     const { registry, error } = registrySource.get();
