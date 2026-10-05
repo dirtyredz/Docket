@@ -60,6 +60,12 @@ const lineEnd = (text, at) => {
   const lf = text.indexOf("\n", at);
   return lf < 0 ? text.length : lf + 1;
 };
+/** Text without CR and blank lines: Prettier-style spacing around the markers must not count as drift. */
+const significant = (text) =>
+  text
+    .split(/\r?\n/)
+    .filter((line) => line.trim() !== "")
+    .join("\n");
 const review = (reason) => ({ state: "manual-review", reason });
 
 /**
@@ -80,7 +86,7 @@ export function planSnippet(text, { title }) {
     const stop = lineEnd(text, end.index);
     const replacement = inEol(block, eolOf(text.slice(begin.index, stop)));
     const current = text.slice(begin.index, stop);
-    const sameBlock = current === replacement || current === replacement.replace(/\r?\n$/, "");
+    const sameBlock = significant(current) === significant(replacement);
     if (sameBlock) return { state: "unchanged" };
     return { state: "updated", text: text.slice(0, begin.index) + replacement + text.slice(stop) };
   }

@@ -138,3 +138,50 @@ describe("ensureAgentSnippets", () => {
     assert.ok(read(root, "AGENTS.md").endsWith(BLOCK));
   });
 });
+
+describe("blank-line-only differences (Prettier)", () => {
+  const BEGIN = "<!-- docket:agent-snippet begin v2 -->\n";
+  const END = "<!-- docket:agent-snippet end -->\n";
+  const variants = {
+    "blank after begin": BLOCK.replace(BEGIN, `${BEGIN}\n`),
+    "blank before end": BLOCK.replace(END, `\n${END}`),
+    "blank around both, doubled": BLOCK.replace(BEGIN, `${BEGIN}\n\n`).replace(END, `\n\n${END}`),
+    "extra blank between paragraphs": BLOCK.replace(/\n\n/, "\n\n\n\n"),
+  };
+  for (const [name, block] of Object.entries(variants)) {
+    for (const [eolName, conv] of [
+      ["LF", (s) => s],
+      ["CRLF", crlf],
+    ]) {
+      test(`${name} (${eolName}) is unchanged`, () => {
+        const text = conv(`# Mine\n\n${block}\nAfter.\n`);
+        assert.notEqual(text, conv(`# Mine\n\n${BLOCK}\nAfter.\n`));
+        assert.deepEqual(plan(text), { state: "unchanged" });
+      });
+    }
+  }
+
+  test("a real wording change still updates, keeping surroundings", () => {
+    const edited = variants["blank after begin"].replace("Docket", "Docket!");
+    const out = plan(`# Mine\n\n${edited}\nAfter.\n`);
+    assert.equal(out.state, "updated");
+    assert.equal(out.text, `# Mine\n\n${BLOCK}\nAfter.\n`);
+  });
+
+  test("an older version with blank lines still upgrades", () => {
+    const old = OLD_BLOCK.replace("begin v1 -->\n", "begin v1 -->\n\n");
+    assert.equal(plan(`# Mine\n\n${old}`).state, "updated");
+  });
+
+  test("ensureAgentSnippets leaves a Prettier-style file untouched; dry run agrees", () => {
+    const t = tempDir("docket snippet ");
+    cleanups.push(t.cleanup);
+    const text = `# Mine\n\n${variants["blank after begin"]}`;
+    for (const n of ["CLAUDE.md", "AGENTS.md"]) fs.writeFileSync(path.join(t.dir, n), text);
+    for (const dryRun of [true, false]) {
+      const states = ensureAgentSnippets(t.dir, { dryRun }).map((r) => r.state);
+      assert.deepEqual(states, ["unchanged", "unchanged"]);
+    }
+    assert.equal(fs.readFileSync(path.join(t.dir, "CLAUDE.md"), "utf8"), text);
+  });
+});
