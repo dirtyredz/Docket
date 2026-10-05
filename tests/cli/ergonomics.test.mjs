@@ -236,3 +236,66 @@ describe("repo help", () => {
     assert.match(runCli(["--help"]).stdout, /^\s+repo\s+/m);
   });
 });
+
+describe("notes: counting, stdin and failure envelopes (0.6.0)", () => {
+  const N1 = "dk-11111111";
+  const N2 = "dk-22222222";
+  const N3 = "dk-33333333";
+  const REF = "2026-10-05T10:00:00.000Z";
+  const noted = (id, status, state) =>
+    itemText(
+      { id, status, rank: id === N1 ? "a" : "b" },
+      { body: `Facts.\n\n## Notes\n\n### ${REF} · ${state} · owner\n\ntext\n` },
+    );
+  const fixture = () =>
+    repo({
+      [N1]: noted(N1, "todo", "open"),
+      [N2]: noted(N2, "wip", "resolved"),
+      [N3]: itemText({ id: N3, status: "todo", rank: "c" }),
+    });
+
+  test("--count-by status --notes open counts only the filtered items", () => {
+    const r = fixture();
+    const d = run(r, ["list", "--count-by", "status", "--notes", "open"]).json.data;
+    assert.deepEqual(d.counts, { todo: 1, wip: 0, done: 0, dropped: 0 });
+    assert.equal(d.total, 1);
+  });
+
+  test("--file - and --body-file - take stdin and keep the notes intact", () => {
+    const r = fixture();
+    const n = run(r, ["note", N3, "--file", "-"], { input: "from stdin\n" });
+    assert.equal(n.status, 0, n.stdout + n.stderr);
+    const rev = run(r, ["show", N1]).json.data.revision;
+    const b = run(r, ["set", N1, "--body-file", "-", "--expect", rev], { input: "\nRewritten\n" });
+    assert.equal(b.status, 0, b.stdout + b.stderr);
+    const text = readItem(r.root, N1);
+    assert.match(text, /# Test item\n\nRewritten\n\n## Notes\n/);
+    assert.ok(text.includes(`### ${REF} · open · owner\n\ntext\n`));
+    assert.equal(run(r, ["show", N1]).json.data.openNoteCount, 1);
+  });
+
+  test("every --json failure is one envelope with nothing on stderr", () => {
+    const r = fixture();
+    const cases = [
+      [["note", N1], 2],
+      [["note", N1, "x", "--author", "robot"], 2],
+      [["note", "dk-99999999", "x"], 4],
+      [["note", "resolve", N1, "nope"], 2],
+      [["note", "resolve", N1, "2020-01-01T00:00:00.000Z"], 4],
+      [["note", "resolve", N1, REF, "--expect", "0000000000000000"], 3],
+      [["set", N1, "--body-file", "-"], 2],
+      [["set", N1, "--body-file", "-", "--expect", "0000000000000000"], 3],
+      [["list", "--notes", "other"], 2],
+    ];
+    for (const [args, status] of cases) {
+      const out = run(r, args, { input: "x\n" });
+      assert.equal(out.status, status, `${args.join(" ")}: ${out.stdout}`);
+      assert.ok(out.json, `${args.join(" ")} stdout is JSON`);
+      assert.equal(out.json.ok, false);
+      assert.equal(out.json.command, args[0]);
+      assert.match(out.json.error.code, /^DOCKET_[A-Z_]+$/);
+      assert.equal(out.stdout.trimEnd().split("\n").length, 1);
+      assert.equal(out.stderr, "", `${args.join(" ")} wrote to stderr`);
+    }
+  });
+});

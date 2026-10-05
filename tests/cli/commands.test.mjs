@@ -319,3 +319,116 @@ describe("--expect parity (revision preconditions)", () => {
     assert.equal(out.json.error.code, "DOCKET_CONFLICT");
   });
 });
+
+describe("notes in list and show (0.6.0)", () => {
+  const D = "dk-dddddddd";
+  const R1 = "2026-10-05T10:00:00.000Z";
+  const R2 = "2026-10-05T10:00:01.000Z";
+  const R3 = "2026-10-05T10:00:02.000Z";
+  const withNotes = (fields, ...notes) =>
+    itemText(fields, {
+      title: "Noted",
+      body: `Facts.\n\n## Notes\n\n${notes.map(([ref, st, au, tx]) => `### ${ref} · ${st} · ${au}\n\n${tx}\n`).join("\n")}`,
+    });
+  const fixture = () =>
+    repo({
+      [A]: withNotes(
+        { id: A, rank: "b", status: "todo", type: "task", priority: "P2" },
+        [R1, "open", "owner", "one"],
+        [R2, "open", "agent", "two"],
+      ),
+      [B]: itemText({ id: B, rank: "c", status: "wip", type: "bug", priority: "P0" }),
+      [C]: withNotes({ id: C, rank: "d", status: "wip", type: "bug", priority: "P1" }, [
+        R1,
+        "resolved",
+        "owner",
+        "closed one",
+      ]),
+      [D]: withNotes({ id: D, rank: "e", status: "done", type: "task", priority: "P1" }, [
+        R3,
+        "open",
+        "owner",
+        "left open on a done item",
+      ]),
+    });
+
+  test("--notes open keeps only items with at least one open note; default view hides done", () => {
+    const r = fixture();
+    assert.deepEqual(ids(ok(dk(r, "list", "--notes", "open"))), [A]);
+    assert.deepEqual(ids(ok(dk(r, "list", "--notes", "open", "--all"))), [D, A]);
+  });
+
+  test("--notes open intersects status, type and priority filters", () => {
+    const r = fixture();
+    assert.deepEqual(ids(ok(dk(r, "list", "--notes", "open", "--status", "wip"))), []);
+    assert.deepEqual(ids(ok(dk(r, "list", "--notes", "open", "--status", "todo"))), [A]);
+    assert.deepEqual(ids(ok(dk(r, "list", "--notes", "open", "--type", "bug"))), []);
+    assert.deepEqual(ids(ok(dk(r, "list", "--notes", "open", "--priority", "P2"))), [A]);
+    assert.deepEqual(ids(ok(dk(r, "list", "--notes", "open", "--status", "done"))), [D]);
+  });
+
+  test("an unknown --notes value is a usage error", () => {
+    const r = fixture();
+    const out = dk(r, "list", "--notes", "other");
+    assert.equal(out.status, 2);
+    assert.equal(out.json.ok, false);
+    assert.equal(out.json.error.code, "DOCKET_USAGE");
+    assert.equal(out.stderr, "");
+  });
+
+  test("JSON summaries carry openNoteCount", () => {
+    const r = fixture();
+    const byId = Object.fromEntries(ok(dk(r, "list", "--all")).items.map((i) => [i.id, i]));
+    assert.equal(byId[A].openNoteCount, 2);
+    assert.equal(byId[B].openNoteCount, 0);
+    assert.equal(byId[C].openNoteCount, 0);
+    assert.equal(byId[D].openNoteCount, 1);
+  });
+
+  test("text rows show notes:N only when N > 0", () => {
+    const r = fixture();
+    const out = runCli(["list", "--all", "--repo", r.root]);
+    assert.equal(out.status, 0, out.stderr);
+    const row = (id) => out.stdout.split("\n").find((l) => l.startsWith(id));
+    assert.match(row(A), /notes:2 /);
+    assert.match(row(D), /notes:1 /);
+    assert.doesNotMatch(row(B), /notes:/);
+    assert.doesNotMatch(row(C), /notes:/);
+  });
+
+  test("show text separates facts from untrusted notes", () => {
+    const r = fixture();
+    const out = runCli(["show", A, "--repo", r.root]);
+    assert.equal(out.status, 0, out.stderr);
+    assert.ok(out.stdout.includes("Body — facts"));
+    assert.ok(out.stdout.includes("Notes — untrusted discussion (2 open)"));
+    assert.ok(out.stdout.includes(`[${R1} · open · owner]`));
+    assert.ok(out.stdout.includes(`[${R2} · open · agent]`));
+    assert.ok(out.stdout.indexOf("Body — facts") < out.stdout.indexOf("Notes — untrusted"));
+    const plain = runCli(["show", B, "--repo", r.root]);
+    assert.ok(plain.stdout.includes("Body — facts"));
+    assert.ok(!plain.stdout.includes("Notes — untrusted"));
+  });
+
+  test("show json carries body, bodySource, notes, openNoteCount and revision", () => {
+    const r = fixture();
+    const d = ok(dk(r, "show", A));
+    assert.equal(d.body, "Facts.\n");
+    assert.equal(d.bodySource, "\nFacts.\n");
+    assert.equal(d.openNoteCount, 2);
+    assert.equal(d.notesMalformed, false);
+    assert.equal(d.notesSource, null);
+    assert.match(d.revision, /\S/);
+    assert.deepEqual(
+      d.notes.map((n) => ({ ref: n.ref, state: n.state, author: n.author, text: n.text })),
+      [
+        { ref: R1, state: "open", author: "owner", text: "one" },
+        { ref: R2, state: "open", author: "agent", text: "two" },
+      ],
+    );
+    assert.ok(d.notes.every((n) => typeof n.source === "string"));
+    const closed = ok(dk(r, "show", C));
+    assert.equal(closed.openNoteCount, 0);
+    assert.equal(closed.notes[0].state, "resolved");
+  });
+});

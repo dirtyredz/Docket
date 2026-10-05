@@ -23,7 +23,11 @@ export async function init(argv, io) {
       : result.initialised
         ? `docket initialised in ${result.root}`
         : `already initialised: ${result.root}`,
-    ...result.files.map((f) => stateLine(f.path, f.state, dryRun)),
+    ...result.files.map((f) =>
+      f.state === "manual-review"
+        ? `  ${f.path}: needs manual review, left alone (${f.reason})`
+        : stateLine(f.path, f.state, dryRun),
+    ),
   ];
   if (!result.agentSnippet) lines.push("  agent files: skipped (--no-agent-snippet)");
   if (result.gate) lines.push("gate:", ...gateReport(result.gate));

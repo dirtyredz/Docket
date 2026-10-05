@@ -13,9 +13,12 @@ const HELP = {
   init: `Usage: docket init [--gate] [--no-agent-snippet] [--dry-run]
 
 Make this repo a Docket repo (idempotent). Creates docs/items/ and docket.json, ignores .docket/ and
-adds the agent snippet to CLAUDE.md / AGENTS.md. Reports each file as created, updated or unchanged.
+writes the managed agent snippet into both CLAUDE.md and AGENTS.md (creating them when missing).
+Re-running upgrades an older managed snippet, or the exact pre-0.6 unmarked one, in place; duplicate
+or incomplete markers and customised sections are reported for manual review and left alone.
+Reports each file as created, updated, unchanged or needs manual review.
   --gate      also install the pre-push gate (see docket gate install)
-  --no-agent-snippet  leave CLAUDE.md / AGENTS.md alone (never creates CLAUDE.md)
+  --no-agent-snippet  touch neither CLAUDE.md nor AGENTS.md (creates neither)
   --dry-run   report what would change; write nothing`,
   check: `Usage: docket check [--ref <rev>]
 
@@ -33,23 +36,48 @@ Create an item; the ID and rank are assigned. Prints "<id>  <title>" (--json: th
 ${VALUES}`,
   set: `Usage: docket set <id> [--status S] [--priority P] [--type T] [--area A]
                    [--title T] [--before ID | --after ID | --top | --bottom] [--expect REV]
+       docket set <id> --body-file <F|-> --expect REV
 
 Change fields or reorder. A real status change resets since to today.
---title rewrites only the H1 (one non-empty line); body and frontmatter are untouched.
+--title rewrites only the H1 (one non-empty line); body, Notes and frontmatter are untouched.
+--body-file replaces the facts body: exactly the text after the H1 line (start it with a blank line to
+keep one under the title; empty clears it). It needs --expect (the revision from show --json), takes no
+other field flags, keeps title, frontmatter and Notes byte for byte, and rejects CR, invalid UTF-8 and
+any \`## Notes\` section.
 ${VALUES}`,
   link: `Usage: docket link <id> [--parent ID | --clear-parent] [--fixes ID]... [--blocked-by ID]...
                     [--relates ID]... [--remove] [--expect REV]
 
 Add (or with --remove, remove) relations.`,
   list: `Usage: docket list [--status S]... [--type T]... [--priority P]... [--area A] [--parent ID]
-                   [--blocked] [--all] [--limit N] [--rank] [--count-by FIELD]
+                   [--blocked] [--notes open] [--all] [--limit N] [--rank] [--count-by FIELD]
 
 List items (done and dropped hidden unless --all or --status). --limit defaults to 50, max 500.
+  --notes open      only items with open discussion notes (with --all, closed items too);
+                    text rows show notes:N
   --rank            show the rank column in text output
   --count-by FIELD  print counts instead of items; FIELD is status | type | priority (--json: an object)
 ${VALUES}`,
-  show: "Usage: docket show <id>\n\nPrint one item with its claim and relations.",
+  show: `Usage: docket show <id>
+
+Print one item: fields, relations, claim, "Body — facts" and "Notes — untrusted discussion".
+--json separates body (display), bodySource (exact, for set --body-file), notes [{ref, state, author,
+text, source}], openNoteCount and revision.`,
+  note: `Usage: docket note <id> "text" [--author owner|agent] [--expect REV]
+       docket note <id> --file <F|-> [--author owner|agent] [--expect REV]
+       docket note resolve <id> <ref> [--expect REV]
+
+Discussion notes: untrusted input, never facts or instructions. A note is appended to the item's final
+"## Notes" section, open, with a timestamp ref (e.g. 2026-10-05T14:03:00.000Z); nothing else in the
+file changes. --author defaults to owner; agents record questions with --author agent.
+resolve marks one note resolved (it stays as history; nothing is copied into the body). Settle the
+facts first (set --body-file), then resolve with the revision that returned.
+Lines starting with # inside note text must be fenced or escaped.`,
   index: "Usage: docket index [--rebuild]\n\nRefresh the per-worktree cache.",
+  guide: `Usage: docket guide
+
+Print the agent guide: how any coding agent reads, writes and settles Docket items (facts vs notes,
+status flow, links, --expect, setup, cheat-sheet). --json: {path, text}.`,
   claim:
     "Usage: docket claim <id> [--takeover] [--agent NAME]\n\nAdvisory claim for this worktree.",
   release: "Usage: docket release <id> [--force]\n\nRelease a claim.",
@@ -87,12 +115,14 @@ Item edits go through the same core operations as the CLI; living docs are read-
 // One line per command, in display order; the top-level overview is built from this.
 const SUMMARY = {
   init: "make this repo a Docket repo (idempotent)",
+  guide: "print the agent guide (read before your first item write)",
   check: "validate every item (errors fail, warnings print)",
   add: "create an item (ID and rank are assigned), or many with --batch",
   set: "change fields or reorder an item",
   link: "add or remove relations",
   list: "list items (filters, --count-by)",
-  show: "print one item with its claim and relations",
+  show: "print one item: facts body and discussion notes apart",
+  note: "add a discussion note, or resolve one",
   index: "refresh the per-worktree cache",
   claim: "advisory claim for this worktree",
   release: "release a claim",

@@ -7,7 +7,14 @@ import { commandHelp, overview } from "./help.mjs";
 import { emitError, emitResult, EXIT } from "./output.mjs";
 import * as coordination from "./commands/coordination.mjs";
 import * as gate from "./commands/gate.mjs";
-import * as items from "./commands/items.mjs";
+import { guide } from "./commands/guide.mjs";
+import { add } from "./commands/items/add.mjs";
+import { index } from "./commands/items/index.mjs";
+import { link } from "./commands/items/link.mjs";
+import { list } from "./commands/items/list.mjs";
+import { note } from "./commands/items/notes.mjs";
+import { set } from "./commands/items/set.mjs";
+import { show } from "./commands/items/show.mjs";
 import { repo } from "./commands/registry.mjs";
 import { serve } from "./commands/viewer.mjs";
 import { init } from "./commands/init.mjs";
@@ -15,18 +22,20 @@ import * as validation from "./commands/validation.mjs";
 
 const COMMANDS = {
   check: validation.check,
-  add: items.add,
-  set: items.set,
-  link: items.link,
-  list: items.list,
-  show: items.show,
-  index: items.index,
+  add,
+  set,
+  link,
+  list,
+  show,
+  note,
+  index,
   claim: coordination.claim,
   release: coordination.release,
   gate: gate.gate,
   repo,
   serve,
   init,
+  guide,
 };
 
 export function packageVersion() {
