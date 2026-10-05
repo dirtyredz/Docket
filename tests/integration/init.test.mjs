@@ -19,9 +19,10 @@ const init = (r, ...extra) => runCli(["init", "--json", "--repo", r.root, ...ext
 const text = (r, name) => fs.readFileSync(path.join(r.root, name), "utf8");
 const count = (s, needle) => s.split(needle).length - 1;
 const SNIPPET = "## Work items (Docket)";
+const BEGIN = "<!-- docket:agent-snippet begin v2 -->";
 
 describe("docket init", () => {
-  test("fresh repo: items dir, docket.json, .gitignore entry, new CLAUDE.md; the store checks clean", () => {
+  test("fresh repo: items dir, docket.json, .gitignore entry, new CLAUDE.md and AGENTS.md; the store checks clean", () => {
     const r = repo();
     const out = init(r);
     assert.equal(out.status, 0, out.stdout + out.stderr);
@@ -31,12 +32,14 @@ describe("docket init", () => {
       "docket.json",
       ".gitignore",
       "CLAUDE.md",
+      "AGENTS.md",
     ]);
     assert.ok(fs.statSync(path.join(r.root, "docs", "items")).isDirectory());
     assert.deepEqual(JSON.parse(text(r, "docket.json")), { version: 1 });
     assert.match(text(r, ".gitignore"), /^\.docket\/$/m);
     const claude = text(r, "CLAUDE.md");
-    assert.ok(claude.startsWith(`# repo with space\n\n${SNIPPET}\n`));
+    assert.ok(claude.startsWith(`# repo with space\n\n${BEGIN}\n${SNIPPET}\n`));
+    assert.equal(text(r, "AGENTS.md"), claude);
     const result = checkStore(resolveRepo(r.root));
     assert.deepEqual(result.errors, []);
   });
@@ -64,24 +67,25 @@ describe("docket init", () => {
     init(r);
     init(r);
     const claude = text(r, "CLAUDE.md");
-    assert.ok(claude.startsWith("# Mine\r\n\r\nKeep this.\r\n\r\n## Work items (Docket)\r\n"));
+    assert.ok(claude.startsWith(`# Mine\r\n\r\nKeep this.\r\n\r\n${BEGIN}\r\n${SNIPPET}\r\n`));
     assert.equal(count(claude, SNIPPET), 1);
     assert.ok(!/(^|[^\r])\n/.test(claude), "CRLF file stays CRLF");
     const agents = text(r, "AGENTS.md");
-    assert.ok(agents.startsWith(`Agents rules\n\n${SNIPPET}`));
+    assert.ok(agents.startsWith(`Agents rules\n\n${BEGIN}\n${SNIPPET}`));
     assert.equal(count(agents, SNIPPET), 1);
     assert.equal(text(r, ".gitignore"), "node_modules/\n.docket/\n");
   });
 
-  test("no agent file creates CLAUDE.md only; AGENTS.md alone does not get a CLAUDE.md", () => {
+  test("no agent file creates both; AGENTS.md alone also gets a CLAUDE.md", () => {
     const none = repo();
     init(none);
     assert.ok(fs.existsSync(path.join(none.root, "CLAUDE.md")));
-    assert.ok(!fs.existsSync(path.join(none.root, "AGENTS.md")));
+    assert.ok(fs.existsSync(path.join(none.root, "AGENTS.md")));
     const agentsOnly = repo();
     fs.writeFileSync(path.join(agentsOnly.root, "AGENTS.md"), "# A\n");
     init(agentsOnly);
-    assert.ok(!fs.existsSync(path.join(agentsOnly.root, "CLAUDE.md")));
+    assert.equal(count(text(agentsOnly, "CLAUDE.md"), SNIPPET), 1);
+    assert.ok(text(agentsOnly, "AGENTS.md").startsWith("# A\n\n"));
     assert.equal(count(text(agentsOnly, "AGENTS.md"), SNIPPET), 1);
   });
 
@@ -149,6 +153,7 @@ describe("docket init --dry-run and report", () => {
       "docket.json": "created",
       ".gitignore": "created",
       "CLAUDE.md": "created",
+      "AGENTS.md": "created",
     });
     assert.deepEqual(snapshot(r), before);
     assert.equal(snapshot(r).itemsDir, false);

@@ -3,16 +3,11 @@
 // and reuses the existing install logic. With `dryRun` nothing is written; the report is the same.
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { DEFAULT_CONFIG, writeConfig } from "../repository/config.mjs";
 import { resolveRepo } from "../repository/context.mjs";
 import { atomicWrite } from "../storage/atomic-write.mjs";
+import { AGENT_FILES, ensureAgentSnippets } from "./agent-snippet.mjs";
 import { installRepo } from "./gate/install.mjs";
-
-const SNIPPET_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), "agent-snippet.md");
-/** First line of the snippet; its presence in an agent file means the snippet is already there. */
-const SNIPPET_MARKER = "## Work items (Docket)";
-const AGENT_FILES = ["CLAUDE.md", "AGENTS.md"];
 
 const read = (file) => (fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null);
 
@@ -75,35 +70,12 @@ function ensurePrettierIgnore(ctx, dryRun) {
   return { path: ".prettierignore", state: text === null ? "created" : "updated" };
 }
 
-/** Append the snippet (in the file's own line endings) to each agent file; create CLAUDE.md if none. */
-function ensureAgentSnippet(ctx, dryRun) {
-  const snippet = fs.readFileSync(SNIPPET_FILE, "utf8").replace(/\r\n/g, "\n");
-  const present = AGENT_FILES.filter((n) => fs.existsSync(path.join(ctx.root, n)));
-  if (!present.length) {
-    if (!dryRun) {
-      const title = path.basename(ctx.root);
-      atomicWrite(path.join(ctx.root, "CLAUDE.md"), `# ${title}\n\n${snippet}`);
-    }
-    return [{ path: "CLAUDE.md", state: "created" }];
-  }
-  return present.map((name) => {
-    const file = path.join(ctx.root, name);
-    const text = read(file);
-    if (text.includes(SNIPPET_MARKER)) return { path: name, state: "unchanged" };
-    if (!dryRun) {
-      const eol = text.includes("\r\n") ? "\r\n" : "\n";
-      const lf = text.replace(/\r\n/g, "\n");
-      const joined = lf === "" ? snippet : `${lf.replace(/\n+$/, "")}\n\n${snippet}`;
-      atomicWrite(file, joined.replace(/\n/g, eol));
-    }
-    return { path: name, state: "updated" };
-  });
-}
-
 /**
  * Initialise the repo containing `start`. Returns {root, dryRun, initialised, created: string[] (paths
- * that are new or changed), files: [{path, state}], agentFiles, gate}. Throws DOCKET_NOT_A_REPO outside
- * a git worktree (resolveRepo). `agentSnippet: false` leaves CLAUDE.md / AGENTS.md alone (never creates one).
+ * that are new or changed), files: [{path, state, reason?}], agentFiles, review, gate}. Throws
+ * DOCKET_NOT_A_REPO outside a git worktree (resolveRepo). The managed agent snippet goes into both
+ * CLAUDE.md and AGENTS.md (created when missing; older snippets upgraded in place, see
+ * agent-snippet.mjs); `agentSnippet: false` touches neither. state "manual-review" is not a change.
  */
 export function initRepo(
   start,
@@ -114,11 +86,11 @@ export function initRepo(
     { path: "docs/items/", state: ensureItemsDir(ctx, dryRun) },
     { path: "docket.json", state: ensureConfig(ctx, dryRun) },
     { path: ".gitignore", state: ensureIgnore(ctx, dryRun) },
-    ...(agentSnippet ? ensureAgentSnippet(ctx, dryRun) : []),
+    ...(agentSnippet ? ensureAgentSnippets(ctx.root, { dryRun }) : []),
   ];
   const prettier = ensurePrettierIgnore(ctx, dryRun);
   if (prettier) files.push(prettier);
-  const changed = files.filter((f) => f.state !== "unchanged");
+  const changed = files.filter((f) => f.state !== "unchanged" && f.state !== "manual-review");
   const agentFiles = changed.map((f) => f.path).filter((n) => AGENT_FILES.includes(n));
   const gateResult = gate ? installRepo(ctx.root, { ...gateOptions, dryRun }) : null;
   return {
@@ -128,6 +100,7 @@ export function initRepo(
     created: changed.map((f) => f.path),
     files,
     agentFiles,
+    review: files.filter((f) => f.state === "manual-review"),
     agentSnippet,
     gate: gateResult,
   };
