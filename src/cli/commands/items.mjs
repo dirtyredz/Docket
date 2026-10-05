@@ -3,10 +3,11 @@ import fs from "node:fs";
 import { ENUMS } from "../../core/format/schema.mjs";
 import { localDate } from "../../core/identity/date.mjs";
 import { planAdd } from "../../core/items/add.mjs";
+import { parseBatch, planAddBatch } from "../../core/items/batch.mjs";
 import { setItem } from "../../core/items/complete.mjs";
 import { readItem } from "../../core/items/detail.mjs";
 import { planLink } from "../../core/items/link.mjs";
-import { listItems } from "../../core/items/query.mjs";
+import { countBy, listItems } from "../../core/items/query.mjs";
 import { mutateStore } from "../../core/items/transaction.mjs";
 import { resolveRepo } from "../../repository/context.mjs";
 import * as claims from "../../state/claims/store.mjs";
@@ -18,6 +19,7 @@ const repeat = { type: "string", multiple: true };
 const bool = { type: "boolean" };
 const LIST_LIMIT_DEFAULT = 50;
 const LIST_LIMIT_MAX = 500;
+const COUNT_FIELDS = ["status", "type", "priority"];
 
 const repoOf = (args, io) => resolveRepo(args.repo ?? io.cwd);
 
@@ -28,14 +30,49 @@ function checkEnum(name, values, allowed) {
   return values;
 }
 
+/** Read a file, or all of stdin for "-" (the caller's stdin, UTF-8). */
+function readInput(file, what) {
+  try {
+    return fs.readFileSync(file === "-" ? 0 : file, "utf8");
+  } catch (err) {
+    throw usageError(`cannot read ${what} ${file === "-" ? "from stdin" : file}: ${err.message}`);
+  }
+}
+
 function readBody(args) {
   if (args["body-file"] === undefined) return args.body ?? "";
   if (args.body !== undefined) throw usageError("use --body or --body-file, not both");
-  return fs.readFileSync(args["body-file"] === "-" ? 0 : args["body-file"], "utf8");
+  return readInput(args["body-file"], "body");
 }
 
-const row = (s) =>
-  `${s.id}  ${s.priority} ${s.rank.padEnd(4)} ${s.status.padEnd(7)} ${s.type.padEnd(7)} ${s.blocked ? "[blocked] " : ""}${s.title ?? ""}`;
+const row = (s, withRank) =>
+  `${s.id}  ${s.priority} ${withRank ? `${s.rank.padEnd(4)} ` : ""}${s.status.padEnd(7)} ${s.type.padEnd(7)} ${s.blocked ? "[blocked] " : ""}${s.title ?? ""}`;
+
+const SINGLE_ONLY = ["type", "priority", "title", "body", "body-file", "area", "status", "parent"];
+const SINGLE_LISTS = ["fixes", "blocked-by", "relates"];
+
+const created = (item, revision) => ({
+  id: item.id,
+  file: `docs/items/${item.id}.md`,
+  revision,
+  ...item.fields,
+  title: item.title,
+});
+
+async function addBatch(args, io) {
+  const clash = [...SINGLE_ONLY, ...SINGLE_LISTS].filter((k) => args[k] !== undefined);
+  if (clash.length) throw usageError(`--batch cannot be combined with --${clash.join(", --")}`);
+  const inputs = parseBatch(readInput(args.batch, "batch"));
+  const ctx = repoOf(args, io);
+  const { value, written } = mutateStore(ctx, (s) =>
+    planAddBatch(s, inputs, { today: localDate() }),
+  );
+  const items = value.map((v, i) => created(v, written[i].revision));
+  return {
+    data: { count: items.length, items },
+    text: items.map((i) => `${i.id}  ${i.title}`).join("\n"),
+  };
+}
 
 export async function add(argv, io) {
   const args = parseCommand(argv, {
@@ -51,8 +88,10 @@ export async function add(argv, io) {
       fixes: repeat,
       "blocked-by": repeat,
       relates: repeat,
+      batch: str,
     },
   });
+  if (args.batch !== undefined) return addBatch(args, io);
   for (const k of ["type", "priority", "title"]) if (!args[k]) throw usageError(`missing --${k}`);
   checkEnum("type", [args.type], ENUMS.type);
   checkEnum("priority", [args.priority], ENUMS.priority);
@@ -72,14 +111,8 @@ export async function add(argv, io) {
   const ctx = repoOf(args, io);
   const { value, written } = mutateStore(ctx, (s) => planAdd(s, input, { today: localDate() }));
   return {
-    data: {
-      id: value.id,
-      file: `docs/items/${value.id}.md`,
-      revision: written[0].revision,
-      ...value.fields,
-      title: value.title,
-    },
-    text: value.id,
+    data: created(value, written[0].revision),
+    text: `${value.id}  ${value.title}`,
   };
 }
 
@@ -179,6 +212,8 @@ export async function list(argv, io) {
       blocked: bool,
       all: bool,
       limit: str,
+      rank: bool,
+      "count-by": str,
     },
   });
   const limit = args.limit === undefined ? LIST_LIMIT_DEFAULT : Number(args.limit);
@@ -196,6 +231,23 @@ export async function list(argv, io) {
   };
   const { records } = loadIndex(repoOf(args, io));
   const { items, invalid } = listItems(records, filters);
+  if (args["count-by"] !== undefined) {
+    const field = args["count-by"];
+    if (!COUNT_FIELDS.includes(field)) {
+      throw usageError(`--count-by must be one of ${COUNT_FIELDS.join(", ")}`);
+    }
+    const counts = countBy(items, field);
+    const lines = Object.entries(counts).map(([k, n]) => `${k.padEnd(8)} ${n}`);
+    lines.push(`${"total".padEnd(8)} ${items.length}`);
+    return {
+      data: { countBy: field, counts, total: items.length, invalid },
+      text: lines.join("\n"),
+      warnings: invalid.map((b) => ({
+        file: b.file,
+        message: "malformed item (run docket check)",
+      })),
+    };
+  }
   const shown = items.slice(0, limit);
   const data = {
     total: items.length,
@@ -204,7 +256,7 @@ export async function list(argv, io) {
     items: shown,
     invalid,
   };
-  const lines = shown.map(row);
+  const lines = shown.map((i) => row(i, Boolean(args.rank)));
   if (data.truncated) lines.push(`... ${items.length - limit} more (raise --limit or filter)`);
   for (const bad of invalid)
     lines.push(`${bad.file}  INVALID: ${bad.errors.map((e) => e.message).join("; ")}`);

@@ -22,7 +22,7 @@ const isManaged = (text) => MANAGED_MARKERS.some((m) => text.includes(m));
 
 /**
  * Opt `repo` into the last-good gate: local git config docket.gateLauncher / docket.gateNode, and the
- * managed pre-push hook refreshed from the template. Foreign hooks and core.hooksPath are never
+ * managed pre-push hook refreshed from the template. `dryRun` computes the same report and writes nothing. Foreign hooks and core.hooksPath are never
  * modified; their state is reported so the owner can wire delegation.
  */
 export function installRepo(
@@ -31,6 +31,7 @@ export function installRepo(
     gateRoot = defaultGateRoot(),
     templatePath = defaultTemplatePath(),
     nodePath = process.execPath,
+    dryRun = false,
   } = {},
 ) {
   const ctx = resolveRepo(repo);
@@ -51,8 +52,10 @@ export function installRepo(
   if (!template.includes("docket.gateLauncher")) {
     throw docketError(CODES.TEMPLATE_TOO_OLD, `${templatePath} has no Docket callback`);
   }
-  git(ctx.root, ["config", "--local", "docket.gateLauncher", toSlash(launcher)]);
-  git(ctx.root, ["config", "--local", "docket.gateNode", toSlash(nodePath)]);
+  const config = [
+    setConfig(ctx, "docket.gateLauncher", toSlash(launcher), dryRun),
+    setConfig(ctx, "docket.gateNode", toSlash(nodePath), dryRun),
+  ];
 
   const hookFile = path.join(ctx.commonDir, "hooks", "pre-push");
   let state;
@@ -63,23 +66,35 @@ export function installRepo(
     /* absent */
   }
   if (current === null || (isManaged(current) && current !== template)) {
-    fs.mkdirSync(path.dirname(hookFile), { recursive: true });
-    atomicWrite(hookFile, template);
-    try {
-      fs.chmodSync(hookFile, 0o755);
-    } catch {
-      /* no-op on Windows */
+    if (!dryRun) {
+      fs.mkdirSync(path.dirname(hookFile), { recursive: true });
+      atomicWrite(hookFile, template);
+      try {
+        fs.chmodSync(hookFile, 0o755);
+      } catch {
+        /* no-op on Windows */
+      }
     }
     state = current === null ? "installed" : "updated";
   } else state = isManaged(current) ? "current" : "foreign";
 
   return {
+    dryRun,
+    config,
     launcher: toSlash(launcher),
     node: toSlash(nodePath),
     hook: { path: toSlash(hookFile), state },
     hooksPath: hooksPathState(ctx),
     active,
   };
+}
+
+// Set a local git config key unless it already has that value. Returns {key, value, state}.
+function setConfig(ctx, key, value, dryRun) {
+  const current = tryGit(ctx.root, ["config", "--local", "--get", key]);
+  if (current === value) return { key, value, state: "unchanged" };
+  if (!dryRun) git(ctx.root, ["config", "--local", key, value]);
+  return { key, value, state: current ? "updated" : "created" };
 }
 
 // core.hooksPath redirects git away from .git/hooks; report whether the active hook still reaches ours.

@@ -12,7 +12,7 @@ Last full review: 2026-10-05
 ```
 src/
   bootstrap/            quarantined recovered validator (not shipped)
-  cli/                  main, args, output          commands/  one adapter per command family
+  cli/                  main, args, output, help         commands/  one adapter per command family
   core/                 errors.mjs                  format/ validation/ identity/ items/
   integration/          agent snippet, init         gate/  promote, smoke, install, launcher, pre-push
   repository/           checkout facts: context, config, snapshot, paths
@@ -47,7 +47,7 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `src/core/format/` — schema constants, strict parser, canonical serializer and round-trip guard
 - `src/core/validation/` — item checks, relation graph integrity, warnings, check orchestration, `checkStore`
 - `src/core/identity/` — random ID allocation, fractional rank, local-date rules
-- `src/core/items/` — add, set (with claim release on completion), link, query, detail and the shared mutation transaction (CLI and viewer)
+- `src/core/items/` — add, batch add, set (with claim release on completion), link, query, detail and the shared mutation transaction (CLI and viewer)
 - `src/storage/` — content revisions, atomic write, lock, item store
 - `src/repository/` — worktree and common-dir discovery, `docket.json`, working-tree or Git-tree snapshot, path identity
 - `src/state/claims/` — common-dir advisory claims store

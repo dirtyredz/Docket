@@ -26,7 +26,7 @@ const ok = (out) => {
 const ids = (data) => data.items.map((i) => i.id);
 
 describe("add", () => {
-  test("human mode prints only the new ID", () => {
+  test("human mode prints the ID and title", () => {
     const r = repo();
     const out = runCli([
       "add",
@@ -40,7 +40,7 @@ describe("add", () => {
       r.root,
     ]);
     assert.equal(out.status, 0);
-    assert.match(out.stdout, /^dk-[0-9a-f]{8}\n$/);
+    assert.match(out.stdout, /^dk-[0-9a-f]{8} {2}Hi\n$/);
     assert.equal(out.stderr, "");
   });
 

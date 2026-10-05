@@ -1,7 +1,19 @@
 # DECISIONS
 
-ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADR-19 is 2026-10-05.
+ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-20 are 2026-10-05.
 Evidence paths are relative to `docs/research/`.
+
+## ADR-20: Batch add is the move-in path; every write command can report before it writes
+
+- **Context:** The first real move-in (6 items) needed one process per item, hand-rolled body files and
+  guesswork about what `init` and `gate install` changed.
+- **Decision:** `dk add --batch <file|->` takes a JSON array, validates every entry (enums, one-line
+  title, string fields, no unknown keys) before writing, then goes through the normal transaction, so IDs
+  and ranks stay tool-assigned. `init` and `gate install` report created/updated/unchanged per file,
+  git config key and hook, and take `--dry-run`. Help is per command, built from the schema enums.
+- **Rejected:** letting batch entries carry IDs, ranks or relations (re-opens hand-written identity);
+  a separate importer (ADR-19).
+- **Evidence:** first move-in report, 2026-10-05.
 
 ## ADR-19: Importers removed; init + agent move-in
 

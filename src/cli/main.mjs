@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { usageError } from "./args.mjs";
+import { commandHelp } from "./help.mjs";
 import { emitError, emitResult, EXIT } from "./output.mjs";
 import * as coordination from "./commands/coordination.mjs";
 import * as gate from "./commands/gate.mjs";
@@ -28,22 +29,25 @@ const HELP = `docket (dk) - Markdown work items per repo
 
 Usage: docket <command> [options]      every command takes --repo <path> and --json
 
-  init    [--gate]                               make this repo a Docket repo (idempotent)
+  init    [--gate] [--dry-run]                             make this repo a Docket repo (idempotent)
   check   [--ref <rev>]                          validate every item (errors fail, warnings print)
   add     --type T --priority P --title "..."    create an item (ID and rank are assigned)
-          [--body TEXT | --body-file F] [--area A] [--status S] [--parent ID]
+          [--body TEXT | --body-file F|-] [--area A] [--status S] [--parent ID]
+          [--batch F|-]                        many items from a JSON array
           [--fixes ID]... [--blocked-by ID]... [--relates ID]...
   set     <id> [--status S] [--priority P] [--type T] [--area A]
           [--before ID | --after ID | --top | --bottom] [--expect REV]
   link    <id> [--parent ID | --clear-parent] [--fixes ID]... [--blocked-by ID]...
           [--relates ID]... [--remove] [--expect REV]
   list    [--status S]... [--type T]... [--priority P]... [--area A] [--parent ID]
-          [--blocked] [--all] [--limit N]
+          [--blocked] [--all] [--limit N] [--rank] [--count-by FIELD]
   show    <id>
   index   [--rebuild]                            refresh the per-worktree cache
   claim   <id> [--takeover] [--agent NAME]       advisory claim for this worktree
   release <id> [--force]
-  gate    promote <tarball> | install | status   last-good pre-push gate
+  gate    promote <tarball> | install [--dry-run] | status   last-good pre-push gate
+
+  docket <command> --help   options and allowed values for one command
 
   --version, -v   print the version`;
 
@@ -56,6 +60,11 @@ export async function runCli(argv, io) {
   const [command, ...rest] = argv;
   if (command === "--version" || command === "-v") {
     io.stdout.write(`${packageVersion()}\n`);
+    return EXIT.ok;
+  }
+  if (command === "help" && rest[0] && commandHelp(rest[0])) {
+    io.stdout.write(`${commandHelp(rest[0])}
+`);
     return EXIT.ok;
   }
   if (!command || command === "--help" || command === "-h" || command === "help") {
@@ -73,7 +82,7 @@ export async function runCli(argv, io) {
     );
   }
   if (rest.includes("--help") || rest.includes("-h")) {
-    io.stdout.write(`${HELP}\n`);
+    io.stdout.write(`${commandHelp(command) ?? HELP}\n`);
     return EXIT.ok;
   }
   try {

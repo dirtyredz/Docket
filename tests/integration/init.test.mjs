@@ -123,3 +123,99 @@ describe("docket init", () => {
     },
   );
 });
+
+describe("docket init --dry-run and report", () => {
+  const snapshot = (r) => {
+    const out = {};
+    for (const n of ["docket.json", ".gitignore", "CLAUDE.md", "AGENTS.md"]) {
+      const f = path.join(r.root, n);
+      out[n] = fs.existsSync(f) ? fs.readFileSync(f, "utf8") : null;
+    }
+    out.itemsDir = fs.existsSync(path.join(r.root, "docs"));
+    return out;
+  };
+
+  test("fresh repo: reports every file as created and writes nothing", () => {
+    const r = repo();
+    const before = snapshot(r);
+    const out = init(r, "--dry-run");
+    assert.equal(out.status, 0, out.stdout + out.stderr);
+    assert.equal(out.json.data.dryRun, true);
+    const states = Object.fromEntries(out.json.data.files.map((f) => [f.path, f.state]));
+    assert.deepEqual(states, {
+      "docs/items/": "created",
+      "docket.json": "created",
+      ".gitignore": "created",
+      "CLAUDE.md": "created",
+    });
+    assert.deepEqual(snapshot(r), before);
+    assert.equal(snapshot(r).itemsDir, false);
+  });
+
+  test("text mode names each file's state; a real run then reports unchanged", () => {
+    const r = repo();
+    fs.writeFileSync(path.join(r.root, ".gitignore"), "node_modules\n");
+    fs.writeFileSync(path.join(r.root, "CLAUDE.md"), "# Mine\n");
+    const dry = runCli(["init", "--dry-run", "--repo", r.root]);
+    assert.match(dry.stdout, /dry run, nothing written/);
+    assert.match(dry.stdout, /\.gitignore: would be updated/);
+    assert.match(dry.stdout, /CLAUDE\.md: would be updated/);
+    assert.match(dry.stdout, /docket\.json: would be created/);
+    runCli(["init", "--repo", r.root]);
+    const again = runCli(["init", "--dry-run", "--repo", r.root]);
+    assert.match(again.stdout, /docket\.json: unchanged/);
+    assert.match(again.stdout, /CLAUDE\.md: unchanged/);
+    assert.equal(
+      JSON.parse(runCli(["init", "--dry-run", "--json", "--repo", r.root]).stdout).data.initialised,
+      false,
+    );
+  });
+
+  test(
+    "--gate --dry-run reports git config keys and the hook without writing them; gate install matches",
+    { skip: templateAvailable() ? false : `no hook template at ${TEMPLATE}` },
+    () => {
+      const home = tempDir("docket gate home ");
+      cleanups.push(home.cleanup);
+      promoteCheckout(path.join(home.dir, "gate"));
+      const env = { DOCKET_HOME: home.dir };
+      const r = repo();
+      const hook = path.join(r.root, ".git", "hooks", "pre-push");
+      const dry = runCli(["init", "--gate", "--dry-run", "--json", "--repo", r.root], { env });
+      assert.equal(dry.status, 0, dry.stdout + dry.stderr);
+      const g = dry.json.data.gate;
+      assert.deepEqual(
+        g.config.map((c) => c.state),
+        ["created", "created"],
+      );
+      assert.equal(g.hook.state, "installed");
+      assert.equal(spawnGit(r, "config", "--get", "docket.gateLauncher"), "");
+      assert.equal(fs.existsSync(hook), false);
+
+      const dryInstall = runCli(["gate", "install", "--dry-run", "--repo", r.root], { env });
+      assert.match(dryInstall.stdout, /dry run, nothing written/);
+      assert.match(dryInstall.stdout, /git config docket\.gateLauncher: created/);
+      assert.match(dryInstall.stdout, /hook .*: would be created/);
+      assert.equal(fs.existsSync(hook), false);
+
+      const real = runCli(["gate", "install", "--repo", r.root], { env });
+      assert.match(real.stdout, /git config docket\.gateNode: created/);
+      assert.match(real.stdout, /hook .*: created/);
+      const next = runCli(["gate", "install", "--repo", r.root], { env });
+      assert.match(next.stdout, /git config docket\.gateLauncher: unchanged/);
+      assert.match(next.stdout, /hook .*: unchanged/);
+      fs.appendFileSync(hook, "# managed hook: structure-gate: managed hook\n");
+      const dryUpdate = runCli(["gate", "install", "--dry-run", "--repo", r.root], { env });
+      assert.match(dryUpdate.stdout, /hook .*: would be updated/);
+      assert.match(fs.readFileSync(hook, "utf8"), /managed hook\n$/);
+    },
+  );
+});
+
+function spawnGit(r, ...args) {
+  try {
+    return git(r.root, ...args).trim();
+  } catch {
+    return "";
+  }
+}

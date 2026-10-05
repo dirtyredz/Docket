@@ -46,6 +46,13 @@ export function listItems(records, filters = {}) {
   };
 }
 
+/** Counts of summaries per value of `field` (status, type or priority): every enum value, zeros included. */
+export function countBy(items, field) {
+  const counts = Object.fromEntries(ENUMS[field].map((v) => [v, 0]));
+  for (const item of items) counts[item[field]] += 1;
+  return counts;
+}
+
 export function summarize(record, statusOf) {
   const { fields } = record;
   return { ...fields, title: record.title, blocked: isBlocked(fields, statusOf) };

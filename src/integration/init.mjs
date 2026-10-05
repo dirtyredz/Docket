@@ -1,6 +1,6 @@
 // `docket init`: make the current repo a Docket repo. Idempotent: every step is skipped when already
 // done, and a run that changes nothing reports `initialised: false`. The gate is opt-in (`gate: true`)
-// and reuses the existing install logic.
+// and reuses the existing install logic. With `dryRun` nothing is written; the report is the same.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,63 +16,82 @@ const AGENT_FILES = ["CLAUDE.md", "AGENTS.md"];
 
 const read = (file) => (fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null);
 
-function ensureItemsDir(ctx) {
-  if (fs.existsSync(ctx.itemsDir)) return false;
-  fs.mkdirSync(ctx.itemsDir, { recursive: true });
-  return true;
+/** Each step returns "created" | "updated" | "unchanged" and writes only when `write` is true. */
+function ensureItemsDir(ctx, write) {
+  if (fs.existsSync(ctx.itemsDir)) return "unchanged";
+  if (write) fs.mkdirSync(ctx.itemsDir, { recursive: true });
+  return "created";
 }
 
-function ensureConfig(ctx) {
-  if (fs.existsSync(ctx.configPath)) return false;
-  writeConfig(ctx, DEFAULT_CONFIG);
-  return true;
+function ensureConfig(ctx, write) {
+  if (fs.existsSync(ctx.configPath)) return "unchanged";
+  if (write) writeConfig(ctx, DEFAULT_CONFIG);
+  return "created";
 }
 
-function ensureIgnore(ctx) {
+function ensureIgnore(ctx, write) {
   const file = path.join(ctx.root, ".gitignore");
-  const text = read(file) ?? "";
-  if (text.split(/\r?\n/).some((l) => /^\/?\.docket\/?$/.test(l.trim()))) return false;
-  const eol = text.includes("\r\n") ? "\r\n" : "\n";
-  const sep = text === "" || text.endsWith("\n") ? "" : eol;
-  atomicWrite(file, `${text}${sep}.docket/${eol}`);
-  return true;
+  const text = read(file);
+  if ((text ?? "").split(/\r?\n/).some((l) => /^\/?\.docket\/?$/.test(l.trim())))
+    return "unchanged";
+  if (write) {
+    const base = text ?? "";
+    const eol = base.includes("\r\n") ? "\r\n" : "\n";
+    const sep = base === "" || base.endsWith("\n") ? "" : eol;
+    atomicWrite(file, `${base}${sep}.docket/${eol}`);
+  }
+  return text === null ? "created" : "updated";
 }
 
 /** Append the snippet (in the file's own line endings) to each agent file; create CLAUDE.md if none. */
-function ensureAgentSnippet(ctx) {
+function ensureAgentSnippet(ctx, write) {
   const snippet = fs.readFileSync(SNIPPET_FILE, "utf8").replace(/\r\n/g, "\n");
   const present = AGENT_FILES.filter((n) => fs.existsSync(path.join(ctx.root, n)));
-  const touched = [];
   if (!present.length) {
-    const title = path.basename(ctx.root);
-    atomicWrite(path.join(ctx.root, "CLAUDE.md"), `# ${title}\n\n${snippet}`);
-    return ["CLAUDE.md"];
+    if (write) {
+      const title = path.basename(ctx.root);
+      atomicWrite(path.join(ctx.root, "CLAUDE.md"), `# ${title}\n\n${snippet}`);
+    }
+    return [{ path: "CLAUDE.md", state: "created" }];
   }
-  for (const name of present) {
+  return present.map((name) => {
     const file = path.join(ctx.root, name);
     const text = read(file);
-    if (text.includes(SNIPPET_MARKER)) continue;
-    const eol = text.includes("\r\n") ? "\r\n" : "\n";
-    const lf = text.replace(/\r\n/g, "\n");
-    const joined = lf === "" ? snippet : `${lf.replace(/\n+$/, "")}\n\n${snippet}`;
-    atomicWrite(file, joined.replace(/\n/g, eol));
-    touched.push(name);
-  }
-  return touched;
+    if (text.includes(SNIPPET_MARKER)) return { path: name, state: "unchanged" };
+    if (write) {
+      const eol = text.includes("\r\n") ? "\r\n" : "\n";
+      const lf = text.replace(/\r\n/g, "\n");
+      const joined = lf === "" ? snippet : `${lf.replace(/\n+$/, "")}\n\n${snippet}`;
+      atomicWrite(file, joined.replace(/\n/g, eol));
+    }
+    return { path: name, state: "updated" };
+  });
 }
 
 /**
- * Initialise the repo containing `start`. Returns {root, initialised, created: string[], agentFiles,
- * gate}. Throws DOCKET_NOT_A_REPO outside a git worktree (resolveRepo).
+ * Initialise the repo containing `start`. Returns {root, dryRun, initialised, created: string[] (paths
+ * that are new or changed), files: [{path, state}], agentFiles, gate}. Throws DOCKET_NOT_A_REPO outside
+ * a git worktree (resolveRepo).
  */
-export function initRepo(start, { gate = false, gateOptions = {} } = {}) {
+export function initRepo(start, { gate = false, dryRun = false, gateOptions = {} } = {}) {
   const ctx = resolveRepo(start);
-  const created = [];
-  if (ensureItemsDir(ctx)) created.push("docs/items/");
-  if (ensureConfig(ctx)) created.push("docket.json");
-  if (ensureIgnore(ctx)) created.push(".gitignore");
-  const agentFiles = ensureAgentSnippet(ctx);
-  created.push(...agentFiles);
-  const gateResult = gate ? installRepo(ctx.root, gateOptions) : null;
-  return { root: ctx.root, initialised: created.length > 0, created, agentFiles, gate: gateResult };
+  const write = !dryRun;
+  const files = [
+    { path: "docs/items/", state: ensureItemsDir(ctx, write) },
+    { path: "docket.json", state: ensureConfig(ctx, write) },
+    { path: ".gitignore", state: ensureIgnore(ctx, write) },
+    ...ensureAgentSnippet(ctx, write),
+  ];
+  const changed = files.filter((f) => f.state !== "unchanged");
+  const agentFiles = changed.map((f) => f.path).filter((n) => AGENT_FILES.includes(n));
+  const gateResult = gate ? installRepo(ctx.root, { ...gateOptions, dryRun }) : null;
+  return {
+    root: ctx.root,
+    dryRun,
+    initialised: changed.length > 0,
+    created: changed.map((f) => f.path),
+    files,
+    agentFiles,
+    gate: gateResult,
+  };
 }

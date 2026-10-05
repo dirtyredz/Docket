@@ -59,3 +59,9 @@ Non-obvious traps, from `PLAN.md` sections 6 and 7, the merge test, and building
   rename `## Work items (Docket)` in an agent file or it is appended again.
 - **Legacy `bl-` IDs are valid, not special.** A repo moved in from an older backlog may keep `bl-<8hex>` IDs
   verbatim, but the move-in playbook mints fresh `dk-` IDs with `dk add`.
+- **Batch add is validate-all, then write-each.** `add --batch` plans every entry before writing, so bad input
+  writes nothing; the files themselves are still separate atomic writes (a crash mid-write could leave some).
+  `--body-file -` and `--batch -` read stdin: do not use both in one call.
+- **`list --count-by` counts the filtered view** (open only unless `--all` or `--status`); `--limit` does not apply.
+- **`--dry-run` still reads the gate.** `init --gate --dry-run` and `gate install --dry-run` fail if no gate is
+  promoted or the hook template is missing, exactly as the real run would.

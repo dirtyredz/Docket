@@ -24,6 +24,9 @@ export function planAdd({ records }, input, { today, random }) {
   if (!ENUMS.priority.includes(input.priority)) {
     throw invalid(`--priority must be one of ${ENUMS.priority.join(", ")}`);
   }
+  if (input.status !== undefined && !ENUMS.status.includes(input.status)) {
+    throw invalid(`--status must be one of ${ENUMS.status.join(", ")}`);
+  }
   const title = (input.title ?? "").trim();
   if (!title || /[\r\n]/.test(title)) throw invalid("--title must be one non-empty line");
   const taken = new Set(records.map((r) => r.id));
