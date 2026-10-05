@@ -135,6 +135,7 @@ export async function set(argv, io) {
       priority: str,
       type: str,
       area: str,
+      title: str,
       before: str,
       after: str,
       top: bool,
@@ -153,6 +154,7 @@ export async function set(argv, io) {
     priority: args.priority,
     type: args.type,
     area: args.area,
+    title: args.title,
     placement: placements.length ? { [placements[0]]: args[placements[0]] } : undefined,
   };
   const { data, warnings } = setItem(repoOf(args, io), id, changes, {

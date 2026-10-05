@@ -31,9 +31,10 @@ Create an item; the ID and rank are assigned. Prints "<id>  <title>" (--json: th
               "<id>  <title>" lines (--json: {count, items}, the full created items). Not combinable with the single-item options.
 ${VALUES}`,
   set: `Usage: docket set <id> [--status S] [--priority P] [--type T] [--area A]
-                   [--before ID | --after ID | --top | --bottom] [--expect REV]
+                   [--title T] [--before ID | --after ID | --top | --bottom] [--expect REV]
 
 Change fields or reorder. A real status change resets since to today.
+--title rewrites only the H1 (one non-empty line); body and frontmatter are untouched.
 ${VALUES}`,
   link: `Usage: docket link <id> [--parent ID | --clear-parent] [--fixes ID]... [--blocked-by ID]...
                     [--relates ID]... [--remove] [--expect REV]

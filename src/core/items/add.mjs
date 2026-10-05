@@ -8,6 +8,13 @@ import { rankAtEnd } from "../identity/rank.mjs";
 const invalid = (message) => docketError(CODES.INVALID, message);
 const unique = (list = []) => [...new Set(list)];
 
+/** Trim and validate a title: one non-empty line. Shared by add and set --title. Throws DOCKET_INVALID. */
+export function cleanTitle(raw) {
+  const title = (raw ?? "").trim();
+  if (!title || /[\r\n]/.test(title)) throw invalid("title must be one non-empty line");
+  return title;
+}
+
 export function bandRanks(records, priority, exceptId = null) {
   return records
     .filter((r) => r.fields?.priority === priority && r.id !== exceptId && r.fields.rank)
@@ -37,8 +44,7 @@ export function planAddOne({ records }, input, { random }, dates) {
   if (input.status !== undefined && !ENUMS.status.includes(input.status)) {
     throw invalid(`status must be one of ${ENUMS.status.join(", ")}`);
   }
-  const title = (input.title ?? "").trim();
-  if (!title || /[\r\n]/.test(title)) throw invalid("title must be one non-empty line");
+  const title = cleanTitle(input.title);
   const taken = new Set(records.map((r) => r.id));
   const id = allocateId({ taken: (x) => taken.has(x), random });
   const fields = {

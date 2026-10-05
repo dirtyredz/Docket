@@ -2,7 +2,7 @@
 
 Capability inventory. Status vocabulary: planned, in progress, built (in the checkout, not yet in an installed tarball),
 shipped. Shipped in 0.1.0 (2026-10-04): M0 to M1c. 0.2.0 (2026-10-05): the one-off legacy import and cutover for
-the first adopter. 0.3.0 (2026-10-05): importers removed, `docket init` and the move-in playbook added. 0.4.0 (2026-10-05): move-in ergonomics. 0.4.1 (2026-10-05): move-in fixes from the first real batch. 0.4.2 (2026-10-05): batch dates and playbook gaps. Items and their statuses live
+the first adopter. 0.3.0 (2026-10-05): importers removed, `docket init` and the move-in playbook added. 0.4.0 (2026-10-05): move-in ergonomics. 0.4.1 (2026-10-05): move-in fixes from the first real batch. 0.4.2 (2026-10-05): batch dates and playbook gaps. 0.4.3 (2026-10-05): `set --title`. Items and their statuses live
 in `docs/items/`; this page does not duplicate them. Milestones are in `ROADMAP.md`.
 
 | Capability                                                                    | Milestone | Status  |
@@ -10,6 +10,7 @@ in `docs/items/`; this page does not duplicate them. Milestones are in `ROADMAP.
 | Strict item parser and canonical serializer (unchanged body bytes)            | M1a       | shipped |
 | `docket check`: all nine ITEM-SPEC check groups, `--ref` for Git trees        | M1a       | shipped |
 | `add` (assigns `dk-` ID and rank), `set`, `link`, `list`, `show`              | M1b       | shipped |
+| `set --title`: rewrites the H1 only (body and frontmatter bytes kept)         | M1b       | shipped |
 | Per-worktree JSON index, rebuilt from hashes                                  | M1b       | shipped |
 | Advisory claims across linked worktrees (`claim`, `release`)                  | M1b       | shipped |
 | Safe writes: lock, revision check, atomic rename                              | M1b       | shipped |

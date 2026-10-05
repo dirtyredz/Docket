@@ -4,7 +4,8 @@ import { CODES, docketError, notFound } from "../errors.mjs";
 import { CLOSED_STATUSES } from "../format/schema.mjs";
 import { rankAtEnd, rankAtStart, rankBetween } from "../identity/rank.mjs";
 import { editableRecord } from "./transaction.mjs";
-import { bandRanks } from "./add.mjs";
+import { withTitle } from "../format/serialize.mjs";
+import { bandRanks, cleanTitle } from "./add.mjs";
 
 const usage = (message) => docketError(CODES.USAGE, message);
 
@@ -33,7 +34,7 @@ export function placeRank(records, id, priority, placement) {
 }
 
 /**
- * Plan a set. changes: {status?, priority?, type?, area?, placement?}. A placement relative to another
+ * Plan a set. changes: {status?, priority?, type?, area?, title?, placement?}. title rewrites only the H1. A placement relative to another
  * item adopts that item's priority when --priority is not given.
  */
 export function planSet({ records, byId }, id, changes, { today, expect }) {
@@ -55,6 +56,14 @@ export function planSet({ records, byId }, id, changes, { today, expect }) {
   else if (f.priority !== before.priority) f.rank = rankAtEnd(bandRanks(records, f.priority, id));
 
   const changed = Object.keys(f).filter((k) => f[k] !== before[k]);
+  let rest = rec.rest;
+  if (changes.title !== undefined) {
+    const title = cleanTitle(changes.title);
+    if (title !== rec.title) {
+      rest = withTitle(rest, title);
+      changed.push("title");
+    }
+  }
   const value = {
     id,
     changed,
@@ -63,7 +72,7 @@ export function planSet({ records, byId }, id, changes, { today, expect }) {
   };
   if (!changed.length) return { writes: [], value };
   return {
-    writes: [{ id, fields: f, rest: rec.rest, expectedRevision: expect ?? rec.revision }],
+    writes: [{ id, fields: f, rest, expectedRevision: expect ?? rec.revision }],
     value,
   };
 }

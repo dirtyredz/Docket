@@ -38,6 +38,11 @@ export function newItemRest(title, body = "") {
   return `# ${title}\n${trimmed ? `\n${trimmed}\n` : ""}`;
 }
 
+/** rest with its H1 title line replaced; every other byte (body, blank lines, line endings) is kept. */
+export function withTitle(rest, title) {
+  return rest.replace(/^(\s*)# .*/, (_, lead) => lead + "# " + title);
+}
+
 /** The body of an item: \`rest\` without its H1 title line and the blank lines after it (inverse of newItemRest). */
 export function bodyOf(rest) {
   return rest.replace(/^\s*# .*\n?/, "").replace(/^\n+/, "");
