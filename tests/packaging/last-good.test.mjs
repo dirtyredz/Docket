@@ -5,7 +5,9 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { after, before, describe, test } from "node:test";
-import { installRepo, promoteTarball, readActive } from "../../src/integration/gate/install.mjs";
+import { installRepo } from "../../src/integration/gate/install.mjs";
+import { readActive } from "../../src/integration/gate/paths.mjs";
+import { promoteTarball } from "../../src/integration/gate/promote.mjs";
 import { TEMPLATE, addRemote, push, templateAvailable } from "../helpers/gate.mjs";
 import { ROOT, itemText, makeRepo, tempDir } from "../helpers/repository.mjs";
 

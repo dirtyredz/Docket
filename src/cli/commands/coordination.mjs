@@ -1,13 +1,12 @@
 // `claim` and `release`: advisory work claims for the current worktree (shared by linked worktrees).
-import { claimItem, releaseItem } from "../../claims/store.mjs";
+import { notFound } from "../../core/errors.mjs";
+import { claimItem, releaseItem } from "../../state/claims/store.mjs";
 import { currentBranch, resolveRepo } from "../../repository/context.mjs";
 import { readItemFile } from "../../storage/item-store.mjs";
 import { parseCommand, requirePositional } from "../args.mjs";
 
 function requireItem(ctx, id) {
-  if (!readItemFile(ctx, id)) {
-    throw Object.assign(new Error(`no item ${id}`), { code: "DOCKET_NOT_FOUND", details: { id } });
-  }
+  if (!readItemFile(ctx, id)) throw notFound(id);
 }
 
 export async function claim(argv, io) {

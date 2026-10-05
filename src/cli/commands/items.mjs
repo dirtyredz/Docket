@@ -1,17 +1,16 @@
 // Item commands: add, set, link, list, show, index. Thin adapters over core/items and the index.
 import fs from "node:fs";
-import { readClaims, releaseItem } from "../../claims/store.mjs";
 import { ENUMS } from "../../core/format/schema.mjs";
 import { localDate } from "../../core/identity/date.mjs";
 import { planAdd } from "../../core/items/add.mjs";
+import { setItem } from "../../core/items/complete.mjs";
+import { readItem } from "../../core/items/detail.mjs";
 import { planLink } from "../../core/items/link.mjs";
-import { isBlocked, listItems } from "../../core/items/query.mjs";
-import { planSet } from "../../core/items/set.mjs";
+import { listItems } from "../../core/items/query.mjs";
 import { mutateStore } from "../../core/items/transaction.mjs";
-import { loadIndex } from "../../index/build.mjs";
-import { reverseRelations } from "../../index/query.mjs";
 import { resolveRepo } from "../../repository/context.mjs";
-import { readItemFile } from "../../storage/item-store.mjs";
+import * as claims from "../../state/claims/store.mjs";
+import { loadIndex } from "../../state/index/build.mjs";
 import { many, parseCommand, requirePositional, usageError } from "../args.mjs";
 
 const str = { type: "string" };
@@ -84,21 +83,6 @@ export async function add(argv, io) {
   };
 }
 
-/** Remove the claim on a completed item. Cleanup failure is reported, never turned into a failed write. */
-function cleanupClaim(ctx, id) {
-  try {
-    const { released } = releaseItem(ctx.commonDir, id, { worktree: ctx.root, force: true });
-    return { claimReleased: released, warnings: [] };
-  } catch (err) {
-    return {
-      claimReleased: false,
-      warnings: [
-        { file: `${id}.md`, message: `item saved, but its claim was not removed: ${err.message}` },
-      ],
-    };
-  }
-}
-
 export async function set(argv, io) {
   const args = parseCommand(argv, {
     positionals: 1,
@@ -127,15 +111,13 @@ export async function set(argv, io) {
     area: args.area,
     placement: placements.length ? { [placements[0]]: args[placements[0]] } : undefined,
   };
-  const ctx = repoOf(args, io);
-  const { value, written } = mutateStore(ctx, (s) =>
-    planSet(s, id, changes, { today: localDate(), expect: args.expect }),
-  );
-  const cleanup = value.completed ? cleanupClaim(ctx, id) : { warnings: [] };
-  const data = { ...value, revision: written[0]?.revision ?? null, noop: written.length === 0 };
-  if (value.completed) data.claimReleased = cleanup.claimReleased;
-  const text = data.noop ? `${id}: no change` : `${id}: ${value.changed.join(", ")}`;
-  return { data, text, warnings: cleanup.warnings };
+  const { data, warnings } = setItem(repoOf(args, io), id, changes, {
+    today: localDate(),
+    expect: args.expect,
+    claims,
+  });
+  const text = data.noop ? `${id}: no change` : `${id}: ${data.changed.join(", ")}`;
+  return { data, text, warnings };
 }
 
 export async function link(argv, io) {
@@ -237,30 +219,13 @@ export async function show(argv, io) {
   const args = parseCommand(argv, { positionals: 1 });
   const id = requirePositional(args, "id");
   const ctx = repoOf(args, io);
-  const { records } = loadIndex(ctx);
-  const record = records.find((r) => r.id === id);
-  const file = readItemFile(ctx, id);
-  if (!record || !file)
-    throw Object.assign(new Error(`no item ${id}`), { code: "DOCKET_NOT_FOUND", details: { id } });
-  const content = file.bytes.toString("utf8");
-  const body = content
-    .replace(/^---\n[\s\S]*?\n---\n/, "")
-    .replace(/^\s*# .*\n?/, "")
-    .replace(/^\n+/, "");
-  const statusOf = (x) => records.find((r) => r.id === x)?.fields?.status;
-  const claim = readClaims(ctx.commonDir).claims[id] ?? null;
-  const data = {
-    ...(record.fields ?? {}),
-    id,
-    title: record.title,
-    revision: file.revision,
-    blocked: record.fields ? isBlocked(record.fields, statusOf) : false,
-    reverse: reverseRelations(records, id),
-    claim,
-    errors: record.errors,
-    body,
-  };
-  return { data, text: content.trimEnd() + (claim ? `\n\n(claimed by ${claim.worktree})` : "") };
+  const { data, content } = readItem(ctx, id, { records: loadIndex(ctx).records, claims });
+  const claimNote = data.claim
+    ? `
+
+(claimed by ${data.claim.worktree})`
+    : "";
+  return { data, text: content.trimEnd() + claimNote };
 }
 
 export async function index(argv, io) {

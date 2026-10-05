@@ -1,7 +1,9 @@
 // `docket.json`: committed store version and explicit migration state. No configurable vocabulary.
 import fs from "node:fs";
-import { STORE_VERSION } from "../core/format/schema.mjs";
 import { atomicWrite } from "../storage/atomic-write.mjs";
+
+/** Highest docket.json store version this build reads. */
+export const STORE_VERSION = 1;
 
 export const DEFAULT_CONFIG = Object.freeze({ version: STORE_VERSION });
 

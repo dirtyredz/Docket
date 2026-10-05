@@ -2,15 +2,16 @@
 // 'z' digit 25. Generated keys never end in 'a', which keeps a gap available below every generated key.
 // A legal hand-written key can still leave no representable gap (nothing sorts between "b" and "ba",
 // or below "a"): that raises DOCKET_RANK_GAP instead of silently rewriting the whole band.
+import { CODES, docketError } from "../errors.mjs";
 
 const A = 97;
 const digit = (ch) => ch.charCodeAt(0) - A;
 const char = (d) => String.fromCharCode(A + d);
 
 const gapError = (lo, hi) =>
-  Object.assign(new Error(`no rank fits between "${lo || "(start)"}" and "${hi ?? "(end)"}"`), {
-    code: "DOCKET_RANK_GAP",
-    details: { lo, hi },
+  docketError(CODES.RANK_GAP, `no rank fits between "${lo || "(start)"}" and "${hi ?? "(end)"}"`, {
+    lo,
+    hi,
   });
 
 function mid(lo, hi) {

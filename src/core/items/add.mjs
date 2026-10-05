@@ -1,10 +1,11 @@
 // `add`: mint a `dk-` ID, put the item at the end of its priority band, never overwrite a file.
+import { CODES, docketError } from "../errors.mjs";
 import { ENUMS } from "../format/schema.mjs";
 import { newItemRest } from "../format/serialize.mjs";
 import { allocateId } from "../identity/id.mjs";
 import { rankAtEnd } from "../identity/rank.mjs";
 
-const invalid = (message) => Object.assign(new Error(message), { code: "DOCKET_INVALID" });
+const invalid = (message) => docketError(CODES.INVALID, message);
 const unique = (list = []) => [...new Set(list)];
 
 export function bandRanks(records, priority, exceptId = null) {

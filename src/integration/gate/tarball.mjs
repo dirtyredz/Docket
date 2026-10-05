@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
+import { CODES, docketError } from "../../core/errors.mjs";
 
 const field = (buf, start, len) => {
   const raw = buf.subarray(start, start + len);
@@ -53,9 +54,7 @@ export function extractTarball(gzBytes, destDir, { strip = "" } = {}) {
     if (!name.startsWith(strip)) continue;
     const target = path.resolve(root, name.slice(strip.length));
     if (!target.startsWith(root + path.sep)) {
-      throw Object.assign(new Error(`tarball entry escapes destination: ${name}`), {
-        code: "DOCKET_BAD_TARBALL",
-      });
+      throw docketError(CODES.BAD_TARBALL, `tarball entry escapes destination: ${name}`);
     }
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.writeFileSync(target, data);

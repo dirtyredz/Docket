@@ -1,10 +1,11 @@
 // Snapshots of a store: the working tree's `docs/items/`, or the same directory as committed at a Git
 // ref. A snapshot is {source, entries: [{name, isFile, bytes, revision}], configError}.
-import { ITEMS_DIR } from "../core/format/schema.mjs";
+import { CODES, docketError } from "../core/errors.mjs";
 import { revisionOf } from "../storage/revision.mjs";
 import { listItemEntries } from "../storage/item-store.mjs";
 import { parseConfig, readConfigBytes } from "./config.mjs";
 import { git } from "./context.mjs";
+import { ITEMS_DIR } from "./paths.mjs";
 
 export function workingSnapshot(ctx) {
   const entries = listItemEntries(ctx).map(({ name, isFile, bytes, revision }) => ({
@@ -41,7 +42,7 @@ export function refSnapshot(ctx, ref) {
   try {
     commit = git(ctx.root, ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`]).trim();
   } catch {
-    throw Object.assign(new Error(`not a commit: ${ref}`), { code: "DOCKET_BAD_REF" });
+    throw docketError(CODES.BAD_REF, `not a commit: ${ref}`);
   }
   const listing = git(ctx.root, ["ls-tree", "-z", commit, "--", `${ITEMS_DIR}/`]);
   const rows = listing

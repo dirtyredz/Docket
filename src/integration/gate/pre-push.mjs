@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 // Pushed-ref validation, run by the launcher from a promoted (last-good) version:
 //   node pre-push.mjs --repo <root> --pre-push     stdin: "<local ref> <local sha> <remote ref> <remote sha>"
-// Every pushed local tip is validated through `docket check --ref`, so a clean working tree cannot hide
-// invalid committed items. Deleted refs (all-zero local sha) are skipped. Exit 1 if any tip fails.
+// Every pushed local tip is validated as `docket check --ref` would (core checkStore), so a clean working
+// tree cannot hide invalid committed items. Deleted refs (all-zero local sha) are skipped. Exit 1 if any tip fails.
 import fs from "node:fs";
-import { runCli } from "../../cli/main.mjs";
+import { formatCheck, formatWarning } from "../../core/validation/report.mjs";
+import { checkStore } from "../../core/validation/store.mjs";
+import { resolveRepo } from "../../repository/context.mjs";
+import * as claims from "../../state/claims/store.mjs";
 
 const ZERO = /^0+$/;
 
@@ -25,11 +28,16 @@ export async function runPrePush(argv, io, input) {
   let failed = false;
   for (const tip of pushedTips(input)) {
     io.stderr.write(`docket gate: ${tip.ref}\n`);
-    const code = await runCli(["check", "--repo", repo, "--ref", tip.sha], {
-      ...io,
-      stdout: io.stderr, // git shows hook stderr; keep stdout quiet
-    });
-    failed ||= code !== 0;
+    try {
+      const result = checkStore(resolveRepo(repo), { ref: tip.sha, claims });
+      // git shows hook stderr, so everything goes there
+      io.stderr.write(`${formatCheck(result)}\n`);
+      for (const w of result.warnings) io.stderr.write(`${formatWarning(w)}\n`);
+      failed ||= !result.ok;
+    } catch (err) {
+      io.stderr.write(`docket check: ${err.message}\n`);
+      failed = true;
+    }
   }
   return failed ? 1 : 0;
 }

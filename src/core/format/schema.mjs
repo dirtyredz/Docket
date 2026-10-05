@@ -46,6 +46,3 @@ export const FILE_RE = /^(dk|bl)-[0-9a-f]{8}\.md$/;
 export const TOKEN_RE = /^[A-Za-z0-9._-]+$/;
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export const RANK_RE = /^[a-z]+$/;
-
-export const ITEMS_DIR = "docs/items";
-export const STORE_VERSION = 1;

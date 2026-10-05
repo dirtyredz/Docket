@@ -1,6 +1,7 @@
 // `docket gate promote <tarball> | install | status`: the last-good pre-push gate.
 import path from "node:path";
-import { gateStatus, installRepo, promoteTarball } from "../../integration/gate/install.mjs";
+import { gateStatus, installRepo } from "../../integration/gate/install.mjs";
+import { promoteTarball } from "../../integration/gate/promote.mjs";
 import { parseCommand, usageError } from "../args.mjs";
 
 export async function gate(argv, io) {

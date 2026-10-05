@@ -8,6 +8,7 @@
 //   rebase   rewrite relative Markdown link targets for the new location
 //   append   add a recorded note at the end (legacy fields that have no schema home)
 import path from "node:path";
+import { CODES, docketError } from "../../core/errors.mjs";
 
 function eolForward(text) {
   if (!text.includes("\r")) return null;
@@ -18,9 +19,7 @@ function eolForward(text) {
   });
   const stripped = lines.map((l, i) => (crlf.includes(i) ? l.slice(0, -1) : l));
   if (stripped.some((l) => l.includes("\r"))) {
-    throw Object.assign(new Error("lone carriage return in an entry"), {
-      code: "DOCKET_IMPORT_SOURCE",
-    });
+    throw docketError(CODES.IMPORT_SOURCE, "lone carriage return in an entry");
   }
   return { text: stripped.join("\n"), step: { op: "eol", crlf } };
 }

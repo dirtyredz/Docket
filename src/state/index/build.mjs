@@ -4,10 +4,10 @@
 // racy-git rule); otherwise it is re-hashed, so a same-size rewrite inside one clock tick is caught.
 import fs from "node:fs";
 import path from "node:path";
-import { parseEntries } from "../core/validation/check.mjs";
-import { atomicWrite } from "../storage/atomic-write.mjs";
-import { listItemEntries } from "../storage/item-store.mjs";
-import { revisionOf } from "../storage/revision.mjs";
+import { parseEntries } from "../../core/validation/check.mjs";
+import { atomicWrite } from "../../storage/atomic-write.mjs";
+import { listItemEntries } from "../../storage/item-store.mjs";
+import { revisionOf } from "../../storage/revision.mjs";
 
 export const INDEX_VERSION = 1;
 const RACY_MS = 2000;

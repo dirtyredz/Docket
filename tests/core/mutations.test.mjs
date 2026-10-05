@@ -3,11 +3,15 @@ import { after, describe, test } from "node:test";
 import { localDate } from "../../src/core/identity/date.mjs";
 import { planAdd } from "../../src/core/items/add.mjs";
 import { planLink } from "../../src/core/items/link.mjs";
-import { compareItems, isBlocked, listItems } from "../../src/core/items/query.mjs";
+import {
+  compareItems,
+  isBlocked,
+  listItems,
+  reverseRelations,
+} from "../../src/core/items/query.mjs";
 import { planSet } from "../../src/core/items/set.mjs";
 import { mutateStore } from "../../src/core/items/transaction.mjs";
 import { parseEntries } from "../../src/core/validation/check.mjs";
-import { reverseRelations } from "../../src/index/query.mjs";
 import { resolveRepo } from "../../src/repository/context.mjs";
 import { workingSnapshot } from "../../src/repository/snapshot.mjs";
 import { localTime, scriptedRandom } from "../helpers/clock.mjs";

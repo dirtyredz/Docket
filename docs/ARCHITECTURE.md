@@ -42,6 +42,10 @@ store's errors before and after the change: only errors the change introduces re
 unrelated broken file never blocks an edit. Create-only writes hard-link the temp file (atomic
 no-overwrite); replacements rename it. Both retry transient Windows `EPERM`/`EBUSY`/`EACCES`.
 
+Failures are `docketError(code, message, details)` from `core/errors.mjs`; its table maps every code
+to a CLI exit kind (usage 2, conflict 3, not found 4, otherwise 1), and the CLI output layer keys off it.
+Claims and the index live under `src/state/` and are passed into core operations as dependencies.
+
 ## Claims
 
 Advisory, per clone: `docket-claims.json` in the git common dir, guarded by its own lock, atomic
@@ -60,9 +64,10 @@ transiently while persisted indexes stay per checkout.
 Pre-push must not depend on the working tree being healthy. A tested tarball is promoted into
 `%LOCALAPPDATA%/Docket/gate/versions/<v>/` only after smoke tests pass; the previous version is kept.
 `active.json` names the selected one. A stable launcher runs that install, never a build or
-working-tree import. Pushed local tips are validated with `check --ref`, so a clean working tree cannot
-hide invalid committed items; deleted refs are skipped. Until the production checker passes its
-conformance suite, a quarantined copy of the merge-test prototype gates Docket itself (M0 to M1b).
+working-tree import. Pushed local tips are validated as `check --ref` does (core `checkStore`, not the CLI), so a clean
+working tree cannot hide invalid committed items; deleted refs are skipped. Until the production checker passes its
+conformance suite, a quarantined copy of the merge-test prototype gated Docket itself (M0 to M1b);
+its promotion path was removed as callerless.
 
 Wiring, per clone and opt-in: `docket gate install` sets `docket.gateLauncher` and `docket.gateNode`
 in the repo's local git config and refreshes the managed pre-push hook from the harness template
@@ -70,9 +75,9 @@ in the repo's local git config and refreshes the managed pre-push hook from the 
 set, buffers the ref list once, replays it to LFS then to `node <gate>/launcher.mjs <root>`, and runs
 both before the structure pause/opt-out exits. The launcher reads `active.json` and runs
 `<version>/<entry> --repo <root> --pre-push` with the refs on stdin; the bootstrap and production
-versions share that contract. A missing launcher fails closed. Version directories are
-`<package version>-<tarball sha256 prefix>` (bootstrap: `bootstrap-<hash>`), so a promotion never
-overwrites an installed version.
+versions shared that contract. A missing launcher fails closed. Version directories are
+`<package version>-<tarball sha256 prefix>` so a promotion never overwrites an installed version.
+Promotion, smoke test, and repo opt-in are separate modules under `integration/gate/`.
 
 ## Viewer checkout targeting
 

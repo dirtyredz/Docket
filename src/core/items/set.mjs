@@ -1,11 +1,12 @@
 // `set`: edit scalar fields. id and created never change. A real status change rewrites `since`; a
 // no-op status assignment does not. Reordering takes relative placement, never a caller-supplied rank.
+import { CODES, docketError, notFound } from "../errors.mjs";
 import { CLOSED_STATUSES } from "../format/schema.mjs";
 import { rankAtEnd, rankAtStart, rankBetween } from "../identity/rank.mjs";
 import { editableRecord } from "./transaction.mjs";
 import { bandRanks } from "./add.mjs";
 
-const usage = (message) => Object.assign(new Error(message), { code: "DOCKET_USAGE" });
+const usage = (message) => docketError(CODES.USAGE, message);
 
 /**
  * Rank for `id` in `priority` given placement {before|after: id} or {top|bottom: true}.
@@ -17,8 +18,7 @@ export function placeRank(records, id, priority, placement) {
   if (placement.bottom) return rankAtEnd(band);
   const anchorId = placement.before ?? placement.after;
   const anchor = records.find((r) => r.id === anchorId);
-  if (!anchor?.fields)
-    throw Object.assign(new Error(`no item ${anchorId}`), { code: "DOCKET_NOT_FOUND" });
+  if (!anchor?.fields) throw notFound(anchorId);
   if (anchorId === id) throw usage("cannot place an item relative to itself");
   if (anchor.fields.priority !== priority) {
     throw usage(`${anchorId} is in ${anchor.fields.priority}, not ${priority}`);

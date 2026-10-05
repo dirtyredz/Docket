@@ -7,6 +7,7 @@
 import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { CODES, docketError } from "../core/errors.mjs";
 import { sleepSync } from "./atomic-write.mjs";
 
 const DEAD_OWNER_GRACE_MS = 1000;
@@ -92,9 +93,7 @@ export function acquireLock(lockPath, { timeoutMs = 10000, staleMs = 60000 } = {
       continue;
     }
     if (Date.now() > deadline) {
-      throw Object.assign(new Error(`timed out waiting for lock ${lockPath}`), {
-        code: "DOCKET_LOCKED",
-      });
+      throw docketError(CODES.LOCKED, `timed out waiting for lock ${lockPath}`);
     }
     sleepSync(5 + Math.floor(Math.random() * Math.min(50, 5 * (attempt + 1))));
   }

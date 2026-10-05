@@ -1,5 +1,6 @@
 // Argument handling. Every command accepts --repo and --json; each declares its own extra options.
 import { parseArgs } from "node:util";
+import { CODES, docketError } from "../core/errors.mjs";
 
 export const COMMON_OPTIONS = Object.freeze({
   repo: { type: "string" },
@@ -7,7 +8,7 @@ export const COMMON_OPTIONS = Object.freeze({
   help: { type: "boolean", short: "h" },
 });
 
-export const usageError = (message) => Object.assign(new Error(message), { code: "DOCKET_USAGE" });
+export const usageError = (message) => docketError(CODES.USAGE, message);
 
 /** Parse argv for one command. Unknown options and stray positionals raise DOCKET_USAGE. */
 export function parseCommand(argv, { options = {}, positionals = 0 } = {}) {

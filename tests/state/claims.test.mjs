@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { pathToFileURL } from "node:url";
-import { claimItem, claimsPath, readClaims, releaseItem } from "../../src/claims/store.mjs";
+import { claimItem, claimsPath, readClaims, releaseItem } from "../../src/state/claims/store.mjs";
 import { resolveRepo } from "../../src/repository/context.mjs";
 import { ROOT, git, itemText, makeRepo, runCli, tempDir } from "../helpers/repository.mjs";
 
@@ -116,7 +116,7 @@ test("a corrupt claims file is tolerated", (t) => {
 
 test("parallel processes claiming distinct ids lose no update", { timeout: 120000 }, async (t) => {
   const { commonDir, a } = setup(t);
-  const storeUrl = pathToFileURL(path.join(ROOT, "src", "claims", "store.mjs")).href;
+  const storeUrl = pathToFileURL(path.join(ROOT, "src", "state", "claims", "store.mjs")).href;
   const runChild = (n) =>
     new Promise((resolve, reject) => {
       const script = `

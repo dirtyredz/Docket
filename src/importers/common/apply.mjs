@@ -13,10 +13,11 @@
 // Sources are only read; a failure at any step leaves them intact and the cutover incomplete.
 import fs from "node:fs";
 import path from "node:path";
-import { checkSnapshot } from "../../core/validation/check.mjs";
+import { CODES, docketError } from "../../core/errors.mjs";
+import { checkStore } from "../../core/validation/store.mjs";
 import { parseConfig, readConfigBytes, writeConfig } from "../../repository/config.mjs";
 import { resolveRepo } from "../../repository/context.mjs";
-import { workingSnapshot } from "../../repository/snapshot.mjs";
+import { samePath } from "../../repository/paths.mjs";
 import { atomicWrite } from "../../storage/atomic-write.mjs";
 import { itemPath, listItemEntries, lockPathFor } from "../../storage/item-store.mjs";
 import { withLock } from "../../storage/lock.mjs";
@@ -25,16 +26,6 @@ import { readJson } from "./manifest.mjs";
 import { RECORD_PATH, buildRecord, migrationMarker, serializeRecord } from "./record.mjs";
 import { sha256 } from "./source-map.mjs";
 import { verifyRun } from "./verify.mjs";
-
-const fail = (code, message, details) =>
-  Object.assign(new Error(message), { code, ...(details ? { details } : {}) });
-
-const samePath = (a, b) => {
-  const norm = (p) => path.resolve(p).split(path.sep).join("/");
-  return process.platform === "win32"
-    ? norm(a).toLowerCase() === norm(b).toLowerCase()
-    : norm(a) === norm(b);
-};
 
 /** Classify each staged item against the target: missing, installed (same bytes) or conflicting. */
 function compareTarget(ctx, manifest, runDir) {
@@ -75,16 +66,16 @@ export function applyRun({ manifestPath, repo = null, now = () => new Date(), to
   const manifest = readJson(path.resolve(manifestPath));
   const ctx = resolveRepo(repo ?? manifest.repo.root);
   if (!samePath(ctx.root, manifest.repo.root)) {
-    throw fail(
-      "DOCKET_IMPORT_TARGET",
+    throw docketError(
+      CODES.IMPORT_TARGET,
       `manifest was staged for ${manifest.repo.root}, not ${ctx.root}`,
     );
   }
   const { events } = readJournal(runDir);
   const { config, marker } = markerOf(ctx);
   if (marker && marker.run !== manifest.run) {
-    throw fail(
-      "DOCKET_IMPORT_CONFLICT",
+    throw docketError(
+      CODES.IMPORT_CONFLICT,
       `docket.json already records migration run ${marker.run}; refusing to apply ${manifest.run}`,
       { marker },
     );
@@ -93,8 +84,8 @@ export function applyRun({ manifestPath, repo = null, now = () => new Date(), to
     return { state: "already-complete", run: manifest.run, installed: 0, resumed: 0, marker };
   }
   if (!manifest.ready) {
-    throw fail(
-      "DOCKET_IMPORT_NOT_READY",
+    throw docketError(
+      CODES.IMPORT_NOT_READY,
       `run ${manifest.run} is not ready (verification failed or overrides open); see docket import verify`,
     );
   }
@@ -110,15 +101,15 @@ export function applyRun({ manifestPath, repo = null, now = () => new Date(), to
     // 1. Preconditions, before anything is written.
     const cmp = compareTarget(ctx, manifest, runDir);
     if (cmp.tampered.length) {
-      throw fail(
-        "DOCKET_IMPORT_STAGING",
+      throw docketError(
+        CODES.IMPORT_STAGING,
         `staged files changed since the dry run: ${cmp.tampered.join(", ")}`,
         { tampered: cmp.tampered },
       );
     }
     if (cmp.conflicts.length) {
-      throw fail(
-        "DOCKET_IMPORT_CONFLICT",
+      throw docketError(
+        CODES.IMPORT_CONFLICT,
         `target already has different files: ${cmp.conflicts.join(", ")}`,
         { conflicts: cmp.conflicts },
       );
@@ -129,19 +120,23 @@ export function applyRun({ manifestPath, repo = null, now = () => new Date(), to
       today,
     });
     if (!v.drift.ok) {
-      throw fail(
-        "DOCKET_IMPORT_DRIFT",
+      throw docketError(
+        CODES.IMPORT_DRIFT,
         `sources changed since the dry run: ${v.drift.problems.join("; ")}`,
         { drift: v.drift.problems },
       );
     }
     if (!v.ok || v.unresolved) {
-      throw fail("DOCKET_IMPORT_NOT_READY", "run no longer verifies; see docket import verify", {
-        reconstruction: v.reconstruction.problems,
-        accounting: v.accounting.problems,
-        check: v.check.errors,
-        unresolved: v.unresolved,
-      });
+      throw docketError(
+        CODES.IMPORT_NOT_READY,
+        "run no longer verifies; see docket import verify",
+        {
+          reconstruction: v.reconstruction.problems,
+          accounting: v.accounting.problems,
+          check: v.check.errors,
+          unresolved: v.unresolved,
+        },
+      );
     }
     append({ op: "begin", at: now().toISOString(), attempt });
 
@@ -167,12 +162,12 @@ export function applyRun({ manifestPath, repo = null, now = () => new Date(), to
     }
 
     // 3. Validate the whole target store as it now stands.
-    const result = checkSnapshot(workingSnapshot(ctx), { today });
+    const result = checkStore(ctx, { today });
     if (!result.ok) {
       throw stop(
         "validate",
-        fail(
-          "DOCKET_IMPORT_INVALID",
+        docketError(
+          CODES.IMPORT_INVALID,
           `installed store fails check (${result.errors.length} error(s)); marker not published`,
           {
             errors: result.errors.slice(0, 50),

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
-import { INDEX_VERSION, indexPath, loadIndex } from "../../src/index/build.mjs";
+import { INDEX_VERSION, indexPath, loadIndex } from "../../src/state/index/build.mjs";
 import { resolveRepo } from "../../src/repository/context.mjs";
 import { git, itemText, makeRepo, runCli } from "../helpers/repository.mjs";
 

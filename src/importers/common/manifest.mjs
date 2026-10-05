@@ -8,7 +8,11 @@
 //   overrides.template.json   unresolved decisions, ready to fill in (only when there are any)
 import fs from "node:fs";
 import path from "node:path";
+import { CODES, docketError } from "../../core/errors.mjs";
+import { KEYS } from "../../core/format/schema.mjs";
+import { serializeChecked } from "../../core/format/serialize.mjs";
 import { tryGit } from "../../repository/context.mjs";
+import { toSlash } from "../../repository/paths.mjs";
 
 export const MANIFEST_VERSION = 1;
 const pad = (n) => String(n).padStart(2, "0");
@@ -20,18 +24,14 @@ export function runName(importer, now = new Date()) {
   return `${importer}-${d}-${t}`;
 }
 
-const importError = (message, details) =>
-  Object.assign(new Error(message), {
-    code: "DOCKET_IMPORT_STAGING",
-    ...(details ? { details } : {}),
-  });
+const importError = (message, details) => docketError(CODES.IMPORT_STAGING, message, details);
 
 /**
  * Directory that holds runs. Default `<root>/.docket/import`, which must be git-ignored so staging can
  * never be committed by accident (add `.docket/` to .git/info/exclude, or pass `out`).
  */
 export function importRoot(ctx, out = null) {
-  if (out) return path.resolve(out).split(path.sep).join("/");
+  if (out) return toSlash(path.resolve(out));
   const dir = `${ctx.docketDir}/import`;
   const probe = ".docket/import/probe/manifest.json";
   const ignored = tryGit(ctx.root, ["check-ignore", "--no-index", "-q", probe]) !== null;
@@ -89,4 +89,32 @@ export function readJson(file) {
   } catch (err) {
     throw importError(`cannot read ${file}: ${err.message}`);
   }
+}
+
+/** The staged bytes of an item draft `d` ({id, fields, rest}): no relations yet, round-trip checked. */
+export function buildItem(d) {
+  const fields = { id: d.id, ...d.fields, parent: "", fixes: [], blocked_by: [], relates: [] };
+  const ordered = Object.fromEntries(KEYS.map((k) => [k, fields[k]]));
+  return Buffer.from(serializeChecked({ fields: ordered, rest: d.rest }), "utf8");
+}
+
+/** Write overrides.template.json for the decisions that still block apply. Returns whether it wrote. */
+export function writeOverridesTemplate(runDir, decisions) {
+  const unresolved = decisions.filter((d) => d.severity === "override" && !d.resolved);
+  if (!unresolved.length) return false;
+  writeJson(`${runDir}/overrides.template.json`, {
+    version: 1,
+    note: "Fill in a status (todo, wip, done, dropped), type or priority per entry, or keepAllocated: true for a duplicate ID; pass with --overrides.",
+    entries: Object.fromEntries(
+      unresolved.map((d) => [
+        d.id,
+        {
+          decision: d.code,
+          message: d.message,
+          ...(d.code === "duplicate-id" ? { keepAllocated: false } : { status: null }),
+        },
+      ]),
+    ),
+  });
+  return true;
 }

@@ -1,6 +1,7 @@
 // Durable replacement: temp file in the same directory, fsync, then rename (or hard-link for create-only).
 // Windows can refuse a rename or link transiently while an editor, indexer or antivirus holds the
 // destination open, so those steps retry with backoff before giving up. The temp file never survives.
+import { CODES, docketError } from "../core/errors.mjs";
 import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -53,9 +54,7 @@ export function atomicWrite(target, data, { createOnly = false, ops = defaultOps
         withRetry(() => ops.link(tmp, target), retry);
       } catch (err) {
         if (err.code === "EEXIST") {
-          throw Object.assign(new Error(`refusing to overwrite existing ${target}`), {
-            code: "DOCKET_EXISTS",
-          });
+          throw docketError(CODES.EXISTS, `refusing to overwrite existing ${target}`);
         }
         throw err;
       }

@@ -1,6 +1,8 @@
 // Worktree and common-dir discovery. Everything that asks "which checkout is this?" goes through here.
 import { execFileSync } from "node:child_process";
 import path from "node:path";
+import { CODES, docketError } from "../core/errors.mjs";
+import { ITEMS_DIR, toSlash } from "./paths.mjs";
 
 /** Run git and return stdout (utf8 string, or a Buffer when `encoding: "buffer"`). Throws with stderr. */
 export function git(cwd, args, { input, encoding = "utf8" } = {}) {
@@ -15,8 +17,7 @@ export function git(cwd, args, { input, encoding = "utf8" } = {}) {
     return encoding === "buffer" ? out : out.toString(encoding);
   } catch (err) {
     const stderr = err.stderr ? err.stderr.toString("utf8").trim() : err.message;
-    throw Object.assign(new Error(`git ${args[0]} failed: ${stderr}`), {
-      code: "DOCKET_GIT",
+    throw Object.assign(docketError(CODES.GIT, `git ${args[0]} failed: ${stderr}`), {
       status: err.status,
     });
   }
@@ -30,8 +31,6 @@ export function tryGit(cwd, args) {
     return null;
   }
 }
-
-const toSlash = (p) => p.split(path.sep).join("/");
 
 /**
  * Resolve the checkout containing `start`.
@@ -50,8 +49,7 @@ export function resolveRepo(start = ".") {
       "--git-common-dir",
     ]);
   } catch (err) {
-    throw Object.assign(new Error(`not inside a git worktree: ${cwd}`), {
-      code: "DOCKET_NOT_A_REPO",
+    throw Object.assign(docketError(CODES.NOT_A_REPO, `not inside a git worktree: ${cwd}`), {
       cause: err,
     });
   }
@@ -60,7 +58,7 @@ export function resolveRepo(start = ".") {
     root,
     gitDir,
     commonDir,
-    itemsDir: `${root}/docs/items`,
+    itemsDir: `${root}/${ITEMS_DIR}`,
     docketDir: `${root}/.docket`,
     configPath: `${root}/docket.json`,
   };

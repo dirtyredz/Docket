@@ -4,11 +4,9 @@ import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {
-  defaultTemplatePath,
-  promoteDirectory,
-  smokeGate,
-} from "../../src/integration/gate/install.mjs";
+import { defaultTemplatePath } from "../../src/integration/gate/install.mjs";
+import { promoteDirectory } from "../../src/integration/gate/promote.mjs";
+import { smokeGate } from "../../src/integration/gate/smoke.mjs";
 import { ROOT, git } from "./repository.mjs";
 
 export const TEMPLATE = defaultTemplatePath();

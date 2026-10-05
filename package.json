@@ -16,8 +16,7 @@
     "src/core/",
     "src/storage/",
     "src/repository/",
-    "src/index/",
-    "src/claims/",
+    "src/state/",
     "src/importers/",
     "src/integration/",
     "README.md"
@@ -29,7 +28,7 @@
     "test:core": "node --test \"tests/core/*.test.mjs\"",
     "test:storage": "node --test \"tests/storage/*.test.mjs\"",
     "test:cli": "node --test \"tests/cli/*.test.mjs\"",
-    "test:coordination": "node --test \"tests/claims/*.test.mjs\" \"tests/index/*.test.mjs\"",
+    "test:coordination": "node --test \"tests/state/*.test.mjs\"",
     "test:integration": "node --test \"tests/integration/*.test.mjs\"",
     "test:packaging": "node --test \"tests/packaging/*.test.mjs\"",
     "test:layout": "node src/tooling/layout-check.mjs",

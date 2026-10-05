@@ -2,6 +2,7 @@
 // describe it as contiguous, non-overlapping spans that together cover every character. Reconstruction
 // concatenates the spans' recovered text and compares the hash with the frozen source hash.
 import { createHash } from "node:crypto";
+import { CODES, docketError } from "../../core/errors.mjs";
 
 const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
@@ -17,7 +18,7 @@ export function decodeSource(bytes, rel) {
   try {
     return decoder.decode(bytes);
   } catch {
-    throw Object.assign(new Error(`${rel} is not valid UTF-8`), { code: "DOCKET_IMPORT_SOURCE" });
+    throw docketError(CODES.IMPORT_SOURCE, `${rel} is not valid UTF-8`);
   }
 }
 
@@ -104,4 +105,39 @@ export function reconstruct({ rel, length, sha256: expected, spans }, recover) {
     );
   }
   return { ok: problems.length === 0, sha256: actual, problems };
+}
+
+/** The manifest record of a source file: identity, frozen hash, HEAD blob, and entry count. */
+export function sourceRecord(s, blobs) {
+  return {
+    path: s.rel,
+    role: s.role,
+    area: s.area,
+    bytes: s.bytes.length,
+    length: s.text.length,
+    lines: s.lines.length,
+    sha256: sha256(s.bytes),
+    headBlob: blobs.get(s.rel) ?? null,
+    matchesHead: blobs.get(s.rel) === gitBlobId(s.bytes),
+    entries: s.drafts.length,
+  };
+}
+
+/**
+ * The source-map record of a source file. `spans` are its line spans (from the importer's scanner,
+ * each with `disposition` and, for items, `item` = draft ID); `s.drafts` carry the title and inverse
+ * steps. Item spans store steps and a hash; every other span stores its text so it can be replayed.
+ */
+export function mapSource(s, spans) {
+  const ids = s.drafts.map((d) => d.id);
+  const records = spans.map((span) => {
+    const { text, ...rest } = span;
+    const record = { ...rest, sha256: sha256(Buffer.from(text, "utf8")) };
+    if (span.disposition === "item") {
+      const d = s.drafts[ids.indexOf(span.item)];
+      return { ...record, title: d.title, steps: d.steps };
+    }
+    return { ...record, text };
+  });
+  return { path: s.rel, length: s.text.length, sha256: sha256(s.bytes), spans: records };
 }

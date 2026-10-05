@@ -5,6 +5,9 @@
 // Exit codes: 0 ok, 1 failed (validation errors, operation refused), 2 usage, 3 conflict, 4 not found,
 // 5 internal error.
 
+import { CODES, KIND_OF_CODE } from "../core/errors.mjs";
+import { formatWarning } from "../core/validation/report.mjs";
+
 export const EXIT = Object.freeze({
   ok: 0,
   failed: 1,
@@ -14,25 +17,14 @@ export const EXIT = Object.freeze({
   internal: 5,
 });
 
-const CODE_EXIT = {
-  DOCKET_USAGE: EXIT.usage,
-  DOCKET_NOT_A_REPO: EXIT.usage,
-  DOCKET_BAD_REF: EXIT.usage,
-  DOCKET_CONFLICT: EXIT.conflict,
-  DOCKET_LOCKED: EXIT.conflict,
-  DOCKET_CLAIMED: EXIT.conflict,
-  DOCKET_EXISTS: EXIT.conflict,
-  DOCKET_NOT_FOUND: EXIT.notFound,
-};
-
+/** Exit code for an error: its code's kind in the errors table; unlisted DOCKET_* codes fail; the rest are internal. */
 export function exitCodeFor(err) {
-  if (CODE_EXIT[err.code] !== undefined) return CODE_EXIT[err.code];
+  const kind = KIND_OF_CODE[err.code];
+  if (kind) return EXIT[kind];
   return typeof err.code === "string" && err.code.startsWith("DOCKET_")
     ? EXIT.failed
     : EXIT.internal;
 }
-
-const formatWarning = (w) => `warning: ${w.file ? `${w.file}: ` : ""}${w.message}`;
 
 /**
  * Write a command result. result: {data, text?: string, warnings?: [], exitCode?: number}.
@@ -53,7 +45,7 @@ export function emitResult(io, command, result, json) {
 
 export function emitError(io, command, err, json) {
   const exitCode = exitCodeFor(err);
-  const code = err.code && String(err.code).startsWith("DOCKET_") ? err.code : "DOCKET_INTERNAL";
+  const code = err.code && String(err.code).startsWith("DOCKET_") ? err.code : CODES.INTERNAL;
   if (json) {
     const error = { code, message: err.message, ...(err.details ? { details: err.details } : {}) };
     io.stdout.write(JSON.stringify({ ok: false, command, error }) + "\n");

@@ -2,6 +2,7 @@
 // Callers that mutate hold the worktree lock (lockPathFor) around read-check-write.
 import fs from "node:fs";
 import path from "node:path";
+import { CODES, docketError } from "../core/errors.mjs";
 import { atomicWrite } from "./atomic-write.mjs";
 import { readWithRevision, revisionOf } from "./revision.mjs";
 
@@ -51,9 +52,10 @@ export function writeItemFile(ctx, id, bytes, { expectedRevision, ops } = {}) {
   const current = readWithRevision(target);
   const actual = current ? current.revision : null;
   if (expectedRevision !== undefined && expectedRevision !== actual) {
-    throw Object.assign(new Error(`${id} changed since it was read`), {
-      code: "DOCKET_CONFLICT",
-      details: { id, expected: expectedRevision, actual },
+    throw docketError(CODES.CONFLICT, `${id} changed since it was read`, {
+      id,
+      expected: expectedRevision,
+      actual,
     });
   }
   atomicWrite(target, bytes, { createOnly: actual === null, ops });

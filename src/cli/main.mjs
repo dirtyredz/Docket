@@ -2,6 +2,7 @@
 // Docket CLI entry (`docket` and `dk`). Dispatch only: commands live in ./commands/*.mjs.
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
+import { usageError } from "./args.mjs";
 import { emitError, emitResult, EXIT } from "./output.mjs";
 import * as coordination from "./commands/coordination.mjs";
 import * as gate from "./commands/gate.mjs";
@@ -66,10 +67,12 @@ export async function runCli(argv, io) {
   const json = rest.includes("--json");
   const handler = COMMANDS[command];
   if (!handler) {
-    const err = Object.assign(new Error(`unknown command "${command}" (see docket --help)`), {
-      code: "DOCKET_USAGE",
-    });
-    return emitError(io, command, err, json);
+    return emitError(
+      io,
+      command,
+      usageError(`unknown command "${command}" (see docket --help)`),
+      json,
+    );
   }
   if (rest.includes("--help") || rest.includes("-h")) {
     io.stdout.write(`${HELP}\n`);

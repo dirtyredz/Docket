@@ -2,24 +2,32 @@
 // convert every entry into a staged item, persist the manifest and source map, then verify the run
 // from disk (byte reconstruction, content accounting, core validation). Reads the legacy files only;
 // never writes inside the source tree except the git-ignored staging directory.
+// This file sequences the steps; reusable mechanics live in importers/common.
 import fs from "node:fs";
 import path from "node:path";
-import { isDeepStrictEqual } from "node:util";
-import { ITEMS_DIR, KEYS, TOKEN_RE } from "../../core/format/schema.mjs";
-import { parseItem } from "../../core/format/parse.mjs";
-import { serializeItem } from "../../core/format/serialize.mjs";
+import { CODES, docketError } from "../../core/errors.mjs";
 import { localDate } from "../../core/identity/date.mjs";
 import { currentBranch, resolveRepo, tryGit } from "../../repository/context.mjs";
+import { ITEMS_DIR } from "../../repository/paths.mjs";
 import { listItemEntries } from "../../storage/item-store.mjs";
 import {
   MANIFEST_VERSION,
+  buildItem,
   importRoot,
   priorAllocations,
   runName,
   stageRun,
   writeJson,
+  writeOverridesTemplate,
 } from "../common/manifest.mjs";
-import { decodeSource, gitBlobId, sha256, splitLines } from "../common/source-map.mjs";
+import {
+  decodeSource,
+  gitBlobId,
+  mapSource,
+  sha256,
+  sourceRecord,
+  splitLines,
+} from "../common/source-map.mjs";
 import { verifyRun } from "../common/verify.mjs";
 import {
   assignIdentities,
@@ -29,54 +37,10 @@ import {
   readOverrides,
 } from "./convert.mjs";
 import { firstSeenDates } from "./history.mjs";
+import { REGISTER, SHARD_ROOT, headBlobs, inventory } from "./inventory.mjs";
 import { parseRegisterIndex } from "./register.mjs";
 import { fileSpans, ID_MARKER_RE, scanEntries } from "./shards.mjs";
 import { summarize } from "./summary.mjs";
-
-export const REGISTER = "docs/BACKLOG.md";
-export const SHARD_ROOT = "docs/work/backlog";
-const sourceError = (m) => Object.assign(new Error(m), { code: "DOCKET_IMPORT_SOURCE" });
-
-/** Source files in import order: the register, then open shards, then done shards (alphabetical). */
-export function inventory(root) {
-  if (!fs.existsSync(path.join(root, REGISTER)))
-    throw sourceError(`${REGISTER} not found under ${root}`);
-  const sources = [{ rel: REGISTER, role: "register", area: "" }];
-  const related = [];
-  for (const role of ["open", "done"]) {
-    const dir = path.join(root, SHARD_ROOT, role);
-    if (!fs.existsSync(dir)) continue;
-    for (const name of fs
-      .readdirSync(dir)
-      .filter((n) => n.endsWith(".md"))
-      .sort()) {
-      const area = name.replace(/\.md$/, "").toLowerCase();
-      sources.push({
-        rel: `${SHARD_ROOT}/${role}/${name}`,
-        role,
-        area: TOKEN_RE.test(area) ? area : "",
-      });
-    }
-  }
-  if (fs.existsSync(path.join(root, SHARD_ROOT))) {
-    for (const name of fs.readdirSync(path.join(root, SHARD_ROOT)).sort()) {
-      const rel = `${SHARD_ROOT}/${name}`;
-      if (fs.statSync(path.join(root, rel)).isFile()) related.push({ rel });
-    }
-  }
-  for (const s of [...sources, ...related]) s.bytes = fs.readFileSync(path.join(root, s.rel));
-  return { sources, related };
-}
-
-function headBlobs(root, rels) {
-  const out = tryGit(root, ["ls-tree", "HEAD", "--", ...rels]);
-  const map = new Map();
-  for (const row of (out ?? "").split("\n").filter(Boolean)) {
-    const tab = row.indexOf("\t");
-    map.set(row.slice(tab + 1), row.slice(0, tab).split(" ")[2]);
-  }
-  return map;
-}
 
 function overrideFor(overrides, key, legacyId, prior) {
   return (
@@ -87,51 +51,8 @@ function overrideFor(overrides, key, legacyId, prior) {
   );
 }
 
-function buildItem(d) {
-  const fields = { id: d.id, ...d.fields, parent: "", fixes: [], blocked_by: [], relates: [] };
-  const ordered = Object.fromEntries(KEYS.map((k) => [k, fields[k]]));
-  const text = serializeItem({ fields: ordered, rest: d.rest });
-  const reparsed = parseItem(text);
-  if (!isDeepStrictEqual(reparsed.fields, ordered) || reparsed.rest !== d.rest) {
-    throw Object.assign(new Error(`serializer round trip failed for ${d.id}`), {
-      code: "DOCKET_INTERNAL",
-    });
-  }
-  return Buffer.from(text, "utf8");
-}
-
-/**
- * Run the dry run. options: {repo, out?, run?, overrides? (parsed JSON), now?, random?}.
- * Returns {runDir, manifestPath, manifest}.
- */
-export function dryRunEvilEye({
-  repo,
-  out = null,
-  run = null,
-  overrides: overridesDoc = null,
-  now = new Date(),
-  random,
-}) {
-  const ctx = resolveRepo(repo);
-  const importDate = localDate(now);
-  const root = importRoot(ctx, out);
-  const runId = run ?? runName("evileye", now);
-  const runDir = `${root}/${runId}`;
-  if (fs.existsSync(runDir))
-    throw Object.assign(new Error(`run directory already exists: ${runDir}`), {
-      code: "DOCKET_IMPORT_STAGING",
-    });
-
-  const { sources, related } = inventory(ctx.root);
-  const blobs = headBlobs(
-    ctx.root,
-    [...sources, ...related].map((s) => s.rel),
-  );
-  const overrides = readOverrides(overridesDoc);
-  const prior = priorAllocations(root, "evileye");
-  const firstSeen = firstSeenDates(ctx.root, [REGISTER, SHARD_ROOT]);
-  const fileDecisions = [];
-
+/** Decode, split and scan every source file in place; returns the register's rows and their problems. */
+function scanSources(sources) {
   for (const s of sources) {
     s.text = decodeSource(s.bytes, s.rel);
     s.lines = splitLines(s.text);
@@ -139,11 +60,14 @@ export function dryRunEvilEye({
     s.index = s.role === "register" ? parseRegisterIndex(s.lines) : null;
   }
   const register = sources[0];
-  if (!register.index.found) throw sourceError(`${REGISTER} has no "## Ranking index"`);
+  if (!register.index.found) {
+    throw docketError(CODES.IMPORT_SOURCE, `${REGISTER} has no "## Ranking index"`);
+  }
+  const decisions = [];
   const rows = new Map();
   for (const row of register.index.rows) {
     for (const p of row.problems)
-      fileDecisions.push({
+      decisions.push({
         code: "row-problem",
         severity: "override",
         message: p,
@@ -151,7 +75,7 @@ export function dryRunEvilEye({
         line: row.line,
       });
     if (rows.has(row.id)) {
-      fileDecisions.push({
+      decisions.push({
         code: "duplicate-row",
         severity: "override",
         message: `${row.id} has more than one register row; the first is used`,
@@ -160,7 +84,11 @@ export function dryRunEvilEye({
       });
     } else rows.set(row.id, row);
   }
+  return { register, rows, decisions };
+}
 
+/** Convert every entry of every source into a draft (stored on `s.drafts`); returns all drafts. */
+function draftEntries(sources, { rows, firstSeen, importDate, overrides, prior }) {
   const drafts = [];
   for (const s of sources) {
     s.drafts = s.scan.entries.map((entry) => {
@@ -182,6 +110,64 @@ export function dryRunEvilEye({
     });
     drafts.push(...s.drafts);
   }
+  return drafts;
+}
+
+/** Flag rebased links whose target is not in the checkout. */
+function noteMissingLinkTargets(drafts, root) {
+  for (const d of drafts) {
+    for (const e of d.steps.find((s) => s.op === "rebase")?.edits ?? []) {
+      if (!fs.existsSync(path.join(root, e.resolved))) {
+        d.decisions.push({
+          code: "link-target-missing",
+          severity: "review",
+          message: `link ${e.from} points at ${e.resolved}, which does not exist`,
+        });
+      }
+    }
+  }
+}
+
+/** The line spans of a scanned source, ready for common mapSource. */
+function spansOf(s) {
+  return fileSpans(s.text, s.lines, s.scan, {
+    entryKeys: s.drafts.map((d) => d.id),
+    rowLines: s.index?.rowLines,
+    tableLines: s.index?.tableLines,
+  });
+}
+
+/**
+ * Run the dry run. options: {repo, out?, run?, overrides? (parsed JSON), now?, random?}.
+ * Returns {runDir, manifestPath, manifest}.
+ */
+export function dryRunEvilEye({
+  repo,
+  out = null,
+  run = null,
+  overrides: overridesDoc = null,
+  now = new Date(),
+  random,
+}) {
+  const ctx = resolveRepo(repo);
+  const importDate = localDate(now);
+  const root = importRoot(ctx, out);
+  const runId = run ?? runName("evileye", now);
+  const runDir = `${root}/${runId}`;
+  if (fs.existsSync(runDir))
+    throw docketError(CODES.IMPORT_STAGING, `run directory already exists: ${runDir}`);
+
+  const { sources, related } = inventory(ctx.root);
+  const blobs = headBlobs(
+    ctx.root,
+    [...sources, ...related].map((s) => s.rel),
+  );
+  const overrides = readOverrides(overridesDoc);
+  const prior = priorAllocations(root, "evileye");
+  const firstSeen = firstSeenDates(ctx.root, [REGISTER, SHARD_ROOT]);
+
+  const { register, rows, decisions: fileDecisions } = scanSources(sources);
+  const drafts = draftEntries(sources, { rows, firstSeen, importDate, overrides, prior });
   const targetEntries = listItemEntries(ctx).map(({ name, isFile, bytes }) => ({
     name,
     isFile,
@@ -193,21 +179,14 @@ export function dryRunEvilEye({
     ...targetEntries.map((e) => e.name.replace(/\.md$/, "")),
   ]);
   assignIdentities(drafts, { taken, prior: prior.map, random, overrides });
-  for (const d of drafts) {
-    for (const e of d.steps.find((s) => s.op === "rebase")?.edits ?? []) {
-      if (!fs.existsSync(path.join(ctx.root, e.resolved))) {
-        d.decisions.push({
-          code: "link-target-missing",
-          severity: "review",
-          message: `link ${e.from} points at ${e.resolved}, which does not exist`,
-        });
-      }
-    }
-  }
+  noteMissingLinkTargets(drafts, ctx.root);
   assignRanks(drafts);
 
   const staged = drafts.map((d) => ({ id: d.id, bytes: buildItem(d) }));
-  const sourceMap = { version: MANIFEST_VERSION, sources: sources.map((s) => mapSource(s)) };
+  const sourceMap = {
+    version: MANIFEST_VERSION,
+    sources: sources.map((s) => mapSource(s, spansOf(s))),
+  };
   stageRun(runDir, { items: staged, sourceMap });
 
   const decisions = [
@@ -261,55 +240,6 @@ export function dryRunEvilEye({
   });
   manifest.ready = manifest.verification.ok && manifest.verification.unresolved === 0;
   writeJson(manifestPath, manifest);
-  const unresolved = decisions.filter((d) => d.severity === "override" && !d.resolved);
-  if (unresolved.length) {
-    writeJson(`${runDir}/overrides.template.json`, {
-      version: 1,
-      note: "Fill in a status (todo, wip, done, dropped), type or priority per entry, or keepAllocated: true for a duplicate ID; pass with --overrides.",
-      entries: Object.fromEntries(
-        unresolved.map((d) => [
-          d.id,
-          {
-            decision: d.code,
-            message: d.message,
-            ...(d.code === "duplicate-id" ? { keepAllocated: false } : { status: null }),
-          },
-        ]),
-      ),
-    });
-  }
+  writeOverridesTemplate(runDir, decisions);
   return { runDir, manifestPath, manifest };
-}
-
-function sourceRecord(s, blobs) {
-  return {
-    path: s.rel,
-    role: s.role,
-    area: s.area,
-    bytes: s.bytes.length,
-    length: s.text.length,
-    lines: s.lines.length,
-    sha256: sha256(s.bytes),
-    headBlob: blobs.get(s.rel) ?? null,
-    matchesHead: blobs.get(s.rel) === gitBlobId(s.bytes),
-    entries: s.drafts.length,
-  };
-}
-
-function mapSource(s) {
-  const entryKeys = s.drafts.map((d) => d.id);
-  const spans = fileSpans(s.text, s.lines, s.scan, {
-    entryKeys,
-    rowLines: s.index?.rowLines,
-    tableLines: s.index?.tableLines,
-  }).map((span) => {
-    const { text, ...rest } = span;
-    const record = { ...rest, sha256: sha256(Buffer.from(text, "utf8")) };
-    if (span.disposition === "item") {
-      const d = s.drafts[entryKeys.indexOf(span.item)];
-      return { ...record, title: d.title, steps: d.steps };
-    }
-    return { ...record, text };
-  });
-  return { path: s.rel, length: s.text.length, sha256: sha256(s.bytes), spans };
 }

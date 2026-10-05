@@ -3,15 +3,12 @@
 // longer exists expires on read and is dropped on the next write. Never committed.
 import fs from "node:fs";
 import path from "node:path";
-import { atomicWrite } from "../storage/atomic-write.mjs";
-import { withLock } from "../storage/lock.mjs";
+import { CODES, docketError } from "../../core/errors.mjs";
+import { samePath, toSlash } from "../../repository/paths.mjs";
+import { atomicWrite } from "../../storage/atomic-write.mjs";
+import { withLock } from "../../storage/lock.mjs";
 
 const FILE = "docket-claims.json";
-const norm = (p) => {
-  const s = path.resolve(p).split(path.sep).join("/");
-  return process.platform === "win32" ? s.toLowerCase() : s;
-};
-export const sameWorktree = (a, b) => norm(a) === norm(b);
 
 export const claimsPath = (commonDir) => path.join(commonDir, FILE);
 const lockPath = (commonDir) => path.join(commonDir, `${FILE}.lock`);
@@ -47,12 +44,10 @@ function write(commonDir, claims) {
 }
 
 const claimedError = (id, holder) =>
-  Object.assign(
-    new Error(`${id} is claimed by ${holder.worktree} (${holder.branch ?? "detached"})`),
-    {
-      code: "DOCKET_CLAIMED",
-      details: { id, holder },
-    },
+  docketError(
+    CODES.CLAIMED,
+    `${id} is claimed by ${holder.worktree} (${holder.branch ?? "detached"})`,
+    { id, holder },
   );
 
 /**
@@ -67,11 +62,11 @@ export function claimItem(
   return withLock(lockPath(commonDir), () => {
     const { claims } = readClaims(commonDir);
     const previous = claims[id] ?? null;
-    if (previous && !sameWorktree(previous.worktree, worktree) && !takeover) {
+    if (previous && !samePath(previous.worktree, worktree) && !takeover) {
       throw claimedError(id, previous);
     }
     const claim = {
-      worktree: path.resolve(worktree).split(path.sep).join("/"),
+      worktree: toSlash(path.resolve(worktree)),
       branch,
       agent,
       at: now.toISOString(),
@@ -94,7 +89,7 @@ export function releaseItem(commonDir, id, { worktree, force = false }) {
       if (expired.length) write(commonDir, claims);
       return { released: false, claim: null };
     }
-    if (!force && !sameWorktree(claim.worktree, worktree)) throw claimedError(id, claim);
+    if (!force && !samePath(claim.worktree, worktree)) throw claimedError(id, claim);
     delete claims[id];
     write(commonDir, claims);
     return { released: true, claim };

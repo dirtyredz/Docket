@@ -1,5 +1,6 @@
 // Random identity allocation: `dk-` + 4 random bytes as lowercase hex, retried until unused.
 import { randomBytes as cryptoRandomBytes } from "node:crypto";
+import { CODES, docketError } from "../errors.mjs";
 import { NEW_ID_PREFIX } from "../format/schema.mjs";
 
 /**
@@ -11,7 +12,5 @@ export function allocateId({ taken, random = cryptoRandomBytes, attempts = 32 })
     const id = `${NEW_ID_PREFIX}-${random(4).toString("hex")}`;
     if (!taken(id)) return id;
   }
-  throw Object.assign(new Error(`no free ID after ${attempts} attempts`), {
-    code: "DOCKET_ID_EXHAUSTED",
-  });
+  throw docketError(CODES.ID_EXHAUSTED, `no free ID after ${attempts} attempts`);
 }

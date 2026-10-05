@@ -3,10 +3,12 @@
 // Ranks are assigned per band afterwards (assignRanks), through core rank generation.
 import { createHash } from "node:crypto";
 import path from "node:path";
-import { ENUMS, ITEMS_DIR } from "../../core/format/schema.mjs";
+import { CODES, docketError } from "../../core/errors.mjs";
+import { ENUMS } from "../../core/format/schema.mjs";
 import { newItemRest } from "../../core/format/serialize.mjs";
 import { allocateId } from "../../core/identity/id.mjs";
 import { spreadRanks } from "../../core/identity/rank.mjs";
+import { ITEMS_DIR } from "../../repository/paths.mjs";
 import { transformEntry } from "../common/transform.mjs";
 import { ID_MARKER_RE } from "./shards.mjs";
 import {
@@ -38,12 +40,12 @@ export function entryKey(rel, firstLine) {
   return `${rel}#${createHash("sha256").update(norm).digest("hex").slice(0, 10)}`;
 }
 
-/** Validate an overrides document; returns Map<key-or-id, override>. Throws DOCKET_USAGE. */
+/** Validate an overrides document; returns Map<key-or-id, override>. Throws DOCKET_IMPORT_OVERRIDES. */
 export function readOverrides(doc) {
-  const bad = (m) => Object.assign(new Error(`overrides: ${m}`), { code: "DOCKET_USAGE" });
+  const bad = (m) => docketError(CODES.IMPORT_OVERRIDES, `overrides: ${m}`);
   if (!doc) return new Map();
   if (doc.version !== 1 || typeof doc.entries !== "object")
-    bad('expected {"version": 1, "entries": {...}}');
+    throw bad('expected {"version": 1, "entries": {...}}');
   const out = new Map();
   for (const [k, o] of Object.entries(doc.entries)) {
     for (const f of ["status", "type", "priority"]) {
