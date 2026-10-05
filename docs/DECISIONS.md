@@ -5,14 +5,14 @@ Evidence paths are relative to `docs/research/`.
 
 ## ADR-19: Importers removed; init + agent move-in
 
-- **Context:** Docket must be project-agnostic. The EvilEye import was byte-verified because it ran once
+- **Context:** Docket must be project-agnostic. The first adopter import was byte-verified because it ran once
   against one real backlog; its cutover is done. Other repos have seven different legacy shapes.
 - **Decision:** Importer code (`src/importers/`, `docket import`) is deleted. New projects start with
   `docket init`; an existing repo moves in once, through an agent following `docs/MOVE-IN.md` (`dk add`
   and `dk set` per old entry, count check, owner review). `bl-` stays valid as a generic legacy-ID
   prefix. The superseded import ADRs (17, 18) moved to `records/decisions/2026-10.md`.
 - **Rejected:** one importer per legacy shape (code to maintain for single-use runs); keeping the
-  EvilEye importer as an example (its provenance and journal machinery only served that run).
+  the first adopter importer as an example (its provenance and journal machinery only served that run).
 - **Evidence:** owner ruling 2026-10-05.
 
 > ADRs 17 and 18 (lossless import, resumable apply) moved to `records/decisions/2026-10.md`.
@@ -36,7 +36,7 @@ Evidence paths are relative to `docs/research/`.
   refs on stdin) also carried the bootstrap checker, so the template change landed in M0, not M1c.
 - **Rejected:** a committed flag in `docket.json` (a fresh clone has no installed gate to run); appending
   a call to installed hooks (hook-sync replaces managed hooks from the template); a Docket-owned
-  `core.hooksPath` (clobbers EvilEye's wrapper).
+  `core.hooksPath` (clobbers the first adopter's wrapper).
 - **Evidence:** `tests/integration/pre-push.test.mjs` "un-opted repos behave exactly as before" runs the
   pre-change template from the harness repo's HEAD against the new one in six scenarios.
 
@@ -75,9 +75,9 @@ Evidence paths are relative to `docs/research/`.
   items into one repo.
 - **Evidence:** `markdown-vs-db-project-docs.md`, `round2-md-vs-db-workflow.md`.
 
-## ADR-10: EvilEye portal retired at M2
+## ADR-10: the first adopter portal retired at M2
 
-- **Context:** The EvilEye backlog portal is the only writable frontend for legacy shards. Owner ruling
+- **Context:** The first adopter backlog portal is the only writable frontend for legacy shards. Owner ruling
   2026-10-04: the portal is not in active use.
 - **Decision:** Stop and retire it at the M2b cutover (startup retired, mutation path returns 410),
   before the viewer exists. The CLI is the early usable slice; no second writable frontend.
@@ -88,7 +88,7 @@ Evidence paths are relative to `docs/research/`.
 
 - **Context:** Remaining conflicts are same-field edits and concurrent relation-list appends; volume is
   unknown and probably low.
-- **Decision:** No custom merge driver. From the EvilEye cutover, record real conflicts
+- **Decision:** No custom merge driver. From the first adopter cutover, record real conflicts
   (`docket conflicts`) for two weeks, then decide in `docs/records/conflicts/`.
 - **Rejected:** building a field-level driver now (unproven need, installation burden on every clone).
 - **Evidence:** `MERGE-TEST-RESULTS.md` implication 4, scenarios c5, g1, g2.
@@ -141,9 +141,9 @@ relates`. Status moves (the most frequent concurrent edit) are fenced by near-im
 - **Rejected:** Backlog.md's MCP; an HTTP-only API.
 - **Evidence:** `existing-solutions-survey.md`; `PLAN.md` section 2.
 
-## ADR-03: Name Docket, `dk-<8hex>` prefix, EvilEye `bl-` IDs preserved indefinitely
+## ADR-03: Name Docket, `dk-<8hex>` prefix, the first adopter `bl-` IDs preserved indefinitely
 
-- **Context:** The prototype used `bl-` IDs, already present throughout EvilEye history and references.
+- **Context:** The prototype used `bl-` IDs, already present throughout the first adopter history and references.
 - **Decision:** The product is Docket; new IDs are `dk-<8hex>`. Existing `bl-<8hex>` IDs stay valid,
   immutable identities (not aliases needing lookup), at the cost of permanent dual-prefix support.
   ITEM-SPEC amended accordingly.

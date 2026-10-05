@@ -1,7 +1,7 @@
 # Docket
 
-Windows 11 CLI (`docket` / `dk`) and local viewer over per-repo Markdown work items. Status: M0 to M2b
-shipped (CLI, core, gate, `init`; importers removed, ADR-19); M3+ is design only (`docs/PLAN.md`).
+Windows 11 CLI (`docket` / `dk`) and local viewer over per-repo Markdown work items. Status: the CLI, core, pre-push
+gate, `docket init` and the move-in playbook are shipped (importers removed, ADR-19); the viewer (M3+) is design only (`docs/PLAN.md`).
 
 ## Working here
 

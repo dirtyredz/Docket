@@ -1,6 +1,6 @@
 # Doc-set survey, 2026-10-04
 
-**Scope.** 31 repos, 1,297 md files, 17.46 MB. That is 14 mod-collection repos (mods and root), 2 game mods, 13 other project repos, a game asset pack and the ~/.claude harness. a game repo (the first adopter) (7.7 MB) and a large web monorepo (4.2 MB) are 68% of the bytes. Scoping used `git ls-files --cached --others --exclude-standard`, so worktrees are excluded. Sizes are in KB. A dash means the doc is missing. "(d)" means it lives in docs/, otherwise it is at the root. The raw inventory per file is in `inv.txt` in this folder.
+**Scope.** 31 repos, 1,297 md files, 17.46 MB. That is 14 mod-collection repos (mods and root), 2 game mods, 13 other project repos, a game asset pack and the ~/.claude harness. the first adopter repo (7.7 MB) and a large web monorepo (4.2 MB) are 68% of the bytes. Scoping used `git ls-files --cached --others --exclude-standard`, so worktrees are excluded. Sizes are in KB. A dash means the doc is missing. "(d)" means it lives in docs/, otherwise it is at the root. The raw inventory per file is in `inv.txt` in this folder.
 
 ## Summary table
 
@@ -8,7 +8,7 @@
 |---|---|---|---|---|---|---|---|---|---|
 | a personal site | 8.1 | — | 2.7 | 7.1 | 8.3 | 3.0 | 1.9 | 7.9 | 4.3 |
 | a game asset pack | — | — | 2.0 | — | — | — | — | — | — |
-| **a game repo (the first adopter)** | 5.9 | 2.5 | **25.3** | 7.5 | 1.9 (map) | 2.3 (map) | 5.6 | 24.2 (register) + 10 open and 10 done shards | 1.6 (map) |
+| **the first adopter repo** | 5.9 | 2.5 | **25.3** | 7.5 | 1.9 (map) | 2.3 (map) | 5.6 | 24.2 (register) + 10 open and 10 done shards | 1.6 (map) |
 | an exam app | 5.3 | 1.2 | 0.7 | 4.5 | 2.9 | 3.8 | 0.6 | 2.7 | 2.3 |
 | game-mod repo 1 | 6.3 | **33.6** | 14.6 | — | — | — | — | 5.4 (root) | — |
 | game-mod repo 2 | 6.2 | **20.6** | 4.4 | — | — | — | — | 5.5 (root) | — |
@@ -43,13 +43,13 @@ Per-repo notes:
 - a résumé workspace: `HANDOFF.md` (5.7) and `REGISTRY.md` (1.8) are extra root docs. The `_platform` docs sit under `_platform/docs/`.
 - a large web monorepo: ADRs are in the root `docs/decisions/` (24 files, 220 KB), plus 3 big design docs.
 
-**Read-at-start cost.** The nine canonical docs total 645 KB in a family dashboard PWA (about 160k tokens) and 664 KB in a game prototype. That is far beyond the "a screen or two" in ~/.claude/CLAUDE.md. a game repo (the first adopter)'s nine canonical docs total 77 KB.
+**Read-at-start cost.** The nine canonical docs total 645 KB in a family dashboard PWA (about 160k tokens) and 664 KB in a game prototype. That is far beyond the "a screen or two" in ~/.claude/CLAUDE.md. the first adopter repo's nine canonical docs total 77 KB.
 
 ## Per-repo sections
 
-### a game repo (the first adopter) (7.74 MB, 422 files)
+### the first adopter repo (7.74 MB, 422 files)
 
-- **Layout.** Only a game repo (the first adopter) has the fully restructured set.
+- **Layout.** Only the first adopter repo has the fully restructured set.
   - Maps: root STRUCTURE.md (5.9 KB, `## Layout` present), CLAUDE.md 2.5 KB, AGENTS.md 5.9 KB.
   - Detail: `docs/handbook/` (55 files, 984 KB, CODE-MAP/ARCHITECTURE/GOTCHAS/FEATURES per area).
   - Records: `docs/records/` (45 files, 615 KB, dated ADR collections).
@@ -187,14 +187,14 @@ Out of scope: it is a packwiz pack with only a README.
 1. Priority H2 sections plus checkboxes: a game prototype, a budgeting app, an MCP server repo, an education-data sync, the collection mods, the harness.
 2. Feature/phase H2 groups with an inline `**P0**` tag: a family dashboard PWA.
 3. A `### Bn — title` heading per item: a personal site.
-4. A table plus entries: a game repo (the first adopter) (register plus shards, the only `bl-` IDs) and a large web monorepo (table rows as items).
+4. A table plus entries: the first adopter repo (register plus shards, the only `bl-` IDs) and a large web monorepo (table rows as items).
 5. Bracket status words or inline `[P0]`: a résumé workspace, an agent-harness repo.
 6. Plain bold-lead bullets under P1/P2: an exam app, the game-mod repos.
 7. Phase sections with no priority: a meeting-copilot app.
 
 Patterns across all shapes:
 - Dated "Structure review — date" sections get appended in five repos.
-- Done items mostly stay in place. Only a game repo (the first adopter) archives them.
+- Done items mostly stay in place. Only the first adopter repo archives them.
 - Items are small: median 86–450 B, with outliers up to 6 KB.
 - Items without IDs get cited by ADR, plan or hand-off numbers.
 
@@ -202,14 +202,14 @@ Patterns across all shapes:
 
 1. a family dashboard PWA: STRUCTURE 175 KB, DECISIONS 222 KB.
 2. a game prototype: STRUCTURE 129 KB, DECISIONS 231 KB, GOTCHAS 121 KB, BACKLOG 96 KB.
-3. a game repo (the first adopter) research/: 4.86 MB, though it is separated by folder.
+3. the first adopter repo research/: 4.86 MB, though it is separated by folder.
 4. a large web monorepo design and plan docs: three over 100 KB.
-5. Against a game repo (the first adopter)'s own caps, about 11 repos have a STRUCTURE over 16 KiB, and 5 have a CLAUDE.md over 6 KiB.
+5. Against the first adopter repo's own caps, about 11 repos have a STRUCTURE over 16 KiB, and 5 have a CLAUDE.md over 6 KiB.
 
 ### Worst drift
 
 - Review stamps lag the content in a game prototype, a family dashboard PWA and a budgeting app.
-- a game repo (the first adopter)'s CLAIMS list documents 24 wrong figures, and its mirrored index and entry fields disagree in about 11% of matched entries.
+- the first adopter repo's CLAIMS list documents 24 wrong figures, and its mirrored index and entry fields disagree in about 11% of matched entries.
 - mod B has a version mismatch.
 - a mod collection states its mod count three different ways.
 - a family dashboard PWA's BACKLOG and ROADMAP disagree on phase status.
@@ -217,7 +217,7 @@ Patterns across all shapes:
 
 ### Closest to and furthest from the convention
 
-- **Closest.** a game repo (the first adopter) is the only repo with tool-enforced size caps, a Layout contract, IDs and one home per claim. a personal site, an exam app and the collection mods are closest in shape and size.
+- **Closest.** the first adopter repo is the only repo with tool-enforced size caps, a Layout contract, IDs and one home per claim. a personal site, an exam app and the collection mods are closest in shape and size.
 - **Furthest.** a family dashboard PWA and a game prototype, then a large web monorepo, then the game-mod repos.
 
 ### What a format spec must accommodate
@@ -237,7 +237,7 @@ Patterns across all shapes:
 
 | Repo | MEMORY.md | Files |
 |---|---|---|
-| a game repo (the first adopter) | 9.7 KB | 48 (114 KB) |
+| the first adopter repo | 9.7 KB | 48 (114 KB) |
 | a large web monorepo | 12.8 KB | 55 (141 KB) |
 | a mod collection | 2.5 KB | 14 (35 KB) |
 | a game prototype | 2.4 KB | 12 |
@@ -247,7 +247,7 @@ Patterns across all shapes:
 | 11 repos | empty dir | 0 |
 | 6 repos/paths | no dir | n/a |
 
-## a game repo (the first adopter) portal (`tools\portal`)
+## the first adopter repo portal (`tools\portal`)
 
 - **Parsing.**
   - Only the backlog is parsed (`src/backlog/parse.mjs`, `status.mjs`, `shards.mjs`). It works losslessly by character offsets, never re-serializes, and recognizes priority sections, top-level list items or `###` entries, `bl-` IDs and the ranking index (where the row is authoritative).

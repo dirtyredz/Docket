@@ -33,7 +33,7 @@ export function loadIndex(ctx, { rebuild = false } = {}) {
   const cache = rebuild ? { files: {}, state: "rebuild" } : readCache(ctx);
   const entries = listItemEntries(ctx, { withBytes: false });
   const files = {};
-  let dirty = cache.state !== "ok";
+  let needsWrite = cache.state !== "ok";
   const stats = { total: entries.length, reused: 0, parsed: 0, removed: 0, cache: cache.state };
   for (const entry of entries) {
     const cached = cache.files[entry.name];
@@ -47,7 +47,7 @@ export function loadIndex(ctx, { rebuild = false } = {}) {
     const hash = bytes ? revisionOf(bytes) : null;
     if (cached && cached.hash === hash && hash) {
       files[entry.name] = { ...cached, size: entry.size, mtimeMs: entry.mtimeMs };
-      dirty = true;
+      needsWrite = true;
       stats.reused++;
       continue;
     }
@@ -67,7 +67,7 @@ export function loadIndex(ctx, { rebuild = false } = {}) {
     stats.parsed++;
   }
   stats.removed = Object.keys(cache.files).filter((n) => !(n in files)).length;
-  if (dirty || stats.parsed || stats.removed) {
+  if (needsWrite || stats.parsed || stats.removed) {
     try {
       const data = { version: INDEX_VERSION, builtAt: Date.now(), files };
       atomicWrite(indexPath(ctx), JSON.stringify(data) + "\n");

@@ -26,7 +26,7 @@ docket gate promote <tarball>  /  docket gate install  /  docket gate status
 ```
 
 `docket init` creates `docs/items/` and `docket.json`, ignores `.docket/` and adds the agent snippet to
-CLAUDE.md / AGENTS.md. To move an existing backlog in, have an agent follow `docs/MOVE-IN.md`.
+CLAUDE.md / AGENTS.md. To move an existing backlog in, have an agent follow the `docs/MOVE-IN.md` playbook (shipped inside the installed package, under the `docket` package root).
 
 ## Install
 

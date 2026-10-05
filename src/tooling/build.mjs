@@ -16,8 +16,10 @@ const REQUIRED = [
   "package/src/integration/agent-snippet.md",
   "package/src/integration/init.mjs",
   "package/src/cli/commands/init.mjs",
+  "package/docs/MOVE-IN.md",
 ];
-const FORBIDDEN = /^package\/(src\/bootstrap|src\/tooling|tests|docs)\//;
+// docs/MOVE-IN.md is the one shipped playbook; every other doc stays out.
+const FORBIDDEN = /^package\/(src\/bootstrap|src\/tooling|tests|docs\/(?!MOVE-IN\.md$))/;
 
 const dist = path.join(ROOT, "dist");
 fs.mkdirSync(dist, { recursive: true });

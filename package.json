@@ -18,6 +18,7 @@
     "src/repository/",
     "src/state/",
     "src/integration/",
+    "docs/MOVE-IN.md",
     "README.md"
   ],
   "scripts": {

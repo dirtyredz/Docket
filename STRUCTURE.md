@@ -29,13 +29,13 @@ docs/                   living docs, items/, records/, research/ (historical)
 ```
 CLI / viewer  -->  core  -->  repository, storage
 state, integration  -->  core
+integration/init  -->  repository, storage, integration/gate (install)
 ```
 
 - `core` has no terminal or HTTP knowledge. It calls `repository` and `storage`, never `state`: claims
   and the index reach core operations as arguments (`setItem`, `readItem`), so core stays free of the
   coordination stores.
 - `cli` and `viewer` are thin adapters over `core/items` operations; business rules never live in them.
-  validation); they use `repository` for Git facts and `storage` only to list existing target items.
 - `integration/gate` validates through core `checkStore`, never through `cli`.
 - `core/errors.mjs` is a leaf (no imports) that every layer may use.
 - `src/bootstrap/` is quarantined historical code; production code never imports it.

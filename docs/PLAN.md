@@ -1,6 +1,6 @@
 ## 1. Goal
 
-Build Docket as a Windows 11 CLI and local viewer/editor over independently versioned, per-repo Markdown items. Deliver a self-hosting CLI and hard validation gate on Docket and EvilEye before building the viewer; keep all indexes rebuildable and all item data inside its owning repo.
+Build Docket as a Windows 11 CLI and local viewer/editor over independently versioned, per-repo Markdown items. Deliver a self-hosting CLI and hard validation gate on Docket and the first adopter before building the viewer; keep all indexes rebuildable and all item data inside its owning repo.
 
 ## 2. Placement
 
@@ -12,7 +12,7 @@ Use a CLI with bounded JSON output for agents; no MCP server in this scope. Choo
 
 **Resolve the stale documentation explicitly.**
 
-- Amend `docs/research/ITEM-SPEC.md` before implementation: new IDs are `dk-<8hex>`; existing EvilEye `bl-<8hex>` IDs remain valid, immutable identities—not aliases requiring another lookup.
+- Amend `docs/research/ITEM-SPEC.md` before implementation: new IDs are `dk-<8hex>`; existing the first adopter `bl-<8hex>` IDs remain valid, immutable identities—not aliases requiring another lookup.
 - Rename operational paths to `.docket/index.json` and `<git-common-dir>/docket-claims.json`.
 - Preserve the final field order: `id, type, created, status, since, area, priority, rank, parent, fixes, blocked_by, relates`.
 - Earlier research recommending one shared backlog, another field order, extensible fields, or Backlog.md’s serializer is superseded. Borrow its file-per-item idea, not its sequential IDs or incompatible schema.
@@ -40,8 +40,8 @@ Use a CLI with bounded JSON output for agents; no MCP server in this scope. Choo
 | `src/cli/{main,args,output}.mjs` | Dispatch, argument handling and stable human/JSON output contracts. |
 | `src/cli/commands/{items,validation,coordination,registry,viewer,migration,gate,conflicts}.mjs` | Thin adapters for the corresponding command families; business rules remain elsewhere. |
 | `src/importers/common/{source-map,manifest,apply}.mjs` | Shared byte accounting, persisted migration plans, and resumable installation. Extract only the mechanics actually shared by both importers. |
-| `src/importers/evileye/{register,shards,status,convert}.mjs` | Legacy register/shard interpretation, lead-status recognition and conversion. |
-| `src/importers/priority-checkbox/{parse,convert}.mjs` | The second supported legacy shape. Separate from EvilEye conventions. |
+| `src/importers/first-adopter/{register,shards,status,convert}.mjs` | Legacy register/shard interpretation, lead-status recognition and conversion. |
+| `src/importers/priority-checkbox/{parse,convert}.mjs` | The second supported legacy shape. Separate from the first adopter conventions. |
 | `src/integration/agent-snippet.md` | Short reusable instructions copied into each repo’s CLAUDE.md and AGENTS.md. |
 | `src/integration/gate/{install,launcher,pre-push}.mjs` | Gate configuration/promotion, last-good resolution, and pushed-ref validation. |
 | `src/observability/conflicts.mjs` | Local recording and reporting of real merge conflicts. |
@@ -49,7 +49,7 @@ Use a CLI with bounded JSON output for agents; no MCP server in this scope. Choo
 | `src/viewer/ui/{index.html,app.mjs,api.mjs,repo-picker.mjs,board.mjs,item-editor.mjs,relations.mjs,documents.mjs,styles.css}` | Browser shell and separate UI responsibilities. |
 | `src/tooling/{build,layout-check}.mjs` | Assemble the distributable and verify declared placement/file-size limits. |
 | `tests/{format,core,storage,cli,index,claims,registry,importers,integration,viewer,merge,packaging}/` | Responsibility-matched test files specified below. |
-| `tests/helpers/{repository,clock}.mjs`, `tests/fixtures/{items,evileye,priority-checkbox}/` | Shared disposable-repo/clock support and bounded fixtures. |
+| `tests/helpers/{repository,clock}.mjs`, `tests/fixtures/{items,first-adopter,priority-checkbox}/` | Shared disposable-repo/clock support and bounded fixtures. |
 | `docs/records/{migrations,conflicts}/` | Migration evidence and the two-week conflict review; historical records stay out of living summaries. |
 
 `STRUCTURE.md` must contain hook-compatible `## Layout` bullets covering these homes. Keep code files below approximately 800 lines; extract by responsibility before crossing that limit.
@@ -68,11 +68,11 @@ Use a CLI with bounded JSON output for agents; no MCP server in this scope. Choo
 
 **Portal reuse and extractions.** The approximately 200–300-line estimate is an upper bound for adapted code and integration, not a ready-made core. Inspection found an 83-line storage module, a 494-line patcher, and a 78-line status module. Roughly 125–210 production lines are plausible candidates: storage primitives, small span helpers, and importer-only status detection.
 
-Extract revision/atomic-write techniques into Docket storage; use span accounting only in migration. Do not transplant the portal’s register reconciliation, general patcher, title truncation or status heuristics into the item core. Preserve attribution. No live dependency on the EvilEye checkout.
+Extract revision/atomic-write techniques into Docket storage; use span accounting only in migration. Do not transplant the portal’s register reconciliation, general patcher, title truncation or status heuristics into the item core. Preserve attribution. No live dependency on the first adopter checkout.
 
-**Necessary external changes, shipped with EvilEye rollout.**
+**Necessary external changes, shipped with the first adopter rollout.**
 
-| Paths, relative to EvilEye unless absolute | Change and placement |
+| Paths, relative to the first adopter unless absolute | Change and placement |
 |---|---|
 | `tools/portal/src/backlog/legacy-write-policy.mjs` | New explicit cutover guard, shared by legacy writers. |
 | `tools/portal/src/backlog/service.mjs`, `scripts/migrate-backlog.mjs` under `tools/portal/` | Guard queued mutations and the direct migration writer. `import-gap.mjs` already writes through the service. |
@@ -125,10 +125,10 @@ The portal service already mixes several responsibilities. Add only a call to th
    - Keep LFS first. Run Docket before the template’s structure pause/opt-out early returns: those controls govern structure review, not item validity.
    - Validate each pushed local tip through `check --ref`; a clean working tree must not conceal invalid committed items. Skip deleted refs. Claims remain advisory local warnings.
    - Refresh managed hooks explicitly. Preserve foreign hooks and existing `core.hooksPath`.
-   - EvilEye’s existing chain stays icon guard → physical managed hook → LFS/Docket/structure checks. Its wrapper already replays stdin; do not replace it.
+   - the first adopter’s existing chain stays icon guard → physical managed hook → LFS/Docket/structure checks. Its wrapper already replays stdin; do not replace it.
    - **Callers:** the managed template’s installer and hook-sync consume its new version; Claude’s separate `PreToolUse` structure gate remains unchanged.
 
-5. **M2a — EvilEye importer and byte-verified dry run.** _(Historical: done for one repo; the importer was removed 2026-10-05, see ADR-19. New work uses `docket init` and `docs/MOVE-IN.md`.)_
+5. **M2a — the first adopter importer and byte-verified dry run.** _(Historical: done for one repo; the importer was removed 2026-10-05, see ADR-19. New work uses `docket init` and `docs/MOVE-IN.md`.)_
    - Inventory the actual source tree. Inspection found 391 unique `bl-` markers and 271 register rows; these are a baseline, not hard-coded expected totals.
    - Freeze source hashes and persist the import plan. Keep existing `bl-` IDs verbatim; allocate missing identities through core allocation and retain them across retries.
    - Register priority and ordering win. Missing rows fall back to explicit shard priority and stable source order, with reported decisions. Wishlist becomes `idea/P3`.
@@ -139,7 +139,7 @@ The portal service already mixes several responsibilities. Add only a call to th
    - Reject unexplained omissions, duplicates and unresolved ambiguities before apply.
    - **Callers:** importer only reads legacy files; production CLI/core supplies output validation and allocation.
 
-6. **M2b — EvilEye cutover: first external usable slice.**
+6. **M2b — the first adopter cutover: first external usable slice.**
    - Install the staged items using a resumable journal and source-hash preconditions. Refuse source drift or conflicting pre-existing output.
    - Stop the old portal during cutover. Publish the explicit migration marker only after the item set passes validation; failure leaves the source intact and cutover incomplete.
    - Retain old shards as historical evidence; replace the register with a short navigation page after recording its source commit/hash.
@@ -184,11 +184,11 @@ The per-repo CLAUDE.md/AGENTS.md snippet should say:
 | M1b | `tests/storage/atomic-write.test.mjs`: stale revisions, cooperating concurrent writers, rename failures, Windows retry behavior and temp cleanup. |
 | M1b | `tests/{claims,index}/store.test.mjs`: parallel claim updates, ownership, worktree expiration, completion cleanup, cache rebuild and branch/worktree isolation. |
 | M1b | `tests/cli/commands.test.mjs`: exact JSON envelope, bounded list output, stderr separation, exit codes, Unicode and paths with spaces. |
-| M1c | `tests/integration/pre-push.test.mjs`: invalid pushed tip despite clean working files, several refs, deletions, LFS stdin replay, structure pause/opt-out, pending review, foreign hooks and EvilEye-style delegation. |
+| M1c | `tests/integration/pre-push.test.mjs`: invalid pushed tip despite clean working files, several refs, deletions, LFS stdin replay, structure pause/opt-out, pending review, foreign hooks and first-adopter-style delegation. |
 | M1c | `tests/packaging/last-good.test.mjs`: deliberately broken working tree cannot break the installed gate; failed promotion preserves the previous installation; both Windows command aliases work. |
-| M2 | `tests/importers/evileye.test.mjs`: register/shard priority mismatch, missing rows, done-row drift, duplicate IDs, nested prose, flags, relative links and uncertain dates. |
+| M2 | `tests/importers/first-adopter.test.mjs`: register/shard priority mismatch, missing rows, done-row drift, duplicate IDs, nested prose, flags, relative links and uncertain dates. |
 | M2 | `tests/importers/manifest.test.mjs`: first reproduce dropped-byte and changed-source failures, then verify byte reconstruction, complete content accounting, repeatability and interrupted-apply recovery. |
-| M2 | EvilEye tests listed in Placement: retired writers cannot change files/events; documentation references recognize both prefixes; old and migrated snapshots retain identity coverage. |
+| M2 | the first adopter tests listed in Placement: retired writers cannot change files/events; documentation references recognize both prefixes; old and migrated snapshots retain identity coverage. |
 | M3 | `tests/importers/priority-checkbox.test.mjs`, `tests/registry/store.test.mjs`: duplicate headings, nested checklists, ambiguous statuses, unsupported shapes, doc overrides and unavailable paths. |
 | M4 | `tests/viewer/{routes,worktrees}.test.mjs`, `tests/viewer/editor.e2e.test.mjs`: CLI/UI parity, stale-save recovery, correct checkout targeting, reverse relations, read-only docs, traversal and origin rejection. |
 | M5 | `tests/merge/scenarios.test.mjs`: reconstruct the documented Git scenarios with the final field order, including known conflicts and clean merges requiring warnings. `tests/integration/conflicts.test.mjs`: capture and classify real-conflict records. |
@@ -205,12 +205,12 @@ Do not claim the missing prototype already covers these tests. The research expl
 | M1a | `npm ci`, `npm run test:format`, `npm run test:core`, `node src/cli/main.mjs check --repo .`; Docket validates itself before ordinary CLI-created items are accepted. |
 | M1b | `npm run test:storage`, `npm run test:cli`, `npm run test:coordination`, `npm run build`, `npm run test:layout`, `npm pack`; install the resulting tarball with `npm install --global <tarball>`. Confirm `docket --version`, `dk --version` and `docket check --repo .` from outside the checkout. |
 | M1c | `npm run test:integration`, `npm run test:packaging`; promote with `docket gate promote <tarball>`, install with `docket gate install --repo .`. Use disposable bare remotes to prove rejection/pass behavior without a real push. Break working-tree code and confirm the last-good gate still runs. |
-| M2 | `npm run test:importers`; run `docket import evileye --repo <EvilEye> --dry-run --json`, review the persisted manifest, then `docket import apply --repo <EvilEye> --manifest <path>`. Require zero unexplained content losses and a passing `docket check --repo <EvilEye>`. |
+| M2 | `npm run test:importers`; run `docket import first-adopter --repo <game-repo> --dry-run --json`, review the persisted manifest, then `docket import apply --repo <game-repo> --manifest <path>`. Require zero unexplained content losses and a passing `docket check --repo <game-repo>`. |
 | M3 | Repeat importer verification for `docket import priority-checkbox --repo <repo> --source <backlog> --dry-run --json`; run `npm run test:registry`. Verify a small and a large real-source dry run before fleet rollout. |
 | M4 | `npm run test:viewer`, `npm run test:e2e`, `npm run build`; launch `docket serve`. Confirm repo switching, status moves, ordering, feature bugs, reverse links, worktree labels, stale-save recovery and seven read-only doc views. |
 | M5 | `npm run test:merge`; review two weeks of actual conflict records separately from synthetic results. Record the merge-driver decision and supporting counts. |
 
-During M2, also run EvilEye’s documented commands from its root:
+During M2, also run the first adopter’s documented commands from its root:
 
 - `npm --prefix tools/portal run check`
 - `npm --prefix tools/portal test`
@@ -232,13 +232,13 @@ Capture before/after evidence through `tools/documentation/baseline-snapshot.mjs
 - **`docs/research/ITEM-SPEC.md`:** authoritative naming/path amendment and resolution of the `fixes` target inconsistency. Keep other research as historical evidence.
 - **`docs/records/migrations/`:** exact source inventories, hashes, transformations, overrides and acceptance results.
 - **`docs/records/conflicts/`:** two-week observations and the explicit merge-driver decision.
-- **EvilEye and harness docs named in Placement:** new item authority, retired legacy writers, documentation-checker integration and preserved hook composition.
+- **the first adopter and harness docs named in Placement:** new item authority, retired legacy writers, documentation-checker integration and preserved hook composition.
 
 ## 7. Open questions / assumptions
 
 | Owner decision | Assumption used in this plan |
 |---|---|
-| Preserve or rewrite EvilEye IDs? | Preserve existing `bl-` identities indefinitely; mint only `dk-`. This avoids rewriting historical references, at the cost of permanent dual-prefix support. |
+| Preserve or rewrite the first adopter IDs? | Preserve existing `bl-` identities indefinitely; mint only `dk-`. This avoids rewriting historical references, at the cost of permanent dual-prefix support. |
 | Missing merge-test prototype? | Recover the original before M0 acceptance. If unavailable, the owner must choose whether an explicitly labeled reconstruction satisfies the bootstrap requirement; it must not be presented as the original tested artifact. |
 | `fixes` legality? | Follow the field table: only bugs may have `fixes`, targeting features/tasks. Amend rule 8, whose “not idea” wording currently also admits bugs. |
 | Dates absent from legacy entries? | Preserve reliable dates only when internally consistent; otherwise use the recorded import date for `created`/`since` and disclose the uncertainty. Do not invent historical precision. |
@@ -247,7 +247,7 @@ Capture before/after evidence through `tools/documentation/baseline-snapshot.mjs
 | Is whole-file writing acceptable? | Yes for small canonical items, while preserving untouched body bytes. Cooperating Docket writers lock; an external editor can still race between revision check and rename. |
 | Last-good installation and schema upgrades? | Keep the gate separate from the development checkout and ordinary global CLI upgrades. Promote support for a new schema before committing items requiring it. |
 | Structure-gate integration scope? | A small supported change to the managed harness template is part of rollout. Structure pause/opt-out does not disable Docket validation. |
-| Retire EvilEye’s portal before the viewer exists? | Yes. The CLI is the deliberate early usable slice; the legacy portal is not maintained as a second writable frontend. |
+| Retire the first adopter’s portal before the viewer exists? | Yes. The CLI is the deliberate early usable slice; the legacy portal is not maintained as a second writable frontend. |
 | Common-importer fleet coverage? | Approximately 18 repos is an estimate. Verify actual shapes and defer exceptions instead of adding permissive parsing branches. |
 | Global viewer semantics? | Registry and transient aggregation are global; persisted item indexes are per checkout. Claims cover linked worktrees on one machine, not independent clones or cloud agents. |
 | Documentation migration? | Keep living prose docs intact and read-only in the viewer. Seed feature items when needed for references; defer wholesale FEATURES conversion and unrelated doc cleanup. |

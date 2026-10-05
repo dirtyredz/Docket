@@ -1,6 +1,6 @@
 # Round 2: an item store with status workflow and relations. Markdown, SQLite or JSONL as the source of truth?
 
-*Research director report, 2026-10-04. Adversarial investigation with two researcher rounds per side, plus my own spot-checks of git's merge code and the a game repo (the first adopter) portal. It builds on the round 1 report (`markdown-vs-db-project-docs.md`) and the 31-repo survey (`doc-set-survey.md`).*
+*Research director report, 2026-10-04. Adversarial investigation with two researcher rounds per side, plus my own spot-checks of git's merge code and the first adopter repo portal. It builds on the round 1 report (`markdown-vs-db-project-docs.md`) and the 31-repo survey (`doc-set-survey.md`).*
 
 ## Question and decision at stake
 
@@ -79,9 +79,9 @@ It claims this is better than two alternatives:
 6. **Random IDs avoid allocation races across branches.**
    - Beads switched to hash IDs in v0.20.1 after collisions between concurrent branches.
    - Backlog.md's sequential IDs needed a branch scan and a "fresh bounded remote snapshot" ([v1.50.1 notes](https://newreleases.io/project/github/MrLesk/Backlog.md/release/v1.50.1), secondary).
-   - a game repo (the first adopter) already generates random IDs (`C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\src\backlog\patch.mjs:22`).
-7. **An explicit status field removes a whole class of parser.** a game repo (the first adopter)'s `status.mjs:4-12` guesses done, reopened or partial from about ten prose wordings. A `status:` field replaces all of it.
-8. **The harness doesn't object to about 390 item files.** `C:\Users\dirty\.claude\hooks\structure\internals\filetypes.js:14-17` has no `md` in `CODE_EXT`, and `placement.js:158,179` counts only code files toward the fan-out cap.
+   - the first adopter repo already generates random IDs (`<game-repo>/tools/portal/src/backlog/patch.mjs:22`).
+7. **An explicit status field removes a whole class of parser.** the first adopter repo's `status.mjs:4-12` guesses done, reopened or partial from about ten prose wordings. A `status:` field replaces all of it.
+8. **The harness doesn't object to about 390 item files.** `<harness>/hooks/structure/internals/filetypes.js:14-17` has no `md` in `CODE_EXT`, and `placement.js:158,179` counts only code files toward the fan-out cap.
 
 ## The case against (claims that survived, with severity)
 
@@ -125,7 +125,7 @@ It claims this is better than two alternatives:
 | SQLite as truth | An event table gives exact timestamps, but only inside one copy. Two worktrees' event rows cannot be merged. |
 | JSONL as truth | A mutable snapshot has the same blame problem as markdown. An *append-only* JSONL event log with the built-in `merge=union` merges concurrent appends with no per-clone setup. That is its one real strength. |
 
-On a game repo (the first adopter)'s out-of-git event log: the pessimist cited `events.jsonl` in %LOCALAPPDATA% as proof that history lives outside git. I checked it. It is the portal's per-checkout *Claude review queue* (`C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\README.md:187-192`, `src\storage\state.mjs:1-2`), not item history. It is evidence of nothing either way.
+On the first adopter repo's out-of-git event log: the pessimist cited `events.jsonl` in %LOCALAPPDATA% as proof that history lives outside git. I checked it. It is the portal's per-checkout *Claude review queue* (`<game-repo>/tools/portal/README.md:187-192`, `src\storage\state.mjs:1-2`), not item history. It is evidence of nothing either way.
 
 ### Relations
 
@@ -172,7 +172,7 @@ Two consequences:
 - Every shape needs rewriting whatever the target, so the importers cost about the same for any store.
 - Markdown keeps prose bodies verbatim and diffs readable.
 - **Shape 1** (priority H2 sections plus checkboxes) covers about 18 of the 31 repos: a game prototype, a budgeting app, an MCP server repo, an education-data sync, the a mod collection mods and the harness. One importer covers most of the fleet.
-- **a game repo (the first adopter):**
+- **the first adopter repo:**
   - keep the existing `bl-` IDs;
   - the register row's priority wins (as its README already says);
   - done shards become `status: done`.
@@ -198,7 +198,7 @@ Two consequences:
 | Scanning worktrees vs a claims file in the shared git dir for in-work visibility | **Both, layered** | A claims file at `$(git rev-parse --git-common-dir)/bl-claims.json` is the coordination point: shared by every worktree of a clone, never committed, and it expires when its worktree path disappears. The viewer also reads each worktree's `docs/items/` (from `git worktree list --porcelain`) as a hint that includes uncommitted edits. In-work is ephemeral local coordination, like an editor lock, so keeping it out of the committed state does not violate "state travels with code". The durable `status: wip` plus `since:` still lands with the branch. |
 | Field-level merge driver now vs later | **Later** | It is per-clone config and more to build. Ordering keys apart removes most conflicts. Log real conflicts first. |
 | Slug in the filename (pessimist) vs ID only | **ID only** | A slug changes when the title changes, which changes the path and breaks plain `git log`. The viewer and `bl list` supply readable names. |
-| Type-neutral `bl-` prefix vs typed `ft-`/`bug-` prefixes | **Type-neutral `bl-`** | Retyping an idea into a feature must not break references, and a game repo (the first adopter)'s existing IDs stay valid. |
+| Type-neutral `bl-` prefix vs typed `ft-`/`bug-` prefixes | **Type-neutral `bl-`** | Retyping an idea into a feature must not break references, and the first adopter repo's existing IDs stay valid. |
 
 ## Where each side overreached
 
@@ -259,7 +259,7 @@ Free prose: description, acceptance criteria. It never restates a field.
   - "Blocked" is derived from `blocked_by`, not stored.
 - **IDs.**
   - Format: `bl-` plus 8 random hex characters, type-neutral and immutable.
-  - Keep a game repo (the first adopter)'s existing IDs as they are.
+  - Keep the first adopter repo's existing IDs as they are.
   - Cross-repo references use `repo#bl-xxxxxxxx`.
 - **Relations.** Stored on the source only: `parent` (scalar), `fixes`, `blocked_by`, `relates` (lists). Reverse lookups come from the index. A new relation kind is a new list key, registered in a per-repo `docs/items/_schema` or in the `bl` defaults.
 - **Rank.** A fractional key (LexoRank style), so re-ranking edits one file.
@@ -273,12 +273,12 @@ Free prose: description, acceptance criteria. It never restates a field.
 ### What to build first
 
 1. **Write the one-page spec** above: grammar, key order, enums, relation keys and `check` rules. Decide the type and relation vocabulary once, for every repo.
-2. **Build a shared `bl` core package**, lifted from `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal`:
+2. **Build a shared `bl` core package**, lifted from `<game-repo>/tools/portal`:
    - Keep the hash-checked atomic write path from `src/storage/documents.mjs`.
    - Replace the single-file span patcher with a strict frontmatter parser and serializer. Small per-item files make full rewrites safe, as long as key order is preserved byte-for-byte.
    - Drop `status.mjs`'s prose-wording heuristics and the register-reconciliation code.
 3. **Build the `bl` CLI** with `add`, `set`, `link`, `list` (compact rows and `--json`), `show`, `check` and `index`. `check` runs in each repo's test tier and as a hard pre-push gate. One line of agent instruction says: "change items through `bl`; list through `bl list`."
-4. **Migrate a game repo (the first adopter) first** with a deterministic importer: register priority wins, done shards become `status: done`, IDs are preserved. Then write the shape 1 importer, which covers about 18 repos, then the remaining shapes.
+4. **Migrate the first adopter repo first** with a deterministic importer: register priority wins, done shards become `status: done`, IDs are preserved. Then write the shape 1 importer, which covers about 18 repos, then the remaining shapes.
 5. **Adapt the global viewer** to read each repo's `docs/items/` through the core package, show the kanban from `status`, edit only through `bl`'s write path (hash check, 409 on a stale write), and overlay claims and worktree status read-only.
 6. **Measure for two weeks:** merge conflicts on `docs/items/`, `bl check` failures and hand-edit rate. Add the field-level merge driver only if conflicts are real.
 
@@ -325,11 +325,11 @@ Free prose: description, acceptance criteria. It never restates a field.
 - claudeissues #4700 (YAML frontmatter, anecdotal): https://claudeissues.com/issue/4700-agent-yaml-parsing-fails-with-valid-line-breaks-in-frontmatter
 
 **Code references:**
-- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\README.md:187-192` (`events.jsonl` is the Claude review queue)
-- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\src\storage\state.mjs:1-2,16-20` (per-checkout state in %LOCALAPPDATA%)
-- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\src\backlog\patch.mjs:22` (random ID generation)
-- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\src\backlog\parse.mjs:18` (ID validation)
-- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\src\backlog\status.mjs:4-12` (prose status heuristics, which v1 removes)
-- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\src\storage\documents.mjs` (hash-checked atomic writes, which v1 reuses)
-- `C:\Users\dirty\.claude\hooks\structure\internals\filetypes.js:14-17` (no `md` in `CODE_EXT`)
-- `C:\Users\dirty\.claude\hooks\structure\internals\placement.js:158,179` (fan-out counts code only)
+- `<game-repo>/tools/portal/README.md:187-192` (`events.jsonl` is the Claude review queue)
+- `<game-repo>/tools/portal/src/storage/state.mjs:1-2,16-20` (per-checkout state in %LOCALAPPDATA%)
+- `<game-repo>/tools/portal/src/backlog/patch.mjs:22` (random ID generation)
+- `<game-repo>/tools/portal/src/backlog/parse.mjs:18` (ID validation)
+- `<game-repo>/tools/portal/src/backlog/status.mjs:4-12` (prose status heuristics, which v1 removes)
+- `<game-repo>/tools/portal/src/storage/documents.mjs` (hash-checked atomic writes, which v1 reuses)
+- `<harness>/hooks/structure/internals/filetypes.js:14-17` (no `md` in `CODE_EXT`)
+- `<harness>/hooks/structure/internals/placement.js:158,179` (fan-out counts code only)
