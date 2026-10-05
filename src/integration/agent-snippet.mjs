@@ -1,8 +1,10 @@
 // The managed agent snippet in CLAUDE.md / AGENTS.md: detection, in-place upgrade and persistence.
-// The snippet lives between versioned begin/end comments. A recognised older managed block, or the
-// exact unmarked legacy snippet (0.3.0-0.5.x), is replaced in place; surrounding bytes and the file's
-// line endings are kept. Duplicate or incomplete markers and customised legacy sections are never
-// touched: they are reported for manual review, and no second block is ever appended.
+// The snippet lives between versioned begin/end comments. A managed block is classified by marker
+// version and exact canonical content: the current canonical block is unchanged, a known older
+// version's exact canonical block is upgraded in place, and everything else (customised, unknown or
+// newer version) is reported for manual review and never touched. The exact unmarked legacy snippet
+// (0.3.0-0.5.x) is also migrated in place. Surrounding bytes and line endings are kept. Duplicate or
+// incomplete markers and customised legacy sections are never touched; no second block is appended.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,6 +25,13 @@ and \`link\` for changes. Never invent IDs or ranks. Claim work in the current w
 finished, and run \`dk check\` before pushing. Drop items instead of deleting them. Living docs remain
 ordinary Markdown.
 `;
+
+/**
+ * Canonical full blocks (markers included, LF) of OLDER marked versions, keyed by version number.
+ * When SNIPPET_VERSION is bumped, add the outgoing version's exact block here so it still upgrades.
+ * (No marked version has shipped before v2.)
+ */
+export const PRIOR_BLOCKS = Object.freeze({});
 
 /** The current managed block (LF), begin and end markers included, ending with LF. */
 export function managedBlock() {
@@ -72,7 +81,7 @@ const review = (reason) => ({ state: "manual-review", reason });
  * Plan the snippet for one file's text (null = absent). Returns {state, text?, reason?}: state is
  * created | updated | unchanged | manual-review; text is the new content when it changes.
  */
-export function planSnippet(text, { title }) {
+export function planSnippet(text, { title, prior = PRIOR_BLOCKS }) {
   const block = managedBlock();
   if (text === null) return { state: "created", text: `# ${title}\n\n${block}` };
   const begins = [...text.matchAll(BEGIN_RE)];
@@ -86,8 +95,16 @@ export function planSnippet(text, { title }) {
     const stop = lineEnd(text, end.index);
     const replacement = inEol(block, eolOf(text.slice(begin.index, stop)));
     const current = text.slice(begin.index, stop);
-    const sameBlock = significant(current) === significant(replacement);
-    if (sameBlock) return { state: "unchanged" };
+    const version = Number(begin[1]);
+    if (version === SNIPPET_VERSION) {
+      if (significant(current) === significant(block)) return { state: "unchanged" };
+      return review(`customised v${version} docket:agent-snippet block`);
+    }
+    const known = Object.hasOwn(prior, version) ? prior[version] : null;
+    if (known === null) return review(`unknown snippet version v${version}`);
+    if (significant(current) !== significant(known)) {
+      return review(`customised v${version} docket:agent-snippet block`);
+    }
     return { state: "updated", text: text.slice(0, begin.index) + replacement + text.slice(stop) };
   }
   const headings = text.split(/\r?\n/).filter((l) => l === HEADING).length;

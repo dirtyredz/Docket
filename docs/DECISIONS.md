@@ -8,10 +8,12 @@ Evidence paths are relative to `docs/research/`.
 - **Context:** The 0.5 snippet was an unmarked block detected by its heading: it could not be upgraded, and
   it carried all agent guidance inline in two instruction files.
 - **Decision:** `init` writes a short block between `<!-- docket:agent-snippet begin v2 -->` and `end`
-  markers into both CLAUDE.md and AGENTS.md (creating either), and re-running upgrades it in place. Only an
-  older managed block or the exact pre-0.6 unmarked text is migrated; line endings and surrounding bytes
-  stay. Duplicate or incomplete markers and a customised `## Work items (Docket)` section are reported
-  "needs manual review", untouched, never given a second block. The full guide ships as
+  markers into both CLAUDE.md and AGENTS.md (creating either), and re-running upgrades it in place. A managed block
+  is classified by marker version and exact canonical content (blank lines and CR ignored): current-version
+  canonical is unchanged; a known older version's exact canonical text, or the exact pre-0.6 unmarked text, is
+  migrated; a customised block of any version, an unknown or newer version, duplicate or incomplete markers and
+  a customised `## Work items (Docket)` section are reported "needs manual review", untouched, never given a
+  second block. Line endings and surrounding bytes stay. The full guide ships as
   `docs/AGENT-GUIDE.md`, tool-neutral, printed by `docket guide`; the snippet points at it.
 - **Rejected:** rewriting customised sections (destroys owner edits); heading-only detection (cannot tell
   versions apart); an agent-specific guide (Docket serves any agent).

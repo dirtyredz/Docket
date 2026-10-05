@@ -16,11 +16,13 @@ const cleanups = [];
 after(() => cleanups.forEach((c) => c()));
 const crlf = (s) => s.replace(/\n/g, "\r\n");
 const BLOCK = managedBlock();
-const plan = (text) => planSnippet(text, { title: "t" });
 const OLD_BLOCK = BLOCK.replace("begin v2", "begin v1").replace(
   "run `docket guide`",
   "read the guide",
 );
+// A pretend v1 is "known" only where a test injects it; the shipped table has no older versions.
+const plan = (text) => planSnippet(text, { title: "t", prior: { 1: OLD_BLOCK } });
+const planShipped = (text) => planSnippet(text, { title: "t" });
 
 describe("planSnippet", () => {
   test("the managed block is versioned, bounded and tells agents to run docket guide", () => {
@@ -98,6 +100,48 @@ describe("planSnippet", () => {
   });
 });
 
+describe("managed block classification", () => {
+  const custom = BLOCK.replace("Docket", "Docket (ours)");
+  for (const [eolName, conv] of [
+    ["LF", (s) => s],
+    ["CRLF", crlf],
+  ]) {
+    test(`customised v2 is manual review (${eolName})`, () => {
+      const out = planShipped(conv(`# Mine\n\n${custom}`));
+      assert.equal(out.state, "manual-review");
+      assert.equal(out.reason, "customised v2 docket:agent-snippet block");
+      assert.equal(out.text, undefined);
+    });
+    test(`unknown future v3 is manual review (${eolName})`, () => {
+      const v3 = BLOCK.replace("begin v2", "begin v3");
+      for (const b of [v3, v3.replace("Docket", "Docket (ours)")]) {
+        const out = planShipped(conv(`# Mine\n\n${b}`));
+        assert.deepEqual(out, { state: "manual-review", reason: "unknown snippet version v3" });
+      }
+    });
+  }
+
+  test("an older version missing from the known table, or customised, is untouched", () => {
+    assert.equal(planShipped(`# Mine\n\n${OLD_BLOCK}`).reason, "unknown snippet version v1");
+    const edited = OLD_BLOCK.replace("Docket", "Docket (ours)");
+    assert.equal(plan(`# Mine\n\n${edited}`).reason, "customised v1 docket:agent-snippet block");
+  });
+
+  test("a Prettier-spaced canonical v2 block is unchanged", () => {
+    const spaced = BLOCK.replace("-->\n", "-->\n\n").replace(
+      "<!-- docket:agent-snippet end",
+      "\n$&",
+    );
+    assert.deepEqual(planShipped(`# Mine\n\n${spaced}`), { state: "unchanged" });
+  });
+
+  test("customised legacy block is manual review; exact legacy migrates", () => {
+    const custom = LEGACY_SNIPPET.replace("Drop items", "Retire items");
+    assert.equal(planShipped(`# Mine\n\n${custom}`).state, "manual-review");
+    assert.equal(planShipped(`# Mine\n\n${LEGACY_SNIPPET}`).state, "updated");
+  });
+});
+
 describe("ensureAgentSnippets", () => {
   const dir = () => {
     const t = tempDir("docket snippet ");
@@ -123,6 +167,26 @@ describe("ensureAgentSnippets", () => {
       ensureAgentSnippets(root).map((f) => f.state),
       ["unchanged", "unchanged"],
     );
+  });
+
+  test("customised v2 and unknown v3: dry run and real run agree, files untouched", () => {
+    const root = dir();
+    const v2 = `# Mine\n\n${BLOCK.replace("Docket", "Docket (ours)")}`;
+    const v3 = crlf(`# Mine\n\n${BLOCK.replace("begin v2", "begin v3")}`);
+    fs.writeFileSync(path.join(root, "CLAUDE.md"), v2);
+    fs.writeFileSync(path.join(root, "AGENTS.md"), v3);
+    const dry = ensureAgentSnippets(root, { dryRun: true });
+    const real = ensureAgentSnippets(root);
+    assert.deepEqual(dry, real);
+    assert.deepEqual(
+      real.map((r) => [r.state, r.reason]),
+      [
+        ["manual-review", "customised v2 docket:agent-snippet block"],
+        ["manual-review", "unknown snippet version v3"],
+      ],
+    );
+    assert.equal(read(root, "CLAUDE.md"), v2);
+    assert.equal(read(root, "AGENTS.md"), v3);
   });
 
   test("dry run reports and writes nothing; manual review leaves the file byte-identical", () => {
@@ -161,11 +225,13 @@ describe("blank-line-only differences (Prettier)", () => {
     }
   }
 
-  test("a real wording change still updates, keeping surroundings", () => {
+  test("a real wording change in a v2 block is customised: manual review, never rewritten", () => {
     const edited = variants["blank after begin"].replace("Docket", "Docket!");
     const out = plan(`# Mine\n\n${edited}\nAfter.\n`);
-    assert.equal(out.state, "updated");
-    assert.equal(out.text, `# Mine\n\n${BLOCK}\nAfter.\n`);
+    assert.deepEqual(out, {
+      state: "manual-review",
+      reason: "customised v2 docket:agent-snippet block",
+    });
   });
 
   test("an older version with blank lines still upgrades", () => {

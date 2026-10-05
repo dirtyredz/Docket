@@ -90,8 +90,9 @@ Non-obvious traps, from `plans/PLAN.md` sections 6 and 7, the merge test, and bu
   from `bodySource`, not `body`. It rejects CR, invalid UTF-8 and `## Notes`, and `--expect` is required.
 - **Settling a note is two writes.** Save the facts (`set --body-file --expect`), then resolve with the returned
   revision. An interrupted run leaves the note open; resolve copies nothing into the body.
-- **Customised snippets are not upgraded.** A `## Work items (Docket)` section that was edited, or duplicate or incomplete
-  markers, reads "needs manual review" and is left alone; `--no-agent-snippet` skips both files.
+- **Customised snippets are not upgraded.** A `## Work items (Docket)` section or a marked block that was edited (any
+  version), a marker version this build does not know, or duplicate or incomplete
+  markers, reads "needs manual review" and is left alone; `--no-agent-snippet` skips both files. Bumping `SNIPPET_VERSION` means adding the outgoing block to `PRIOR_BLOCKS`, or old blocks stop upgrading.
 - **Adopting repos: a pre-existing `## Notes` section becomes Notes.** Prose there fails check group 10. Look for it
   (`dk check`) before upgrading, and rename or fence it.
 - **Index v2 rebuilds on first run.** Older caches are discarded and rebuilt; nothing to migrate.
