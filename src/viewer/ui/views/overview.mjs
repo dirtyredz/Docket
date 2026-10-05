@@ -13,7 +13,8 @@ export function coverageText(coverage) {
   return parts.join(", ");
 }
 
-export function renderOverview(el, overview) {
+/** options.discussion: show only repos with at least one item needing discussion (navigation state). */
+export function renderOverview(el, overview, { discussion = false } = {}) {
   const head = h(
     "tr",
     {},
@@ -22,12 +23,22 @@ export function renderOverview(el, overview) {
     h("th", { scope: "col", class: "num" }, "todo"),
     h("th", { scope: "col", class: "num" }, "wip"),
     h("th", { scope: "col", class: "num" }, "open"),
+    h("th", { scope: "col", class: "num" }, "open notes"),
+    h("th", { scope: "col", class: "num" }, "needs discussion"),
     h("th", { scope: "col", class: "num" }, "invalid"),
     h("th", { scope: "col" }, "State"),
   );
-  const rows = overview.repos.map((r) => {
+  const shown = discussion
+    ? overview.repos.filter((r) => r.counts?.discussion > 0)
+    : overview.repos;
+  const rows = shown.map((r) => {
     const counts = r.counts;
-    const cell = (v) => h("td", { class: `num${v === 0 ? " zero" : ""}` }, counts ? String(v) : "");
+    const cell = (v, testid) =>
+      h(
+        "td",
+        { class: `num${v === 0 ? " zero" : ""}`, "data-testid": testid },
+        counts ? String(v) : "",
+      );
     return h(
       "tr",
       { "data-testid": `overview-${r.alias}`, class: r.state },
@@ -36,6 +47,8 @@ export function renderOverview(el, overview) {
       cell(counts?.todo),
       cell(counts?.wip),
       cell(counts?.open),
+      cell(counts?.openNotes ?? 0, "overview-open-notes"),
+      cell(counts?.discussion ?? 0, "overview-discussion"),
       cell(r.invalid),
       h(
         "td",
@@ -53,8 +66,23 @@ export function renderOverview(el, overview) {
     overview.registryError
       ? h("p", { class: "error" }, `Registry: ${overview.registryError}`)
       : null,
-    overview.repos.length
+    h(
+      "label",
+      { class: "filter" },
+      h("input", {
+        type: "checkbox",
+        checked: discussion,
+        "data-testid": "filter-discussion",
+        onchange: (e) => {
+          location.hash = e.target.checked ? "#/?discussion=1" : "#/";
+        },
+      }),
+      " Needs discussion",
+    ),
+    shown.length
       ? h("table", { class: "overview" }, h("thead", {}, head), h("tbody", {}, rows))
-      : h("p", {}, "No repos registered. Run ", h("code", {}, "docket repo scan <dir>"), "."),
+      : discussion && overview.repos.length
+        ? h("p", { class: "muted" }, "No repo has an item needing discussion.")
+        : h("p", {}, "No repos registered. Run ", h("code", {}, "docket repo scan <dir>"), "."),
   );
 }

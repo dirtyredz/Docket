@@ -1,5 +1,6 @@
 // Viewer shell: hash routing, navigation composition, refresh scheduling and keyboard shortcuts.
 // Routes: #/ (overview), #/search?q=..&closed=1, #/r/<repo>/<checkout>/<board|docs|worktrees>/...
+// The "needs discussion" filter lives in the hash query (?discussion=1) on the overview and the board.
 import { api } from "./api.mjs";
 import { h, replace } from "./dom.mjs";
 import { anyDirty } from "./drafts.mjs";
@@ -30,14 +31,16 @@ const state = { overview: null, route: { view: "overview" }, pollTimer: null };
 export function parseRoute(hash = location.hash) {
   const [path, qs = ""] = hash.replace(/^#/, "").split("?");
   const parts = path.split("/").filter(Boolean).map(decodeURIComponent);
+  const params = new URLSearchParams(qs);
+  const discussion = params.get("discussion") === "1";
   if (parts[0] === "search") {
-    const params = new URLSearchParams(qs);
     return { view: "search", q: params.get("q") ?? "", closed: params.get("closed") === "1" };
   }
   if (parts[0] === "r" && parts[1] && parts[2]) {
-    return { view: parts[3] ?? "board", repo: parts[1], checkout: parts[2], rest: parts.slice(4) };
+    const rest = parts.slice(4);
+    return { view: parts[3] ?? "board", repo: parts[1], checkout: parts[2], rest, discussion };
   }
-  return { view: "overview" };
+  return { view: "overview", discussion };
 }
 
 function setStatus(text, kind = "") {
@@ -57,7 +60,9 @@ async function loadOverview({ refresh = false } = {}) {
     return;
   }
   renderRepoPicker(els.sidebar, state.overview, state.route.repo);
-  if (state.route.view === "overview") renderOverview(els.main, state.overview);
+  if (state.route.view === "overview") {
+    renderOverview(els.main, state.overview, { discussion: state.route.discussion });
+  }
   clearTimeout(state.pollTimer);
   const pending = state.overview.loading || state.overview.coverage.loading > 0;
   if (pending) state.pollTimer = setTimeout(() => loadOverview(), POLL_LOADING_MS);
@@ -79,7 +84,9 @@ async function render() {
   const route = state.route;
   if (route.view === "overview") {
     els.detail.hidden = true;
-    if (state.overview) renderOverview(els.main, state.overview);
+    if (state.overview) {
+      renderOverview(els.main, state.overview, { discussion: route.discussion });
+    }
     return loadOverview({ refresh: true });
   }
   if (route.view === "search") {
@@ -90,6 +97,7 @@ async function render() {
 }
 
 const baseOf = (route) => `#/r/${route.repo}/${route.checkout}`;
+const queryOf = (route) => (route.discussion ? "?discussion=1" : "");
 
 async function renderRepoRoute(route) {
   if (!state.overview) await loadOverview();
@@ -104,7 +112,7 @@ async function renderRepoRoute(route) {
   renderRepoPicker(els.sidebar, state.overview, repo.id);
   const view = h("div", { class: "view" });
   const header = repoHeader(repo, route, (checkout) => {
-    location.hash = `#/r/${repo.id}/${checkout}/${route.view}`;
+    location.hash = `#/r/${repo.id}/${checkout}/${route.view}${queryOf(route)}`;
   });
   replace(els.main, header, view);
   try {
@@ -123,7 +131,8 @@ async function renderBoardRoute(view, route) {
   const base = baseOf(route);
   const selected = route.rest[0];
   const board = await api.board(route.repo, route.checkout);
-  const rerender = () => renderBoard(view, board, { base, selected, rerender });
+  const rerender = () =>
+    renderBoard(view, board, { base, selected, rerender, discussion: route.discussion });
   rerender();
   if (!selected) {
     els.detail.hidden = true;
@@ -141,11 +150,13 @@ export async function renderDetail(route, base, id) {
     api.item(route.repo, route.checkout, id),
     api.relations(route.repo, route.checkout, id).catch(() => null),
   ]);
+  const query = queryOf(route);
   els.detail.dataset.item = `${route.checkout}/${id}`;
   renderItemDetail(els.detail, {
     item,
     relations,
     base,
+    query,
     route,
     reload: () => renderDetail(route, base, id),
     onSaved: async (warnings) => {
@@ -197,7 +208,7 @@ function wire() {
       els.searchInput.focus();
     } else if (e.key === "r") refreshAll();
     else if (e.key === "Escape" && state.route.view === "board" && state.route.rest[0]) {
-      location.hash = `${baseOf(state.route)}/board`;
+      location.hash = `${baseOf(state.route)}/board${queryOf(state.route)}`;
     }
   });
 }

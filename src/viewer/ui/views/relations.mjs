@@ -89,7 +89,7 @@ export function relationControls(ctx) {
   return {
     setEnabled(on) {
       for (const c of controls) c.disabled = !on;
-      note.textContent = on ? "" : "Save or discard field changes before changing relations.";
+      note.textContent = on ? "" : "Save or discard your unsaved edits before changing relations.";
       note.className = "muted";
     },
     block(relations) {

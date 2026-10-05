@@ -41,6 +41,12 @@ export const api = {
   worktrees: (repo) => request("GET", `/api/repos/${enc(repo)}/worktrees`),
   save: (repo, checkout, id, body) =>
     request("POST", `${co(repo, checkout)}/items/${enc(id)}`, body),
+  saveBody: (repo, checkout, id, body) =>
+    request("POST", `${co(repo, checkout)}/items/${enc(id)}/body`, body),
+  addNote: (repo, checkout, id, body) =>
+    request("POST", `${co(repo, checkout)}/items/${enc(id)}/notes`, body),
+  resolveNote: (repo, checkout, id, ref, body) =>
+    request("POST", `${co(repo, checkout)}/items/${enc(id)}/notes/${enc(ref)}/resolve`, body),
   relate: (repo, checkout, id, body) =>
     request("POST", `${co(repo, checkout)}/items/${enc(id)}/relations`, body),
 };
