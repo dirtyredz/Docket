@@ -221,3 +221,17 @@ describe("per-command help", () => {
     assert.match(runCli(["--help"]).stdout, /Markdown work items per repo/);
   });
 });
+
+describe("repo help", () => {
+  test("`repo --help` and `help repo` print the repo usage with the --doc option", () => {
+    const direct = runCli(["repo", "--help"]);
+    assert.equal(direct.status, 0);
+    assert.match(direct.stdout, /^Usage: docket repo add/);
+    assert.match(direct.stdout, /--doc NAME=PATH/);
+    assert.equal(runCli(["help", "repo"]).stdout, direct.stdout);
+  });
+
+  test("the overview lists repo", () => {
+    assert.match(runCli(["--help"]).stdout, /^\s+repo\s+/m);
+  });
+});

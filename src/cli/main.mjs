@@ -8,6 +8,7 @@ import { emitError, emitResult, EXIT } from "./output.mjs";
 import * as coordination from "./commands/coordination.mjs";
 import * as gate from "./commands/gate.mjs";
 import * as items from "./commands/items.mjs";
+import { repo } from "./commands/registry.mjs";
 import { init } from "./commands/init.mjs";
 import * as validation from "./commands/validation.mjs";
 
@@ -22,6 +23,7 @@ const COMMANDS = {
   claim: coordination.claim,
   release: coordination.release,
   gate: gate.gate,
+  repo,
   init,
 };
 
@@ -41,7 +43,12 @@ export async function runCli(argv, io) {
 `);
     return EXIT.ok;
   }
-  if (!command || command === "--help" || command === "-h" || command === "help") {
+  if (
+    !command ||
+    command === "--help" ||
+    command === "-h" ||
+    command === "help"
+  ) {
     io.stdout.write(`${overview()}\n`);
     return command ? EXIT.ok : EXIT.usage;
   }
@@ -69,7 +76,8 @@ export async function runCli(argv, io) {
 
 if (
   process.argv[1] &&
-  fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))
+  fs.realpathSync(process.argv[1]) ===
+    fs.realpathSync(fileURLToPath(import.meta.url))
 ) {
   const io = {
     stdout: process.stdout,
