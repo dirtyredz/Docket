@@ -1,9 +1,9 @@
 // The full read model of one item (`show`, the viewer's detail): fields, derived blocked, reverse
-// relations, claim, body. The selected item is parsed from freshly read bytes, so fields, title, body,
-// errors and revision always describe the same file; the caller's index records supply only the
+// relations, claim, facts body and discussion notes. The selected item is parsed from freshly read bytes,
+// so fields, title, body, notes, errors and revision always describe the same file; the caller's index records supply only the
 // surrounding items (for reverse relations and blocker statuses). Claims are a dependency
 // (`claims.readClaims`).
-import { bodyOf } from "../format/serialize.mjs";
+import { contentView } from "../format/content.mjs";
 import { notFound } from "../errors.mjs";
 import { parseEntries } from "../validation/check.mjs";
 import { readItemFile } from "../../storage/item-store.mjs";
@@ -32,9 +32,28 @@ export function readItem(ctx, id, { records, claims }) {
     reverse: reverseRelations(surrounding, id),
     claim: claims.readClaims(ctx.commonDir).claims[id] ?? null,
     errors: fresh.errors,
-    body: fresh.rest == null ? content : bodyOf(fresh.rest),
+    ...contentModel(fresh, content),
   };
   return { data, content };
+}
+
+/**
+ * Facts and notes kept apart: {body, bodySource, notes, openNoteCount, notesMalformed, notesSource}.
+ * body is display text, bodySource the exact editable source. Malformed Notes are never folded into
+ * the facts: notesMalformed is set and notesSource carries the raw, untrusted section.
+ */
+function contentModel(fresh, content) {
+  if (fresh.rest == null || !fresh.content) {
+    const none = { bodySource: null, notes: [], openNoteCount: 0 };
+    return { body: content, ...none, notesMalformed: false, notesSource: null };
+  }
+  const view = contentView(fresh.rest, fresh.content);
+  const malformed = fresh.content.errors.length > 0;
+  return {
+    ...view,
+    notesMalformed: malformed,
+    notesSource: malformed ? fresh.rest.slice(fresh.content.bodyEnd) : null,
+  };
 }
 
 /**

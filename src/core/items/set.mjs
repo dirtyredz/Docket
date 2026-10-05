@@ -4,7 +4,7 @@ import { CODES, docketError, notFound } from "../errors.mjs";
 import { CLOSED_STATUSES } from "../format/schema.mjs";
 import { rankAtEnd, rankAtStart, rankBetween } from "../identity/rank.mjs";
 import { editableRecord } from "./transaction.mjs";
-import { withTitle } from "../format/serialize.mjs";
+import { withTitle } from "../format/content.mjs";
 import { bandRanks, cleanTitle } from "./add.mjs";
 import { assertRevision } from "./revisions.mjs";
 

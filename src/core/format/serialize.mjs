@@ -1,4 +1,5 @@
 // Canonical item writing: the 12 keys in fixed order, then the untouched text after the fence.
+// Content helpers (title, body, Notes) live in content.mjs.
 import { isDeepStrictEqual } from "node:util";
 import { CODES, docketError } from "../errors.mjs";
 import { parseItem } from "./parse.mjs";
@@ -14,36 +15,24 @@ export function serializeFrontmatter(fields) {
   return `---\n${KEYS.map((k) => line(k, fields[k])).join("\n")}\n---\n`;
 }
 
-/** Full file text. `rest` is the exact text after the closing fence (H1 and body). */
-export function serializeItem({ fields, rest }) {
-  return serializeFrontmatter(fields) + rest;
+/**
+ * Full file text. `rest` is the exact text after the closing fence (H1, body, Notes). `frontmatter`,
+ * when given, is the original frontmatter text, kept verbatim instead of the canonical form.
+ */
+export function serializeItem({ fields, rest, frontmatter }) {
+  return (frontmatter ?? serializeFrontmatter(fields)) + rest;
 }
 
 /**
  * The one round-trip guard: serialize, reparse, and require the same fields and untouched `rest`.
- * Returns the file text; a mismatch is a serializer bug and throws DOCKET_INTERNAL.
+ * A preserved `frontmatter` must therefore represent exactly the supplied fields: a caller cannot pair
+ * preserved frontmatter with changed values. Returns the file text; a mismatch throws DOCKET_INTERNAL.
  */
-export function serializeChecked({ fields, rest }) {
-  const text = serializeItem({ fields, rest });
+export function serializeChecked(write) {
+  const text = serializeItem(write);
   const reparsed = parseItem(text);
-  if (!isDeepStrictEqual(reparsed.fields, fields) || reparsed.rest !== rest) {
-    throw docketError(CODES.INTERNAL, `serializer round trip failed for ${fields.id}`);
+  if (!isDeepStrictEqual(reparsed.fields, write.fields) || reparsed.rest !== write.rest) {
+    throw docketError(CODES.INTERNAL, `serializer round trip failed for ${write.fields.id}`);
   }
   return text;
-}
-
-/** The `rest` for a new item: H1 title, blank line, optional body, single trailing newline. */
-export function newItemRest(title, body = "") {
-  const trimmed = body.replace(/\r\n?/g, "\n").replace(/\s+$/, "");
-  return `# ${title}\n${trimmed ? `\n${trimmed}\n` : ""}`;
-}
-
-/** rest with its H1 title line replaced; every other byte (body, blank lines, line endings) is kept. */
-export function withTitle(rest, title) {
-  return rest.replace(/^(\s*)# .*/, (_, lead) => lead + "# " + title);
-}
-
-/** The body of an item: \`rest\` without its H1 title line and the blank lines after it (inverse of newItemRest). */
-export function bodyOf(rest) {
-  return rest.replace(/^\s*# .*\n?/, "").replace(/^\n+/, "");
 }

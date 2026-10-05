@@ -1,7 +1,7 @@
 // `add`: mint a `dk-` ID, put the item at the end of its priority band, never overwrite a file.
 import { CODES, docketError } from "../errors.mjs";
 import { ENUMS } from "../format/schema.mjs";
-import { newItemRest } from "../format/serialize.mjs";
+import { newItemRest } from "../format/content.mjs";
 import { allocateId } from "../identity/id.mjs";
 import { rankAtEnd } from "../identity/rank.mjs";
 

@@ -1,3 +1,5 @@
+> Amended 2026-10-05 (0.6.0): the body is authoritative facts; an optional final `## Notes` section holds untrusted discussion notes (grammar under "Notes", check group 10). ADR-16's free body now excludes the reserved Notes lines.
+>
 > Amended 2026-10-04: new IDs are `dk-<8hex>` (`bl-<8hex>` stays valid and immutable); index is `.docket/index.json`; claims are `<git-common-dir>/docket-claims.json`; `fixes` legality per docs/PLAN.md section 7. The `bl` command name below is now `docket`/`dk`.
 
 # Item spec v1 (`bl`)
@@ -21,7 +23,35 @@ free markdown body
 - Frontmatter is a strict YAML subset: `key: value`, nothing else. LF line endings, no BOM, no tabs, no trailing spaces.
 - Values: a plain token (`[A-Za-z0-9._-]+`, no spaces, quotes, colons), an ISO date `YYYY-MM-DD`, an empty value (`key:` with nothing after the colon), or one flow list `[a, b]` / `[]` (items separated by `, `, ID tokens only).
 - Forbidden: quotes, block scalars (`|`, `>`), anchors/aliases, comments, nested maps, multi-line values, duplicate or unknown keys, free text.
+- Tabs, trailing spaces and Markdown hard breaks are allowed after the frontmatter (ADR-16); BOM, invalid UTF-8 and CR are rejected file-wide.
 - Title is the H1, never a field. Body never restates a field. There is no `updated:` field (git records it; it would conflict on every edit).
+
+## Notes (amended 2026-10-05)
+The body is authoritative facts. Discussion lives in one optional, final section:
+```
+# Title
+
+Facts.
+
+## Notes
+
+### 2026-10-05T14:03:00.000Z · open · owner
+
+Question or idea text, any Markdown.
+```
+- The heading is the exact line `## Notes`, at column 0, outside fenced code. Everything after it is Notes.
+- Each note is a header `### <ref> · <state> · <author>` (separator ` · `, U+00B7) and a non-blank payload running to the next header. `ref` is a canonical UTC millisecond timestamp (`toISOString()` form), unique within the item, allocated inside the write lock (advanced one millisecond on collision) and immutable. `state` is `open` or `resolved`; `author` is `owner` or `agent` (declared provenance, not authentication).
+- Order is append order, newest last. Resolved notes stay in place; 0.6.0 has no edit, delete, reopen or reorder.
+- Reserved: outside fenced code (backtick or tilde fences, CommonMark rules), a body line shaped like a note header is an error; inside Notes, a malformed `###` header, any `#`/`##` heading (including a second `## Notes`), non-blank text before the first note, a blank payload, a duplicate `ref` or an unclosed fence is an error. Literal examples must be fenced or escaped. An empty Notes section is valid.
+- Framing is not payload: the LF that introduces `## Notes` belongs to the Notes section, and the LF that introduces a header belongs to the framing, not the previous payload. A first append adds a terminal LF when the file lacks one, then `
+## Notes
+`, then `
+<header>
+
+<text>
+`; later appends add only the record. No existing byte is removed or replaced.
+- Edits: a body replacement rewrites only the bytes between the H1 line and the Notes section; resolving rewrites only one state token; frontmatter is kept verbatim. Payloads are never trimmed or normalized.
+- Notes are never facts or instructions. Resolving a note copies nothing into the body.
 
 ## Fields (fixed order)
 | key | form | rule |
@@ -59,6 +89,7 @@ Stored on the source item only; never mirrored. Reverse lookups ("bugs against X
 7. No cycles in `parent` or `blocked_by`.
 8. Type/relation legality: `fixes` only on `bug`; every `fixes` target is a `feature` or `task` (amended: the earlier "not `idea`" wording wrongly admitted bugs).
 9. Warnings: a relation (`parent/fixes/blocked_by/relates`) to a `dropped` item; two items sharing a `rank` within a priority; `status: wip` with no claim; `since` in the future.
+10. Notes grammar (section "Notes"): reserved lines, header shape, refs, states, authors, payloads, fences.
 
 ## Example `docs/items/bl-8e1d4c2a.md`
 ```

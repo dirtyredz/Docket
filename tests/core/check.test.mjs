@@ -249,3 +249,33 @@ describe("git-backed snapshots", () => {
     assert.ok(hasError(r, "config-version", "docket.json"));
   });
 });
+
+describe("rule 10: item content (Notes)", () => {
+  const withBody = (notes) => ({ body: `Facts.\n\n## Notes\n\n${notes}` });
+  const good = "### 2026-10-05T14:03:00.000Z · open · owner\n\nQuestion?\n";
+
+  test("a well-formed Notes section passes", () => {
+    const r = run([item(A, {}, withBody(good))]);
+    assert.deepEqual(r.errors, []);
+  });
+
+  test("a malformed Notes header is a rule-10 error naming the file", () => {
+    const r = run([item(A, {}, withBody("### nope\n\nx\n"))]);
+    assert.equal(r.ok, false);
+    assert.ok(
+      r.errors.some((e) => e.rule === 10 && e.code === "note-header" && e.file === `${A}.md`),
+    );
+  });
+
+  test("a repo with one malformed Notes item reports only that item", (t) => {
+    const repo = makeRepo({
+      [A]: itemText({ id: A }, withBody(good)),
+      [B]: itemText({ id: B, rank: "b" }, withBody(`${good}\n${good}`)),
+    });
+    t.after(repo.cleanup);
+    const r = checkSnapshot(workingSnapshot(resolveRepo(repo.root)));
+    assert.equal(r.ok, false);
+    assert.ok(hasError(r, "note-duplicate", `${B}.md`));
+    assert.ok(!r.errors.some((e) => e.file === `${A}.md`));
+  });
+});

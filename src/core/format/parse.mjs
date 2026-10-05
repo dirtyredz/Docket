@@ -1,12 +1,14 @@
 // Strict item grammar (ITEM-SPEC check groups 1, 2, 3 and 5). The only code that reads frontmatter.
 // Returns every grammar problem found rather than stopping at the first, plus whatever fields could be
 // read, so `check` can still run graph checks on a partly broken store and report everything at once.
+import { parseContent } from "./content.mjs";
 import { DATE_RE, ID_RE, KEYS, LIST_KEYS, RANK_RE, REQUIRED_KEYS, TOKEN_RE } from "./schema.mjs";
 
 const BOM = [0xef, 0xbb, 0xbf];
 const decoder = new TextDecoder("utf-8", { fatal: true });
 const LINE_RE = /^([a-z_]+):(?: (.*))?$/;
 
+const unreadable = { fields: null, title: null, rest: null, frontmatter: null, content: null };
 const issue = (rule, code, message, line) => ({ rule, code, message, ...(line ? { line } : {}) });
 
 /** Decode bytes strictly: no BOM, valid UTF-8. Returns {text} or {error}. */
@@ -57,13 +59,14 @@ function checkValue(key, value, line, errors) {
 
 /**
  * Parse one item file.
- * Returns { fields, title, rest, errors } where `rest` is the exact text after the closing fence line
- * (the H1 and body, preserved byte for byte by the serializer). fields is null when no frontmatter
- * could be located at all.
+ * Returns { fields, title, rest, frontmatter, content, errors } where `rest` is the exact text after the
+ * closing fence line (H1, body and Notes, preserved byte for byte by the serializer), `frontmatter` the
+ * exact text before it, and `content` the parsed content slices (format/content.mjs). fields is null
+ * when no frontmatter could be located at all.
  */
 export function parseItem(bytes) {
   const decoded = decodeItemBytes(bytes);
-  if (decoded.error) return { fields: null, title: null, rest: null, errors: [decoded.error] };
+  if (decoded.error) return { ...unreadable, errors: [decoded.error] };
   const text = decoded.text;
   const errors = [];
   if (text.includes("\r")) errors.push(issue(3, "crlf", "CR characters (use LF line endings)"));
@@ -71,12 +74,12 @@ export function parseItem(bytes) {
   const lines = text.split("\n");
   if (lines[0] !== "---") {
     errors.push(issue(1, "fence", "frontmatter fence `---` missing at line 1", 1));
-    return { fields: null, title: null, rest: null, errors };
+    return { ...unreadable, errors };
   }
   const end = lines.indexOf("---", 1);
   if (end < 0) {
     errors.push(issue(1, "fence", "frontmatter is not closed by a `---` line"));
-    return { fields: null, title: null, rest: null, errors };
+    return { ...unreadable, errors };
   }
 
   const fields = {};
@@ -118,5 +121,8 @@ export function parseItem(bytes) {
       issue(5, "title", "first non-blank line after the frontmatter must be an H1 `# Title`"),
     );
   }
-  return { fields, title: h1 ? h1[1].trim() : null, rest, errors };
+  const content = parseContent(rest, end + 1);
+  errors.push(...content.errors);
+  const frontmatter = text.slice(0, text.length - rest.length);
+  return { fields, title: h1 ? h1[1].trim() : null, rest, frontmatter, content, errors };
 }

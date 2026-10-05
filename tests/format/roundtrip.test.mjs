@@ -3,11 +3,8 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { KEYS } from "../../src/core/format/schema.mjs";
 import { parseItem } from "../../src/core/format/parse.mjs";
-import {
-  newItemRest,
-  serializeFrontmatter,
-  serializeItem,
-} from "../../src/core/format/serialize.mjs";
+import { newItemRest } from "../../src/core/format/content.mjs";
+import { serializeFrontmatter, serializeItem } from "../../src/core/format/serialize.mjs";
 import { itemText } from "../helpers/repository.mjs";
 
 const roundtrip = (text) => {

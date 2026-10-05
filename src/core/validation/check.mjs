@@ -1,5 +1,6 @@
 // Validation orchestration: parse every entry of a snapshot, run per-item, graph and advisory checks.
 // Input is a snapshot (working tree or Git tree), never the index: check always reads the files.
+import { openNoteCount } from "../format/content.mjs";
 import { parseItem } from "../format/parse.mjs";
 import { checkEntryName, checkItemFields } from "./items.mjs";
 import { checkRelations } from "./relations.mjs";
@@ -7,20 +8,38 @@ import { collectWarnings } from "./warnings.mjs";
 
 /**
  * Parse snapshot entries. Every entry yields a record, malformed or not, so nothing is silently
- * omitted: {name, id, fields, title, rest, errors, revision}.
+ * omitted: {name, id, fields, title, rest, frontmatter, content, openNoteCount, errors, revision}.
+ * Content (body, Notes) uses the same grammar for working-tree and Git-ref checks.
  */
 export function parseEntries(entries) {
   return entries.map((entry) => {
     const nameIssue = checkEntryName(entry);
     const id = entry.name.replace(/\.md$/, "");
     if (nameIssue && !entry.isFile) {
-      return { name: entry.name, id, fields: null, title: null, rest: null, errors: [nameIssue] };
+      const errors = [nameIssue];
+      return {
+        name: entry.name,
+        id,
+        fields: null,
+        title: null,
+        rest: null,
+        openNoteCount: 0,
+        errors,
+      };
     }
     const parsed = parseItem(entry.bytes);
     const errors = [...(nameIssue ? [nameIssue] : []), ...parsed.errors];
     if (parsed.fields) errors.push(...checkItemFields(parsed.fields, entry.name));
     errors.sort((a, b) => a.rule - b.rule);
-    return { name: entry.name, id, ...parsed, errors, revision: entry.revision };
+    const notes = openNoteCount(parsed.content);
+    return {
+      name: entry.name,
+      id,
+      ...parsed,
+      openNoteCount: notes,
+      errors,
+      revision: entry.revision,
+    };
   });
 }
 

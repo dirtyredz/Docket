@@ -8,6 +8,8 @@ docs/PLAN.md
 docs/PLAN.md.*
 docs/PLAN-VIEWER.md
 docs/PLAN-VIEWER.md.*
+docs/PLAN-NOTES.md
+docs/PLAN-NOTES.md.*
 # Item files are validated byte-exact by docket; prettier must never touch them.
 docs/items/
 tests/fixtures/
