@@ -27,8 +27,8 @@ Create an item; the ID and rank are assigned. Prints "<id>  <title>" (--json: th
   --area A  --status S  --parent ID
   --fixes ID  --blocked-by ID  --relates ID   (repeatable)
   --batch F   create many from a JSON array of {type, priority, status?, title, body?, area?}
-              (F or - for stdin). Everything is validated before anything is written; prints the
-              created list as JSON. Not combinable with the single-item options.
+              (F or - for stdin). Everything is validated before anything is written; prints
+              "<id>  <title>" lines (--json: {count, items}, the full created items). Not combinable with the single-item options.
 ${VALUES}`,
   set: `Usage: docket set <id> [--status S] [--priority P] [--type T] [--area A]
                    [--before ID | --after ID | --top | --bottom] [--expect REV]

@@ -62,6 +62,11 @@ Non-obvious traps, from `PLAN.md` sections 6 and 7, the merge test, and building
 - **Batch add is validate-all, then write-each.** `add --batch` plans every entry before writing, so bad input
   writes nothing; the files themselves are still separate atomic writes (a crash mid-write could leave some).
   `--body-file -` and `--batch -` read stdin: do not use both in one call.
+- **`add --batch` prints `id  title` lines unless `--json`**, which returns `{count, items}`. Agents driving a
+  move-in must pass `--json`.
+- **`gate install` / `--dry-run` wording.** Dry runs write nothing, including git config; changed steps read
+  "would be created/updated" (verified: `git config --get docket.gateLauncher` is empty after a dry run).
+- **`npm install --global` needs an absolute tarball path**; a relative one is read as a GitHub spec.
 - **`list --count-by` counts the filtered view** (open only unless `--all` or `--status`); `--limit` does not apply.
 - **`--dry-run` still reads the gate.** `init --gate --dry-run` and `gate install --dry-run` fail if no gate is
   promoted or the hook template is missing, exactly as the real run would.

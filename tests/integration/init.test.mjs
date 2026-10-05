@@ -191,12 +191,16 @@ describe("docket init --dry-run and report", () => {
         ["created", "created"],
       );
       assert.equal(g.hook.state, "installed");
+      const dryInit = runCli(["init", "--gate", "--dry-run", "--repo", r.root], { env });
+      assert.match(dryInit.stdout, /git config docket\.gateLauncher: would be created/);
+      assert.match(dryInit.stdout, /git config docket\.gateNode: would be created/);
+      assert.doesNotMatch(dryInit.stdout, /git config \S+: created/);
       assert.equal(spawnGit(r, "config", "--get", "docket.gateLauncher"), "");
       assert.equal(fs.existsSync(hook), false);
 
       const dryInstall = runCli(["gate", "install", "--dry-run", "--repo", r.root], { env });
       assert.match(dryInstall.stdout, /dry run, nothing written/);
-      assert.match(dryInstall.stdout, /git config docket\.gateLauncher: created/);
+      assert.match(dryInstall.stdout, /git config docket\.gateLauncher: would be created/);
       assert.match(dryInstall.stdout, /hook .*: would be created/);
       assert.equal(fs.existsSync(hook), false);
 

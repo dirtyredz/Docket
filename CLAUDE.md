@@ -11,7 +11,7 @@ gate, `docket init` and the move-in playbook are shipped (importers removed, ADR
 - Tests: `npm test` (everything), or `npm run test:<area>` for bootstrap, format, core, storage, cli,
   coordination (tests/state), integration, packaging, layout (bootstrap and layout are scripts, not test folders). Integration and packaging do real pushes to temp bare
   remotes and need the harness template (`~/.claude/hooks/structure/pre-push.template.sh`).
-- `npm run build` packs `dist/docket-<v>.tgz`. Ship it: `npm install --global <tgz>`, then
+- `npm run build` packs `dist/docket-<v>.tgz`. Ship it: `npm install --global <tgz>`, (ABSOLUTE tarball path: a relative one is misread as a GitHub spec), then
   `docket gate promote <tgz>` (last-good gate) and `docket gate install --repo .`.
 - `npm run lint`, `npm run lint:fix`, `npm run format`, `npm run format:check`.
 - Dependency direction: CLI/viewer -> core -> storage; state, integration -> core. Keep code files under about

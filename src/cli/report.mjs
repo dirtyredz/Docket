@@ -10,7 +10,7 @@ export function stateLine(label, state, dryRun) {
 export function gateReport(result) {
   const { hook, dryRun } = result;
   return [
-    ...result.config.map((c) => `  git config ${c.key}: ${c.state}`),
+    ...result.config.map((c) => stateLine(`git config ${c.key}`, c.state, dryRun)),
     hook.change === "foreign"
       ? `  hook ${hook.path}: foreign, left alone`
       : stateLine(`hook ${hook.path}`, hook.change, dryRun),

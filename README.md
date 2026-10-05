@@ -4,7 +4,7 @@ Docket is a Windows 11 command-line tool (and, later, a local viewer) for tracki
 files, one file per item, stored in the repository the work belongs to. Items branch and merge with the
 code, and every index or cache can be rebuilt from the files.
 
-**Status: 0.4.0 (CLI, gate, `docket init`, batch add, move-in playbook).** The item format is `docs/research/ITEM-SPEC.md`; the plan is
+**Status: 0.4.1 (CLI, gate, `docket init`, batch add, move-in playbook).** The item format is `docs/research/ITEM-SPEC.md`; the plan is
 `docs/PLAN.md`.
 
 ## Commands
