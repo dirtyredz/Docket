@@ -4,16 +4,8 @@
 // base" (rebase, never automatic) or Discard before saving again.
 import { api } from "../../api.mjs";
 import { h } from "../../dom.mjs";
-import {
-  activeKinds,
-  discardDraft,
-  draftKey,
-  editText,
-  getDraft,
-  isDirty,
-  markConflict,
-  rebaseOnServer,
-} from "../../drafts.mjs";
+import { activeKinds, discardDraft, draftKey, editText, getDraft, isDirty } from "../../drafts.mjs";
+import { conflictPanel, createSaver } from "./conflict-save.mjs";
 
 const open = new Set(); // draft keys whose editor is shown (a draft always shows it)
 
@@ -27,33 +19,30 @@ export function bodyBlock(item, base) {
   return body;
 }
 
-function conflictPanel(draft, onRebase) {
-  return h(
-    "div",
-    { class: "conflict", role: "alert", "data-testid": "body-conflict" },
-    h("strong", {}, "The facts changed since you started editing."),
-    h(
-      "div",
-      { class: "side-by-side" },
-      h("div", {}, h("h4", {}, "yours"), h("pre", { "data-testid": "body-mine" }, draft.text)),
+function bodyConflict(draft, saver) {
+  return conflictPanel({
+    testid: "body-conflict",
+    headline: "The facts changed since you started editing.",
+    detail: [
       h(
         "div",
-        {},
-        h("h4", {}, "current"),
-        h("pre", { "data-testid": "body-current" }, draft.conflict.source),
+        { class: "side-by-side" },
+        h("div", {}, h("h4", {}, "yours"), h("pre", { "data-testid": "body-mine" }, draft.text)),
+        h(
+          "div",
+          {},
+          h("h4", {}, "current"),
+          h("pre", { "data-testid": "body-current" }, draft.conflict.source),
+        ),
       ),
+    ],
+    actions: [saver.rebaseAction("body-rebase")],
+    footer: h(
+      "p",
+      { class: "muted" },
+      "Or discard your edit below. Nothing is retried automatically.",
     ),
-    h(
-      "div",
-      { class: "actions" },
-      h(
-        "button",
-        { type: "button", onclick: onRebase, "data-testid": "body-rebase" },
-        "Use current as base",
-      ),
-    ),
-    h("p", { class: "muted" }, "Or discard your edit below. Nothing is retried automatically."),
-  );
+  });
 }
 
 /** env: {ctx, item, route, base, syncAll}. Returns {el, sync()}. */
@@ -63,33 +52,17 @@ export function bodyPanel({ ctx, item, route, base, syncAll }) {
   const draft = getDraft(key);
   const editing = Boolean(draft) || open.has(key);
   const message = h("p", { class: "muted", role: "status", "data-testid": "body-message" });
-  let busy = false;
+  const saver = createSaver({ ctx, route, item, key, syncAll, message });
 
-  const save = async () => {
-    const d = getDraft(key);
-    if (busy || !isDirty(d) || d.conflict) return;
-    busy = true;
-    syncAll();
-    try {
-      await api.saveBody(route.repo, route.checkout, item.id, {
-        expected: d.base.revision,
-        body: d.text,
-      });
-      discardDraft(key);
-      open.delete(key);
-      busy = false;
-      await ctx.onSaved([]); // re-fetches: every panel now bases on the returned revision
-    } catch (err) {
-      busy = false;
-      if (err.status === 409) {
-        markConflict(key, await api.item(route.repo, route.checkout, item.id));
-        return ctx.reload();
-      }
-      message.textContent = err.message;
-      message.className = "error";
-      syncAll();
-    }
-  };
+  const save = () =>
+    saver.save(
+      (d) =>
+        api.saveBody(route.repo, route.checkout, item.id, {
+          expected: d.base.revision,
+          body: d.text,
+        }),
+      { done: () => open.delete(key) },
+    );
 
   const stop = () => {
     discardDraft(key);
@@ -115,12 +88,7 @@ export function bodyPanel({ ctx, item, route, base, syncAll }) {
     "div",
     { class: "body-editor" },
     textarea,
-    draft?.conflict
-      ? conflictPanel(draft, () => {
-          rebaseOnServer(key);
-          ctx.reload();
-        })
-      : null,
+    draft?.conflict ? bodyConflict(draft, saver) : null,
     h(
       "div",
       { class: "actions" },
@@ -159,7 +127,7 @@ export function bodyPanel({ ctx, item, route, base, syncAll }) {
     const d = getDraft(key);
     const others = activeKinds(route.repo, route.checkout, item.id).some((k) => k !== "body");
     const saveBtn = el.querySelector('[data-testid="body-save"]');
-    if (saveBtn) saveBtn.disabled = !isDirty(d) || Boolean(d?.conflict) || others || busy;
+    if (saveBtn) saveBtn.disabled = !isDirty(d) || Boolean(d?.conflict) || others || saver.busy;
     if (others && editing) {
       message.textContent = "Save or discard your other unsaved edit first.";
       message.className = "muted";

@@ -4,6 +4,7 @@
 // per-process CSRF token. Responses carry no CORS headers, a strict CSP, nosniff and no framing; errors
 // are JSON with a stable code and no stack.
 import { CODES, docketError } from "../../core/errors.mjs";
+import { ID_RE } from "../../core/format/schema.mjs";
 
 export const BODY_LIMIT = 64 * 1024;
 export const TOKEN_HEADER = "x-docket-token";
@@ -43,6 +44,32 @@ export function statusFor(err) {
 
 export const httpError = (status, message) =>
   Object.assign(docketError(CODES.USAGE, message), { httpStatus: status, code: "DOCKET_HTTP" });
+
+/**
+ * Validate a JSON request body against its allowed keys: any other key is a 400 ("not accepted here").
+ * With `expected: true` the body must carry a non-empty `expected` revision string; with
+ * `expected: "map"` an {item id: revision string} object (the relation edit's revisions). Returns the
+ * body unchanged; the caller validates the values of its own fields.
+ */
+export function pickFields(body, { allowed, expected = false }) {
+  const keys = expected ? [...allowed, "expected"] : allowed;
+  const unknown = Object.keys(body).filter((k) => !keys.includes(k));
+  if (unknown.length) throw httpError(400, `not accepted here: ${unknown.join(", ")}`);
+  if (expected === "map") {
+    const map = body.expected;
+    if (!map || typeof map !== "object" || Array.isArray(map)) {
+      throw httpError(400, "expected revisions are required");
+    }
+    for (const [k, v] of Object.entries(map)) {
+      if (!ID_RE.test(k) || typeof v !== "string") {
+        throw httpError(400, "bad expected revision entry");
+      }
+    }
+  } else if (expected && (typeof body.expected !== "string" || !body.expected)) {
+    throw httpError(400, "expected revision is required");
+  }
+  return body;
+}
 
 /** The host:port spellings this server answers to. */
 export const allowedHosts = (port) => [`127.0.0.1:${port}`, `localhost:${port}`];

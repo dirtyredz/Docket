@@ -3,7 +3,7 @@
 // edits whichever file holds it.
 import { LIST_KEYS } from "../format/schema.mjs";
 import { assertRevision, assertRevisions } from "./revisions.mjs";
-import { editableRecord } from "./transaction.mjs";
+import { editableRecord, mutateStore, withWritten } from "./transaction.mjs";
 
 /**
  * Plan a link. change: {parent?, clearParent?, remove?, fixes?, blocked_by?, relates?} where the list
@@ -70,4 +70,15 @@ export function planLink({ byId }, id, change, { expect, expectRevisions } = {})
     writes.push({ id: otherId, fields, rest: orec.rest, expectedRevision: orec.revision });
   }
   return { writes, value: { id, changes, fields: own } };
+}
+
+/**
+ * Apply a link (the operation behind `link` and the viewer's relation edits). change and options as
+ * planLink. Returns {id, changes, fields, written}: written lists every rewritten {id, revision}.
+ */
+export function linkItem(ctx, id, change, options = {}) {
+  return withWritten(
+    mutateStore(ctx, (s) => planLink(s, id, change, options)),
+    ["written"],
+  );
 }

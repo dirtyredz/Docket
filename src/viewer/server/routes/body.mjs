@@ -4,18 +4,14 @@
 // replaceBody on exactly the selected checkout, re-verified for the request. Frontmatter, title and
 // Notes are kept byte for byte; a stale `expected` (also for an unchanged body) is a 409.
 import { replaceBody } from "../../../core/items/content/body.mjs";
-import { httpError } from "../boundary.mjs";
-import { checkItemId, openScoped } from "../scope.mjs";
+import { httpError, pickFields } from "../boundary.mjs";
+import { mutateScoped } from "../scope.mjs";
 
 const BASE = "/api/repos/:repo/checkouts/:checkout/items/:id";
 
 /** Validate {expected, body}; anything else is refused. */
 export function bodyRequest(req) {
-  const unknown = Object.keys(req).filter((k) => k !== "expected" && k !== "body");
-  if (unknown.length) throw httpError(400, `not accepted here: ${unknown.join(", ")}`);
-  if (typeof req.expected !== "string" || !req.expected) {
-    throw httpError(400, "expected revision is required");
-  }
+  pickFields(req, { allowed: ["body"], expected: true });
   if (typeof req.body !== "string") throw httpError(400, "body must be a string");
   return { expected: req.expected, body: req.body };
 }
@@ -26,12 +22,10 @@ export function bodyRoutes(deps) {
       method: "POST",
       path: `${BASE}/body`,
       handler: ({ params, body: request }) => {
-        const id = checkItemId(params.id);
         const { expected, body } = bodyRequest(request);
-        const { repo, checkout, ctx } = openScoped(deps, params, { fresh: true });
-        const out = replaceBody(ctx, id, body, { expect: expected });
-        deps.catalog.invalidate(repo, checkout);
-        return out;
+        return mutateScoped(deps, params, (ctx, id) =>
+          replaceBody(ctx, id, body, { expect: expected }),
+        );
       },
     },
   ];

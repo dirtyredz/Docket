@@ -2,15 +2,15 @@
 
 Windows 11 CLI (`docket` / `dk`) and local viewer over per-repo Markdown work items. Status: the CLI, core, pre-push
 gate, `docket init`, the move-in playbook, the repo registry, the local viewer (`docket serve`), facts and notes and the
-agent guide are built in 0.6.0, not yet pushed (importers removed, ADR-19; viewer plan `docs/PLAN-VIEWER.md`).
+agent guide are built in 0.6.0, not yet pushed (importers removed, ADR-19; viewer plan `docs/plans/PLAN-VIEWER.md`).
 
 ## Working here
 
 - Read `STRUCTURE.md` (code map and `## Layout`), then `docs/GOTCHAS.md`. `docs/ARCHITECTURE.md` for
   flows, `docs/DECISIONS.md` for why.
 - Stack: Node >= 22 (24 planned, ADR-13), plain ESM (`.mjs`), npm, `node:test`. No TypeScript.
-- Tests: `npm test` (everything), or `npm run test:<area>` for bootstrap, format, core, storage, cli,
-  coordination (tests/state), registry, viewer, e2e (Playwright; Edge/Chrome fallback), integration, packaging, layout (bootstrap and layout are scripts, not test folders). Integration and packaging do real pushes to temp bare
+- Tests: `npm test` (everything), or `npm run test:<area>` (unit areas live under `tests/unit/`) for bootstrap, format, core, storage, cli,
+  coordination (tests/unit/state), registry (tests/unit/state/registry), viewer, e2e (Playwright; Edge/Chrome fallback), integration, packaging, layout (bootstrap and layout are scripts, not test folders). Integration and packaging do real pushes to temp bare
   remotes and need the harness template (`~/.claude/hooks/structure/pre-push.template.sh`).
 - `npm run build` packs `dist/docket-<v>.tgz`. Ship it: `npm install --global <tgz>`, (ABSOLUTE tarball path: a relative one is misread as a GitHub spec), then
   `docket gate promote <tgz>` (last-good gate) and `docket gate install --repo .`.
@@ -34,7 +34,7 @@ agent guide are built in 0.6.0, not yet pushed (importers removed, ADR-19; viewe
 
 - Living docs (STRUCTURE, ARCHITECTURE, DECISIONS, FEATURES, ROADMAP, BACKLOG, GOTCHAS) are maps: a
   screen or two each, 12 KB hard cap. History goes in `docs/records/`.
-- `docs/research/` and `docs/PLAN.md` are historical evidence. Do not reformat or rewrite them; only
+- `docs/research/` and `docs/plans/PLAN.md` are historical evidence. Do not reformat or rewrite them; only
   ITEM-SPEC.md is amended in place (note at the top).
 
 ## Git

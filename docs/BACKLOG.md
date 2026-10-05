@@ -3,7 +3,7 @@
 Docket's own work lives in `docs/items/` (created in M0), tracked with Docket itself. This page holds no
 item list, statuses or ranks; see `ROADMAP.md` for milestones.
 
-## Open questions from PLAN, with the assumption in force
+## Open questions from `plans/PLAN.md`, with the assumption in force
 
 | Question                           | Assumption used                                                                                                 |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------- |

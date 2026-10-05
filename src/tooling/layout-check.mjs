@@ -24,8 +24,9 @@ export function layoutProblems(files, homes, readLines) {
   for (const file of files) {
     if (!CODE.test(file) || !/^(src|tests)\//.test(file)) continue;
     const dir = path.posix.dirname(file);
+    // With `tests` declared, a suite folder (tests/<suite>) and the unit areas under tests/unit/ are homes.
     const testsSuite =
-      dir.split("/").length === 2 && dir.startsWith("tests/") && homeSet.has("tests");
+      homeSet.has("tests") && (dir.split("/").length === 2 || dir.startsWith("tests/unit/"));
     if (!homeSet.has(dir) && !testsSuite) problems.push(`${file}: not in a declared Layout home`);
     const lines = readLines(file);
     if (lines > MAX_LINES) problems.push(`${file}: ${lines} lines (cap ${MAX_LINES})`);

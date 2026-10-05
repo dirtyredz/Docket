@@ -11,10 +11,9 @@ import {
   editDraft,
   getDraft,
   isDirty,
-  markConflict,
-  rebaseOnServer,
   SCALARS,
 } from "../../drafts.mjs";
+import { conflictPanel, createSaver } from "./conflict-save.mjs";
 
 const ENUMS = {
   status: ["todo", "wip", "done", "dropped"],
@@ -37,41 +36,32 @@ function input(field, value, onInput) {
   );
 }
 
-function conflictPanel(draft, onRebase, onDiscard) {
+function scalarConflict(draft, saver) {
   const c = draft.conflict;
-  return h(
-    "div",
-    { class: "conflict", role: "alert", "data-testid": "conflict" },
-    h("strong", {}, "This item changed since you started editing."),
-    h(
-      "table",
-      {},
-      h("tr", {}, h("th", {}, ""), h("th", {}, "yours"), h("th", {}, "current")),
-      SCALARS.map((k) =>
-        h(
-          "tr",
-          { class: draft.values[k] !== c.values[k] ? "warn" : "" },
-          h("th", {}, k),
-          h("td", { "data-testid": `mine-${k}` }, draft.values[k]),
-          h("td", { "data-testid": `server-${k}` }, c.values[k]),
+  return conflictPanel({
+    testid: "conflict",
+    headline: "This item changed since you started editing.",
+    detail: [
+      h(
+        "table",
+        {},
+        h("tr", {}, h("th", {}, ""), h("th", {}, "yours"), h("th", {}, "current")),
+        SCALARS.map((k) =>
+          h(
+            "tr",
+            { class: draft.values[k] !== c.values[k] ? "warn" : "" },
+            h("th", {}, k),
+            h("td", { "data-testid": `mine-${k}` }, draft.values[k]),
+            h("td", { "data-testid": `server-${k}` }, c.values[k]),
+          ),
         ),
       ),
-    ),
-    h(
-      "div",
-      { class: "actions" },
-      h(
-        "button",
-        { type: "button", onclick: onRebase, "data-testid": "keep-mine" },
-        "Keep mine on current version",
-      ),
-      h(
-        "button",
-        { type: "button", onclick: onDiscard, "data-testid": "take-server" },
-        "Discard mine",
-      ),
-    ),
-  );
+    ],
+    actions: [
+      saver.rebaseAction("keep-mine", "Keep mine on current version"),
+      saver.discardAction("take-server", "Discard mine"),
+    ],
+  });
 }
 
 /** env: {ctx, item, route, syncAll}. Returns {el, sync()}. */
@@ -81,32 +71,15 @@ export function scalarPanel({ ctx, item, route, syncAll }) {
   const draft = getDraft(key);
   const values = draft?.values ?? Object.fromEntries(SCALARS.map((k) => [k, item[k] ?? ""]));
   const message = h("p", { class: "muted", role: "status", "data-testid": "editor-message" });
-  let busy = false;
+  const saver = createSaver({ ctx, route, item, key, syncAll, message });
 
-  const save = async () => {
-    const d = getDraft(key);
-    if (busy || !isDirty(d) || d.conflict) return;
-    busy = true;
-    syncAll();
-    try {
-      const res = await api.save(route.repo, route.checkout, item.id, {
+  const save = () =>
+    saver.save((d) =>
+      api.save(route.repo, route.checkout, item.id, {
         expected: d.base.revision,
         ...changedFields(d),
-      });
-      discardDraft(key);
-      busy = false;
-      await ctx.onSaved(res.warnings ?? []);
-    } catch (err) {
-      busy = false;
-      if (err.status === 409) {
-        markConflict(key, await api.item(route.repo, route.checkout, item.id));
-        return ctx.reload();
-      }
-      message.textContent = err.message;
-      message.className = "error";
-      syncAll();
-    }
-  };
+      }),
+    );
 
   const form = editable
     ? h(
@@ -129,19 +102,7 @@ export function scalarPanel({ ctx, item, route, syncAll }) {
             }),
           ),
         ),
-        draft?.conflict
-          ? conflictPanel(
-              draft,
-              () => {
-                rebaseOnServer(key);
-                ctx.reload();
-              },
-              () => {
-                discardDraft(key);
-                ctx.reload();
-              },
-            )
-          : null,
+        draft?.conflict ? scalarConflict(draft, saver) : null,
         h(
           "div",
           { class: "actions" },
@@ -168,7 +129,7 @@ export function scalarPanel({ ctx, item, route, syncAll }) {
     const others = activeKinds(route.repo, route.checkout, item.id).some((k) => k !== "scalar");
     for (const b of el.querySelectorAll('[data-testid="save"],[data-testid="discard"]')) {
       const isSave = b.dataset.testid === "save";
-      b.disabled = !isDirty(d) || (isSave && (Boolean(d?.conflict) || others || busy));
+      b.disabled = !isDirty(d) || (isSave && (Boolean(d?.conflict) || others || saver.busy));
     }
   }
   return { el, sync };

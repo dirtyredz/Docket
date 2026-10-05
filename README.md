@@ -5,7 +5,7 @@ files, one file per item, stored in the repository the work belongs to. Items br
 code, and every index or cache can be rebuilt from the files.
 
 **Status (0.6.0, built, unpushed): CLI, gate, `docket init`, batch add, move-in playbook, repo registry, local viewer, facts and notes, and the agent guide.** The item format is `docs/research/ITEM-SPEC.md`; the plan is
-`docs/PLAN.md`.
+`docs/plans/PLAN.md`.
 
 ## Commands
 

@@ -4,7 +4,7 @@
 import { CODES, docketError } from "../../errors.mjs";
 import { contentView, parseContent, withBody } from "../../format/content.mjs";
 import { assertRevision } from "../revisions.mjs";
-import { editableContent, mutateStore } from "../transaction.mjs";
+import { editableContent, mutateStore, withWritten } from "../transaction.mjs";
 
 const invalid = (message, details) => docketError(CODES.INVALID, message, details);
 
@@ -52,6 +52,5 @@ export function planBodyReplace({ byId }, id, body, { expect }) {
 
 /** Replace a body. Returns {id, noop, revision} (the current revision on a no-op). */
 export function replaceBody(ctx, id, body, { expect } = {}) {
-  const { value, written } = mutateStore(ctx, (s) => planBodyReplace(s, id, body, { expect }));
-  return { ...value, revision: written[0]?.revision ?? value.revision };
+  return withWritten(mutateStore(ctx, (s) => planBodyReplace(s, id, body, { expect })));
 }

@@ -4,22 +4,14 @@
 // Notes added here are owner-authored. Both run core note operations on exactly the selected checkout,
 // re-verified for the request; a stale `expected` (also for an already-resolved note) is a 409.
 import { addNote, resolveNote } from "../../../core/items/content/notes.mjs";
-import { httpError } from "../boundary.mjs";
-import { checkItemId, openScoped } from "../scope.mjs";
+import { httpError, pickFields } from "../boundary.mjs";
+import { mutateScoped } from "../scope.mjs";
 
 const BASE = "/api/repos/:repo/checkouts/:checkout/items/:id/notes";
 
-function requireOnly(req, keys) {
-  const unknown = Object.keys(req).filter((k) => !keys.includes(k));
-  if (unknown.length) throw httpError(400, `not accepted here: ${unknown.join(", ")}`);
-  if (typeof req.expected !== "string" || !req.expected) {
-    throw httpError(400, "expected revision is required");
-  }
-}
-
 /** Validate {expected, text}. */
 export function noteRequest(req) {
-  requireOnly(req, ["expected", "text"]);
+  pickFields(req, { allowed: ["text"], expected: true });
   if (typeof req.text !== "string") throw httpError(400, "text must be a string");
   return { expected: req.expected, text: req.text };
 }
@@ -33,20 +25,13 @@ function decodeRef(raw) {
 }
 
 export function noteRoutes(deps) {
-  const mutate = (params, run) => {
-    const id = checkItemId(params.id);
-    const { repo, checkout, ctx } = openScoped(deps, params, { fresh: true });
-    const out = run(ctx, id);
-    deps.catalog.invalidate(repo, checkout);
-    return out;
-  };
   return [
     {
       method: "POST",
       path: BASE,
       handler: ({ params, body }) => {
         const { expected, text } = noteRequest(body);
-        return mutate(params, (ctx, id) =>
+        return mutateScoped(deps, params, (ctx, id) =>
           addNote(ctx, id, { text, author: "owner" }, { expect: expected }),
         );
       },
@@ -55,9 +40,11 @@ export function noteRoutes(deps) {
       method: "POST",
       path: `${BASE}/:ref/resolve`,
       handler: ({ params, body }) => {
-        requireOnly(body, ["expected"]);
+        const { expected } = pickFields(body, { allowed: [], expected: true });
         const ref = decodeRef(params.ref);
-        return mutate(params, (ctx, id) => resolveNote(ctx, id, ref, { expect: body.expected }));
+        return mutateScoped(deps, params, (ctx, id) =>
+          resolveNote(ctx, id, ref, { expect: expected }),
+        );
       },
     },
   ];

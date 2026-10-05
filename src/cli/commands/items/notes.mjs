@@ -1,5 +1,6 @@
 // `note` command: append a discussion note (`dk note <id> "text"` or `--file <f|->`) or resolve one
 // (`dk note resolve <id> <ref>`). Notes are untrusted discussion input; core owns the grammar.
+import { NOTE_AUTHORS } from "../../../core/format/content.mjs";
 import { addNote, resolveNote } from "../../../core/items/content/notes.mjs";
 import { parseCommand, usageError } from "../../args.mjs";
 import { readStrictInput } from "../../input.mjs";
@@ -41,8 +42,8 @@ export async function note(argv, io) {
   if (extra !== undefined) throw usageError(`unexpected argument: ${extra}`);
   const text = noteText(args, inline);
   const author = args.author ?? "owner";
-  if (!["owner", "agent"].includes(author))
-    throw usageError("--author must be one of owner, agent");
+  if (!NOTE_AUTHORS.includes(author))
+    throw usageError(`--author must be one of ${NOTE_AUTHORS.join(", ")}`);
   const data = addNote(repoOf(args, io), id, { text, author }, { expect: args.expect });
   return { data, text: `${id}: note ${data.ref} (${author}, open)` };
 }

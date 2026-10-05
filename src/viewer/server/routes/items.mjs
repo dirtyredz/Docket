@@ -14,19 +14,15 @@ import * as claims from "../../../state/claims/store.mjs";
 import { loadIndex } from "../../../state/index/build.mjs";
 import { resolveDocuments } from "../../documents/catalog.mjs";
 import { documentLinkResolver, renderMarkdown } from "../../documents/render.mjs";
-import { httpError } from "../boundary.mjs";
-import { checkItemId, openScoped } from "../scope.mjs";
+import { httpError, pickFields } from "../boundary.mjs";
+import { checkItemId, mutateScoped, openScoped } from "../scope.mjs";
 
 const BASE = "/api/repos/:repo/checkouts/:checkout/items";
 const SCALARS = ["status", "priority", "title"];
 
 /** Validate a scalar save body; returns {expected, changes}. Unknown or body fields are refused. */
 export function scalarChanges(body) {
-  const unknown = Object.keys(body).filter((k) => k !== "expected" && !SCALARS.includes(k));
-  if (unknown.length) throw httpError(400, `not editable here: ${unknown.join(", ")}`);
-  if (typeof body.expected !== "string" || !body.expected) {
-    throw httpError(400, "expected revision is required");
-  }
+  pickFields(body, { allowed: SCALARS, expected: true });
   const changes = {};
   for (const k of SCALARS) {
     if (body[k] === undefined) continue;
@@ -79,16 +75,15 @@ export function itemRoutes(deps) {
       method: "POST",
       path: `${BASE}/:id`,
       handler: ({ params, body }) => {
-        const id = checkItemId(params.id);
         const { expected, changes } = scalarChanges(body);
-        const { repo, checkout, ctx } = openScoped(deps, params, { fresh: true });
-        const { data, warnings } = setItem(ctx, id, changes, {
-          today: localDate(),
-          expect: expected,
-          claims,
+        return mutateScoped(deps, params, (ctx, id) => {
+          const { data, warnings } = setItem(ctx, id, changes, {
+            today: localDate(),
+            expect: expected,
+            claims,
+          });
+          return { ...data, warnings };
         });
-        catalog.invalidate(repo, checkout);
-        return { ...data, warnings };
       },
     },
   ];

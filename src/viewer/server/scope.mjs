@@ -6,7 +6,7 @@ import fs from "node:fs";
 import { CODES, docketError } from "../../core/errors.mjs";
 import { ID_RE } from "../../core/format/schema.mjs";
 import { assertSafeCheckout } from "../../repository/containment.mjs";
-import { ITEMS_DIR } from "../../repository/paths.mjs";
+import { contextFor } from "../../repository/context.mjs";
 import { CHECKOUT_ID_RE, REPO_ID_RE } from "../../state/registry/schema.mjs";
 import { unavailableReason } from "../../state/registry/registration.mjs";
 import { readRegistry } from "../../state/registry/store.mjs";
@@ -88,14 +88,7 @@ export function createCheckoutOpener({ now = Date.now } = {}) {
       }
       verified.set(checkout.id, { at: now(), path: checkout.path });
     }
-    const root = checkout.path;
-    const ctx = {
-      root,
-      commonDir: repo.commonDir,
-      itemsDir: `${root}/${ITEMS_DIR}`,
-      docketDir: `${root}/.docket`,
-      configPath: `${root}/docket.json`,
-    };
+    const ctx = contextFor(checkout.path, repo.commonDir);
     assertSafeCheckout(ctx);
     return ctx;
   };
@@ -109,4 +102,17 @@ export function openScoped({ registrySource, openCheckout }, params, { fresh = f
   const { registry } = registrySource.get();
   const { repo, checkout } = lookup(registry, params.repo, params.checkout);
   return { repo, checkout, ctx: openCheckout(repo, checkout, { fresh }) };
+}
+
+/**
+ * Run a mutating operation on a registered checkout: validate the item id, open the checkout fresh
+ * (re-verified against Git), call run(ctx, id), invalidate the catalog entry and return run's result.
+ * Every mutating route goes through here; routes keep only request validation.
+ */
+export function mutateScoped(deps, params, run) {
+  const id = checkItemId(params.id);
+  const { repo, checkout, ctx } = openScoped(deps, params, { fresh: true });
+  const out = run(ctx, id);
+  deps.catalog.invalidate(repo, checkout);
+  return out;
 }

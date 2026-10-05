@@ -1,7 +1,7 @@
 # STRUCTURE
 
 Code-shape map for Docket: a Windows 11 CLI (`docket` / `dk`) and local viewer over per-repo Markdown
-items. Authority for layout: `docs/PLAN.md` section 2. Status: M0 to M4d and M6 built (strict core, CLI,
+items. Authority for layout: `docs/plans/PLAN.md` section 2. Status: M0 to M4d and M6 built (strict core, CLI,
 storage, state/index, state/claims, last-good gate, `docket init`, repo registry and scan, local viewer, facts and notes, managed agent snippet; 0.6.0 built, unpushed). Importers were removed in 0.3.0
 (ADR-19).
 
@@ -12,16 +12,16 @@ Last full review: 2026-10-05
 ```
 src/
   bootstrap/            quarantined recovered validator (not shipped)
-  cli/                  main, args, output, report, help (overview + per-command), input, guide        commands/  one adapter per command family
+  cli/                  main, args, output, report, help (overview + per-command), input        commands/  one adapter per command family (incl. guide)
   core/                 errors.mjs                  format/ validation/ identity/ items/ (content/)
   integration/          agent snippet (versioned), init         gate/  promote, smoke, install, launcher, pre-push
   repository/           checkout facts: context, config, snapshot, paths, canonical, containment, worktrees
-  state/                claims/  index/  registry/     observability/ (planned)
+  state/                claims/  index/  registry/
   storage/              atomic write, lock, item store, revisions
   tooling/              build, layout-check
   viewer/               server/ (routes/)   ui/ (views/ item/)   documents/
-tests/                  one suite folder per responsibility; helpers/ fixtures/
-docs/                   living docs, items/, records/, research/ (historical)
+tests/                  unit/ (format core storage state cli viewer)  e2e/ integration/ packaging/  helpers/ fixtures/
+docs/                   living docs, items/, plans/ (frozen), records/, research/ (frozen)
 ```
 
 ## Dependency direction
@@ -50,32 +50,35 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `src/core/format/` — schema constants, strict parser, canonical serializer, round-trip guard and the content grammar (body/Notes boundaries, note header and ref rules)
 - `src/core/validation/` — item checks, relation graph integrity, warnings, check orchestration, `checkStore`
 - `src/core/identity/` — random ID allocation, fractional rank, local-date rules
-- `src/core/items/` — add, batch add, set (with claim release on completion), link, query, detail and the shared mutation transaction, canonical and preserved-prefix (CLI and viewer)
+- `src/core/items/` — add, batch add, set (with claim release on completion), link and `linkItem`, query, detail, the relations read model and the shared mutation transaction with its `withWritten` result helper (CLI and viewer)
 - `src/core/items/content/` — body replacement and note lifecycle (append, resolve): the content operations behind `set --body-file`, `note` and the viewer
 - `src/storage/` — content revisions, atomic write, lock, item store
 - `src/repository/` — worktree and common-dir discovery, `docket.json`, working-tree or Git-tree snapshot, path identity, canonical real paths, containment, worktree listing
 - `src/state/claims/` — common-dir advisory claims store
 - `src/state/index/` — rebuildable per-worktree JSON cache
 - `src/state/registry/` — per-machine repo registry: identity, registration, one-shot scan, document-location overrides
-- `src/state/observability/` — local merge-conflict recording and reporting (planned, M3+)
 - `src/cli/` — dispatch, argument handling, output contracts, shared report vocabulary, help, shared file/stdin input, `docket guide`
 - `src/cli/commands/` — thin adapters per command family (items, validation, coordination, init, gate, registry, viewer; conflicts planned)
 - `src/cli/commands/items/` — one adapter per item command (add, set, link, list, show, index, notes) plus shared item-flag options
 - `src/integration/` — the managed, versioned agent snippet (`agent-snippet.mjs`, text in `agent-snippet.md`; markers, exact-legacy migration, manual review) and `docket init` (`init.mjs`)
 - `src/integration/gate/` — gate promotion, smoke test, repo opt-in, stable launcher, tarball reader, pre-push validation
-- `src/viewer/server/` — server lifecycle, request safety (boundary), registered-checkout scope, static assets, transient catalog, worktree hints
+- `src/viewer/server/` — server lifecycle, request safety (boundary, `pickFields`), registered-checkout scope (`mutateScoped`), static assets, transient item catalog, worktree hints
 - `src/viewer/server/routes/` — scoped HTTP adapters: repos, items, body, notes, relations, documents, search
 - `src/viewer/ui/` — browser shell, HTTP client, DOM helper, session drafts, styles
 - `src/viewer/ui/views/` — one module per view: repo picker, overview, board, item editor shell, relations, documents, search, worktree hints
-- `src/viewer/ui/views/item/` — the item editor's panels: scalar fields, facts (body) and notes
+- `src/viewer/ui/views/item/` — the item editor's panels: scalar fields, facts (body) and notes, and their shared conflict-save controller
 - `src/viewer/documents/` — living-doc catalog and read-only Markdown rendering
 - `src/tooling/` — distributable build and layout/size checker
-- `tests/` — responsibility-matched suites: format, core, storage, cli, state, registry, viewer, e2e, integration, packaging
+- `tests/` — suite folders only; unit suites live under `tests/unit/`
+- `tests/unit/` — unit suites, one folder per area: format, core, storage, state (claims, index; `registry/` beside them), cli, viewer
+- `tests/e2e/`, `tests/integration/`, `tests/packaging/` — browser, real-push and tarball suites
 - `tests/helpers/` — disposable-repo, clock and gate support
 - `tests/fixtures/` — bounded fixtures: hooks
 - `docs/` — living docs and research evidence
 - `docs/items/` — Docket's own work items (created in M0; flat, permanent paths)
 - `docs/records/` — migration evidence and conflict-review history
+- `docs/research/` — frozen evidence: item spec, surveys, merge-test results (never reformatted or linted as code)
+- `docs/plans/` — frozen build plans (`PLAN.md`, `PLAN-VIEWER.md`, `PLAN-NOTES.md`)
 
 `docs/research/MERGE-TEST-RESULTS.md` is the canonical merge-test result; `docs/research/merge-test/` holds
 the raw runs behind it (frozen historical evidence). It is not a code home and is never edited or linted as one.
@@ -107,9 +110,9 @@ the raw runs behind it (frozen historical evidence). It is not a code home and i
 
 ## Structural debt
 
-- `tests/` now has 13 suite folders (registry, viewer, e2e added per PLAN-VIEWER); grouping stays the open item `Group tests/ suites`.
+- `tests/unit/viewer/` is one flat folder (12 files); split into server/ and ui/ when it grows (Docket item).
 - `core/items/link.mjs` may write two files (relates stored on the other side); the writes are each
   atomic but not one transaction.
-- Accepted backlog from the 2026-10-05 review is recorded as Docket items (`dk list`): one store-entries
-  shape, unused schema constants, core enum validation, `tests/` grouping. The importer-related items were
+- Accepted backlog from the 2026-10-05 reviews is recorded as Docket items (`dk list`, area structure): one
+  store-entries shape, unused schema constants, core enum validation, catalog/registry/content-format splits. The importer-related items were
   dropped with the importers.

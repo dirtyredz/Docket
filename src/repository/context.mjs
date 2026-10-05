@@ -54,9 +54,17 @@ export function resolveRepo(start = ".") {
     });
   }
   const [root, gitDir, commonDir] = out.trim().split(/\r?\n/).map(toSlash);
+  return contextFor(root, commonDir, gitDir);
+}
+
+/**
+ * The checkout context core operations take, from facts the caller already holds: root and commonDir
+ * (absolute, forward-slash), and gitDir when known (the viewer, which never reads it, omits it).
+ */
+export function contextFor(root, commonDir, gitDir) {
   return {
     root,
-    gitDir,
+    ...(gitDir === undefined ? {} : { gitDir }),
     commonDir,
     itemsDir: `${root}/${ITEMS_DIR}`,
     docketDir: `${root}/.docket`,

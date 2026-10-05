@@ -1,6 +1,6 @@
 # GOTCHAS
 
-Non-obvious traps, from `PLAN.md` sections 6 and 7, the merge test, and building M0 to M1c.
+Non-obvious traps, from `plans/PLAN.md` sections 6 and 7, the merge test, and building M0 to M1c.
 
 - **External-editor race.** Docket locks only cooperating Docket writers. An editor (or an agent
   writing the file directly) can save between the revision check and the rename; that write is lost or

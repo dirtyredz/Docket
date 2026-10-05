@@ -1,6 +1,6 @@
 # ROADMAP
 
-Milestones from `PLAN.md` section 3, in order. Concrete work is tracked as items in `docs/items/`.
+Milestones from `plans/PLAN.md` section 3, in order. Concrete work is tracked as items in `docs/items/`.
 
 **M0 - Architecture and self-hosting bootstrap.** (done 2026-10-04) Write the architecture docs and Layout contract, amend
 ITEM-SPEC (done 2026-10-04), recover the merge-test prototype, hand-write a few milestone items with

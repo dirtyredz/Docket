@@ -40,6 +40,23 @@ export function editableContent(byId, id) {
   return rec;
 }
 
+const OUTCOME = {
+  revision: (value, written) => written[0]?.revision ?? value.revision ?? null,
+  noop: (_value, written) => written.length === 0,
+  written: (_value, written) => written,
+};
+
+/**
+ * Fold a mutateStore result into one flat object: the plan's value plus the derived `keys` (default
+ * `revision`, the first written file's revision or the plan's own, and `noop`, nothing written;
+ * `written` keeps the full list of {id, revision}). The one result shape of the operation wrappers.
+ */
+export function withWritten({ value, written }, keys = ["revision", "noop"]) {
+  const out = { ...value };
+  for (const k of keys) out[k] = OUTCOME[k](value, written);
+  return out;
+}
+
 /**
  * Run a planned mutation. plan({records, byId}) returns {writes, value}; each write is
  * {id, fields, rest, frontmatter?, expectedRevision} (expectedRevision null = must not exist yet;

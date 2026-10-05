@@ -11,7 +11,7 @@ import {
   withNoteState,
 } from "../../format/content.mjs";
 import { assertRevision } from "../revisions.mjs";
-import { editableContent, mutateStore } from "../transaction.mjs";
+import { editableContent, mutateStore, withWritten } from "../transaction.mjs";
 
 const invalid = (message, details) => docketError(CODES.INVALID, message, details);
 
@@ -91,18 +91,12 @@ export function planNoteResolve({ byId }, id, ref, { expect }) {
   return { writes: [write(rec, withNoteState(rec.rest, note, "resolved"), expect)], value };
 }
 
-const withRevision = ({ value, written }) => ({
-  ...value,
-  noop: written.length === 0,
-  revision: written[0]?.revision ?? value.revision,
-});
-
 /** Append a note. Returns {id, ref, author, state, noop: false, revision}. */
 export function addNote(ctx, id, input, { now = new Date(), expect } = {}) {
-  return withRevision(mutateStore(ctx, (s) => planNoteAppend(s, id, input, { now, expect })));
+  return withWritten(mutateStore(ctx, (s) => planNoteAppend(s, id, input, { now, expect })));
 }
 
 /** Resolve a note. Returns {id, ref, state, noop, revision} (the current revision on a no-op). */
 export function resolveNote(ctx, id, ref, { expect } = {}) {
-  return withRevision(mutateStore(ctx, (s) => planNoteResolve(s, id, ref, { expect })));
+  return withWritten(mutateStore(ctx, (s) => planNoteResolve(s, id, ref, { expect })));
 }

@@ -5,16 +5,8 @@
 // "Use current as base"; a resolve refreshes the notes and needs another click.
 import { api } from "../../api.mjs";
 import { h } from "../../dom.mjs";
-import {
-  activeKinds,
-  discardDraft,
-  draftKey,
-  editText,
-  getDraft,
-  isDirty,
-  markConflict,
-  rebaseOnServer,
-} from "../../drafts.mjs";
+import { activeKinds, discardDraft, draftKey, editText, getDraft, isDirty } from "../../drafts.mjs";
+import { conflictPanel, createSaver } from "./conflict-save.mjs";
 
 const notices = new Map(); // draft key -> one-shot message shown after a refresh
 
@@ -45,23 +37,16 @@ function entry(note, onResolve) {
   );
 }
 
-function conflictPanel(draft, onRebase) {
-  return h(
-    "div",
-    { class: "conflict", role: "alert", "data-testid": "note-conflict" },
-    h("strong", {}, "This item changed since you started typing your note."),
-    h("p", {}, "The notes above show the current state. Your text is kept:"),
-    h("pre", { class: "note-text" }, draft.text),
-    h(
-      "div",
-      { class: "actions" },
-      h(
-        "button",
-        { type: "button", onclick: onRebase, "data-testid": "note-rebase" },
-        "Use current as base",
-      ),
-    ),
-  );
+function noteConflict(draft, saver) {
+  return conflictPanel({
+    testid: "note-conflict",
+    headline: "This item changed since you started typing your note.",
+    detail: [
+      h("p", {}, "The notes above show the current state. Your text is kept:"),
+      h("pre", { class: "note-text" }, draft.text),
+    ],
+    actions: [saver.rebaseAction("note-rebase")],
+  });
 }
 
 /** env: {ctx, item, route, syncAll}. Returns {el, sync()}. */
@@ -83,56 +68,26 @@ export function notesPanel({ ctx, item, route, syncAll }) {
   const draft = getDraft(key);
   const notice = notices.get(key);
   notices.delete(key);
-  let busy = false;
+  const msg = h("p", { class: "muted", role: "status", "data-testid": "note-message" });
+  const saver = createSaver({ ctx, route, item, key, syncAll, message: msg });
 
-  const resolve = async (note) => {
-    if (busy) return;
-    busy = true;
-    syncAll();
-    try {
-      await api.resolveNote(route.repo, route.checkout, item.id, note.ref, {
-        expected: item.revision,
-      });
-      busy = false;
-      await ctx.onSaved([]);
-    } catch (err) {
-      busy = false;
-      if (err.status === 409) {
+  const resolve = (note) =>
+    saver.act(
+      () =>
+        api.resolveNote(route.repo, route.checkout, item.id, note.ref, {
+          expected: item.revision,
+        }),
+      () => {
         notices.set(key, "The notes changed elsewhere and were refreshed. Click Resolve again.");
         return ctx.reload();
-      }
-      msg.textContent = err.message;
-      msg.className = "error";
-      syncAll();
-    }
-  };
+      },
+    );
 
-  const add = async () => {
-    const d = getDraft(key);
-    if (busy || !isDirty(d) || d.conflict) return;
-    busy = true;
-    syncAll();
-    try {
-      await api.addNote(route.repo, route.checkout, item.id, {
-        expected: d.base.revision,
-        text: d.text,
-      });
-      discardDraft(key);
-      busy = false;
-      await ctx.onSaved([]);
-    } catch (err) {
-      busy = false;
-      if (err.status === 409) {
-        markConflict(key, await api.item(route.repo, route.checkout, item.id));
-        return ctx.reload();
-      }
-      msg.textContent = err.message;
-      msg.className = "error";
-      syncAll();
-    }
-  };
+  const add = () =>
+    saver.save((d) =>
+      api.addNote(route.repo, route.checkout, item.id, { expected: d.base.revision, text: d.text }),
+    );
 
-  const msg = h("p", { class: "muted", role: "status", "data-testid": "note-message" });
   el.append(
     notice
       ? h("div", { class: "conflict", role: "alert", "data-testid": "note-conflict" }, notice)
@@ -158,12 +113,7 @@ export function notesPanel({ ctx, item, route, syncAll }) {
       },
       draft?.text ?? "",
     ),
-    draft?.conflict
-      ? conflictPanel(draft, () => {
-          rebaseOnServer(key);
-          ctx.reload();
-        })
-      : null,
+    draft?.conflict ? noteConflict(draft, saver) : null,
     h(
       "div",
       { class: "actions" },
@@ -192,12 +142,12 @@ export function notesPanel({ ctx, item, route, syncAll }) {
     const d = getDraft(key);
     const others = activeKinds(route.repo, route.checkout, item.id).some((k) => k !== "note");
     el.querySelector('[data-testid="note-add"]').disabled =
-      !isDirty(d) || Boolean(d?.conflict) || others || busy;
+      !isDirty(d) || Boolean(d?.conflict) || others || saver.busy;
     el.querySelector('[data-testid="note-discard"]').disabled = !d;
     // Resolving moves the revision: not while any unsaved edit (including this panel's own) exists.
     const anyActive = activeKinds(route.repo, route.checkout, item.id).length > 0;
     for (const b of el.querySelectorAll('[data-testid="note-resolve"]'))
-      b.disabled = anyActive || busy;
+      b.disabled = anyActive || saver.busy;
   }
   return { el, sync };
 }

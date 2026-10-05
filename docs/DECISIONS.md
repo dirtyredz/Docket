@@ -29,7 +29,7 @@ Evidence paths are relative to `docs/research/`.
   body restriction.
 - **Rejected:** one combined save (hides which part conflicted); resolve copying text into the body
   (invents facts); body editing without `--expect` (silent overwrite).
-- **Evidence:** `tests/core`, `tests/viewer` and `tests/e2e` content cases.
+- **Evidence:** `tests/unit/core`, `tests/unit/viewer` and `tests/e2e` content cases.
 
 ## ADR-26: Facts and discussion are separate: item body versus Notes
 
@@ -41,7 +41,7 @@ Evidence paths are relative to `docs/research/`.
   tips). This refines ADR-16: the body is still free Markdown except the Notes grammar.
 - **Rejected:** a sidecar notes file (splits one item across files and merges); free-form comments in the
   body (no trust boundary); editable or deletable notes (history).
-- **Evidence:** `research/ITEM-SPEC.md` amendment 2026-10-05; `tests/format/content.test.mjs`.
+- **Evidence:** `research/ITEM-SPEC.md` amendment 2026-10-05; `tests/unit/format/content.test.mjs`.
 
 ## ADR-25: Documents and item bodies are read-only in the viewer (Superseded in part by ADR-27)
 
@@ -52,7 +52,7 @@ Evidence paths are relative to `docs/research/`.
   editable, all through the core operations the CLI uses.
 - **Rejected:** a Markdown body editor (re-opens body-byte guarantees); document editing (any write path
   to arbitrary repo files).
-- **Evidence:** owner ruling 2026-10-05 (PLAN-VIEWER section 7); `tests/viewer/` route tests.
+- **Evidence:** owner ruling 2026-10-05 (`plans/PLAN-VIEWER.md` section 7); `tests/unit/viewer/` route tests.
 
 ## ADR-24: Relation actions are single-edge and revision-checked inside the lock
 
@@ -64,7 +64,7 @@ Evidence paths are relative to `docs/research/`.
   never retried automatically and keeps the browser draft. The CLI's `--expect` shares the same checks.
 - **Rejected:** one combined save (hides which edge conflicted); asserting outside the lock (race);
   auto-retry (silently overwrites).
-- **Evidence:** `core/items/revisions.mjs`; `tests/core` and `tests/viewer` conflict cases.
+- **Evidence:** `core/items/revisions.mjs`; `tests/unit/core` and `tests/unit/viewer` conflict cases.
 
 ## ADR-23: Native-module viewer, lazy sanitized Markdown
 
@@ -76,7 +76,7 @@ Evidence paths are relative to `docs/research/`.
   the gate never load them.
 - **Rejected:** a framework or bundler (a build in the gate path); client-side rendering of raw Markdown;
   a denylist sanitizer.
-- **Evidence:** `tests/viewer/` sanitization cases; packaging test imports the gate without them.
+- **Evidence:** `tests/unit/viewer/` sanitization cases; packaging test imports the gate without them.
 
 ## ADR-22: One logical repo per Git common dir; the overview counts the preferred checkout
 
@@ -87,7 +87,7 @@ Evidence paths are relative to `docs/research/`.
   never failing over silently when it disappears (it reports unavailable). Editing needs an explicit
   checkout selection.
 - **Rejected:** counting every worktree; automatic failover to any available checkout; one entry per path.
-- **Evidence:** owner ruling 2026-10-05; `tests/registry/` grouping cases.
+- **Evidence:** owner ruling 2026-10-05; `tests/unit/state/registry/` grouping cases.
 
 ## ADR-21: Batch entries may set historical dates
 
@@ -132,7 +132,7 @@ Evidence paths are relative to `docs/research/`.
 - **Decision:** BOM, invalid UTF-8 and CR are rejected file-wide; tabs and trailing spaces only inside
   the frontmatter. Body bytes are never rewritten.
 - **Rejected:** whole-file rule (punishes ordinary Markdown); no file-wide line-ending rule.
-- **Evidence:** `tests/core/conformance.test.mjs` pins this and every other prototype difference.
+- **Evidence:** `tests/unit/core/conformance.test.mjs` pins this and every other prototype difference.
 
 ## ADR-15: Gate opt-in is local git config, read by the managed template
 

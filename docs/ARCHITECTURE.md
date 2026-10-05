@@ -1,7 +1,7 @@
 # ARCHITECTURE
 
 How Docket works. Code map is in `../STRUCTURE.md`; reasons are in `DECISIONS.md`. Status: M0 to M4d
-implemented (CLI, core, storage, index, claims, gate, init, registry, viewer; 0.6.0 built, unpushed). Authority: `PLAN.md`, `PLAN-VIEWER.md` and `research/ITEM-SPEC.md`.
+implemented (CLI, core, storage, index, claims, gate, init, registry, viewer; 0.6.0 built, unpushed). Authority: `plans/PLAN.md`, `plans/PLAN-VIEWER.md` and `research/ITEM-SPEC.md`.
 
 ## Truth and caches
 
@@ -116,10 +116,10 @@ Promotion, smoke test, and repo opt-in are separate modules under `integration/g
 - **Revision flow.** Detail returns the item's revision plus the revisions of relation holders. Save and relation
   actions send them back; core asserts them inside the lock (ADR-24). A 409 keeps the browser draft.
 - **Body and notes.** `POST …/items/:id/body {expected, body}`, `…/notes {expected, text}` and
-  `…/notes/:ref/resolve {expected}` call the CLI's content operations. The item editor has a facts panel
+  `…/notes/:ref/resolve {expected}` call core content operations (`replaceBody`, `addNote`, `resolveNote`), as scalar saves call `setItem` and relation edits `linkItem`; the relations panel reads core `relationsView`. Every mutating route runs through `mutateScoped` (fresh checkout open, operation, catalog invalidation). The item editor has a facts panel
   (rendered, or Markdown source with Save/Discard) and a plain-text notes panel labelled untrusted. Drafts are
   kept per repo, checkout, item and kind, survive a 409 and are reconciled explicitly, never merged
-  silently. Overview and board show open-note counts and a discussion filter.
+  silently (one shared save controller, `ui/views/item/conflict-save.mjs`). Overview and board show open-note counts and a discussion filter.
 - **Documents** (not item bodies, ADR-27) are read-only: per-repo override, then repo root, then `docs/`; Markdown is sanitized (ADR-23).
 
 ## Init and move-in

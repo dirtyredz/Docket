@@ -13,7 +13,7 @@ import {
   sendJson,
   statusFor,
 } from "./boundary.mjs";
-import { createCatalog } from "./catalog.mjs";
+import { createCatalog } from "./item-catalog.mjs";
 import { createCheckoutOpener, createRegistrySource } from "./scope.mjs";
 import { loadAssets } from "./static.mjs";
 import { bodyRoutes } from "./routes/body.mjs";

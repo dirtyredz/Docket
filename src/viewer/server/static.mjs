@@ -18,6 +18,7 @@ export const ASSETS = Object.freeze([
   "views/overview.mjs",
   "views/board.mjs",
   "views/item-editor.mjs",
+  "views/item/conflict-save.mjs",
   "views/item/scalar-editor.mjs",
   "views/item/body-editor.mjs",
   "views/item/notes.mjs",

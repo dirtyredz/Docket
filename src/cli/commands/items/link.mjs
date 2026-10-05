@@ -1,6 +1,5 @@
 // `link` command: add or remove parent, fixes, blocked-by and relates links.
-import { planLink } from "../../../core/items/link.mjs";
-import { mutateStore } from "../../../core/items/transaction.mjs";
+import { linkItem } from "../../../core/items/link.mjs";
 import { many, parseCommand, requirePositional, usageError } from "../../args.mjs";
 import { bool, repeat, repoOf, str } from "./options.mjs";
 
@@ -38,16 +37,14 @@ export async function link(argv, io) {
     );
   }
   const ctx = repoOf(args, io);
-  const { value, written } = mutateStore(ctx, (s) =>
-    planLink(s, id, change, { expect: args.expect }),
-  );
-  const text = value.changes.length
-    ? value.changes
+  const data = linkItem(ctx, id, change, { expect: args.expect });
+  const text = data.changes.length
+    ? data.changes
         .map(
           (c) =>
             `${id}: ${c.op} ${c.key} ${c.target}${c.storedOn ? ` (stored on ${c.storedOn})` : ""}`,
         )
         .join("\n")
     : `${id}: no change`;
-  return { data: { ...value, written }, text };
+  return { data, text };
 }

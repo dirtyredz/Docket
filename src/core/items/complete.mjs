@@ -2,7 +2,7 @@
 // release the item's claim. Claims are a dependency (`claims.releaseItem`), not an import, so core
 // stays free of the coordination store. A cleanup failure is a warning, never a failed write.
 import { planSet } from "./set.mjs";
-import { mutateStore } from "./transaction.mjs";
+import { mutateStore, withWritten } from "./transaction.mjs";
 
 /** Remove the claim on a completed item; report (never throw) when that fails. */
 function cleanupClaim(ctx, id, claims) {
@@ -25,9 +25,8 @@ function cleanupClaim(ctx, id, claims) {
  * `claimReleased`.
  */
 export function setItem(ctx, id, changes, { today, expect, claims }) {
-  const { value, written } = mutateStore(ctx, (s) => planSet(s, id, changes, { today, expect }));
-  const cleanup = value.completed ? cleanupClaim(ctx, id, claims) : { warnings: [] };
-  const data = { ...value, revision: written[0]?.revision ?? null, noop: written.length === 0 };
-  if (value.completed) data.claimReleased = cleanup.claimReleased;
+  const data = withWritten(mutateStore(ctx, (s) => planSet(s, id, changes, { today, expect })));
+  const cleanup = data.completed ? cleanupClaim(ctx, id, claims) : { warnings: [] };
+  if (data.completed) data.claimReleased = cleanup.claimReleased;
   return { data, warnings: cleanup.warnings };
 }
