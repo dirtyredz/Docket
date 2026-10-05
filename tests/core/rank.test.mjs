@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { rankAtEnd, rankAtStart, rankBetween } from "../../src/core/identity/rank.mjs";
+import { rankAtEnd, rankAtStart, rankBetween, spreadRanks } from "../../src/core/identity/rank.mjs";
 
 function mulberry32(seed) {
   let a = seed >>> 0;
@@ -128,5 +128,25 @@ describe("DOCKET_RANK_GAP", () => {
       assert.equal(err.details.lo, "b");
       assert.equal(err.details.hi, "ba");
     }
+  });
+});
+
+describe("spreadRanks", () => {
+  test("strictly increasing, equal length, well formed, with room around every key", () => {
+    for (const n of [0, 1, 2, 12, 25, 26, 200, 337, 1000]) {
+      const ranks = spreadRanks(n);
+      assert.equal(ranks.length, n);
+      ranks.forEach(assertWellFormed);
+      assert.equal(new Set(ranks.map((r) => r.length)).size <= 1, true);
+      for (let i = 1; i < n; i++) {
+        assert.ok(ranks[i - 1] < ranks[i], `${ranks[i - 1]} < ${ranks[i]}`);
+        assert.doesNotThrow(() => rankBetween(ranks[i - 1], ranks[i]));
+      }
+      if (n) assert.doesNotThrow(() => rankBetween(null, ranks[0]));
+    }
+  });
+
+  test("keys stay short: two letters for a band of a few hundred", () => {
+    assert.equal(spreadRanks(300)[0].length, 2);
   });
 });

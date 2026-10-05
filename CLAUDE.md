@@ -1,7 +1,7 @@
 # Docket
 
-Windows 11 CLI (`docket` / `dk`) and local viewer over per-repo Markdown work items. Status: M0 to M1c
-built (CLI, core, gate); the design is in `docs/PLAN.md`.
+Windows 11 CLI (`docket` / `dk`) and local viewer over per-repo Markdown work items. Status: M0 to M2b
+shipped (CLI, core, gate, EvilEye import and cutover); M3+ is design only (`docs/PLAN.md`).
 
 ## Working here
 
@@ -9,8 +9,9 @@ built (CLI, core, gate); the design is in `docs/PLAN.md`.
   flows, `docs/DECISIONS.md` for why.
 - Stack: Node >= 22 (24 planned, ADR-13), plain ESM (`.mjs`), npm, `node:test`. No TypeScript.
 - Tests: `npm test` (everything), or `npm run test:<area>` for bootstrap, format, core, storage, cli,
-  coordination, integration, packaging, layout. Integration and packaging do real pushes to temp bare
+  coordination, importers, integration, packaging, layout. Integration and packaging do real pushes to temp bare
   remotes and need the harness template (`~/.claude/hooks/structure/pre-push.template.sh`).
+  `npm run test:evileye-gate` (with `DOCKET_EVILEYE_REPO` set) proves EvilEye's installed chain on a disposable clone.
 - `npm run build` packs `dist/docket-<v>.tgz`. Ship it: `npm install --global <tgz>`, then
   `docket gate promote <tgz>` (last-good gate) and `docket gate install --repo .`.
 - `npm run lint`, `npm run lint:fix`, `npm run format`, `npm run format:check`.

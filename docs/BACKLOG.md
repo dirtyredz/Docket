@@ -23,9 +23,25 @@ item list, statuses or ranks; see `ROADMAP.md` for milestones.
 
 ## Deferred from M0 to M1c (2026-10-04)
 
-- `src/integration/agent-snippet.md` (PLAN section 3 text) is not written yet; needed at M2 rollout.
 - `link` that edits two files (own list plus a reverse-stored `relates`) is two atomic writes, not one
   transaction; a crash between them leaves half the change. Rare; revisit if it bites.
 - Move to Node 24 when it is installed here; no code change expected (ADR-13).
 - Harness: `/gate install` (skills/gate) does not know about `docket gate install`; a repo opting into
   Docket runs both. Consider teaching the skill.
+
+## Deferred from M2a (2026-10-05), resolved at M2b
+
+- Apply, its journal and the interrupted-apply tests shipped in M2b (ADR-18). The owner ruled the three
+  struck-lead overrides, kept the bold lead in bodies, and placed the register prose (EvilEye
+  `docs/records/migrations/README.md` says where); `STRUCTURAL-DEBT.md` stays unconverted.
+
+## Deferred from M2b (2026-10-05)
+
+- An unbounded export (`docket list --all` without the 500 cap, or `docket export --json`) would let EvilEye's
+  adapter drop its priority/status paging.
+- EvilEye's `baseline-snapshot.mjs --at <commit>` refuses migrated commits (Docket has no `list --ref`); add
+  one if historical snapshots of the new store are needed.
+- `docket conflicts record/list` is M5; until then the observation window is logged by hand
+  (`records/conflicts/README.md`).
+- EvilEye's avatar branch adds `bl-5f2b9e47` to a legacy shard; after merging, recreate it with `dk add`.
+- Docket's `package-lock.json` still says version 0.0.0 (pre-existing).

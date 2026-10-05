@@ -1,7 +1,8 @@
 # FEATURES
 
-Capability inventory. Status vocabulary: planned, in progress, shipped. Shipped in 0.1.0 (2026-10-04):
-M0 to M1c, installed globally and gating Docket's own pushes. Items and their statuses live
+Capability inventory. Status vocabulary: planned, in progress, built (in the checkout, not yet in an installed tarball),
+shipped. Shipped in 0.1.0 (2026-10-04): M0 to M1c. Shipped in 0.2.0 (2026-10-05): M2a and M2b, installed
+globally, promoted to the last-good gate, gating Docket's and EvilEye's pushes. Items and their statuses live
 in `docs/items/`; this page does not duplicate them. Milestones are in `ROADMAP.md`.
 
 | Capability                                                             | Milestone | Status  |
@@ -15,8 +16,10 @@ in `docs/items/`; this page does not duplicate them. Milestones are in `ROADMAP.
 | `--repo` on every command, `--json` for agents                         | M1b       | shipped |
 | Tarball install, `docket` and `dk` aliases                             | M1b       | shipped |
 | Last-good pre-push gate composed with LFS and structure checks         | M1c       | shipped |
-| EvilEye importer with byte-verified dry run and resumable apply        | M2a       | planned |
-| EvilEye cutover; legacy portal retired                                 | M2b       | planned |
+| EvilEye importer: byte-verified dry run, manifest, `import verify`     | M2a       | shipped |
+| Agent snippet for CLAUDE.md / AGENTS.md (`src/integration/`)           | M2a       | shipped |
+| Resumable `import apply` with source-hash preconditions                | M2b       | shipped |
+| EvilEye cutover; legacy portal retired                                 | M2b       | shipped |
 | Repo registry (`docket repo add/list/remove`)                          | M3        | planned |
 | Priority-checkbox importer for other repos                             | M3        | planned |
 | Local viewer/editor (`docket serve`): board, editor, relations         | M4        | planned |

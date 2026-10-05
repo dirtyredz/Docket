@@ -18,12 +18,12 @@ promoted last-good checker.
 **M1c - Real push gate.** (done 2026-10-04) Opt-in launcher in the managed hook template; stdin buffered and replayed to
 LFS and Docket; Docket runs before structure early returns; `check --ref` on each pushed tip.
 
-**M2a - EvilEye importer and dry run.** Inventory, frozen source hashes, persisted plan, ID
+**M2a - EvilEye importer and dry run.** (done 2026-10-05; manifest approved by the owner) Inventory, frozen source hashes, persisted plan, ID
 preservation, priority and status mapping, byte-verified reconstruction; no unexplained omissions.
 
-**M2b - EvilEye cutover.** Resumable install, old portal stopped and retired (owner ruling 2026-10-04),
-legacy-write guards, documentation-checker adapter, composed gate. Starts the two-week conflict
-observation.
+**M2b - EvilEye cutover.** (done 2026-10-05, uncommitted in EvilEye until the owner reviews it) Resumable install, old portal stopped and retired (owner ruling 2026-10-04),
+legacy-write guards, documentation-checker adapter, composed gate. The two-week conflict observation
+runs 2026-10-05 to 2026-10-19 (`records/conflicts/`).
 
 **M3 - Registry and common-shape importer.** `docket repo` commands, document-location overrides,
 priority-H2/checklist importer, small then large pilot.

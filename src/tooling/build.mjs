@@ -13,6 +13,8 @@ const REQUIRED = [
   "package/src/cli/main.mjs",
   "package/src/integration/gate/launcher.mjs",
   "package/src/integration/gate/pre-push.mjs",
+  "package/src/integration/agent-snippet.md",
+  "package/src/importers/evileye/dry-run.mjs",
 ];
 const FORBIDDEN = /^package\/(src\/bootstrap|src\/tooling|tests|docs)\//;
 

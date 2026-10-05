@@ -4,7 +4,7 @@ Docket is a Windows 11 command-line tool (and, later, a local viewer) for tracki
 files, one file per item, stored in the repository the work belongs to. Items branch and merge with the
 code, and every index or cache can be rebuilt from the files.
 
-**Status: 0.1.0, milestones M0 to M1c.** The item format is `docs/research/ITEM-SPEC.md`; the plan is
+**Status: 0.2.0 installed (M0 to M2b: CLI, gate, EvilEye import and cutover).** The item format is `docs/research/ITEM-SPEC.md`; the plan is
 `docs/PLAN.md`.
 
 ## Commands
@@ -22,7 +22,17 @@ docket show <id>
 docket index [--rebuild]
 docket claim <id> [--takeover]   /   docket release <id>
 docket gate promote <tarball>  /  docket gate install  /  docket gate status
+docket import evileye --dry-run [--out DIR] [--run NAME] [--overrides FILE]   stage + byte-verify
+docket import verify --manifest PATH             re-verify a staged run (drift, bytes, check)
+docket import apply --manifest PATH              install a ready run (resumable; marker published last)
 ```
+
+`docket import` stages under `<repo>/.docket/import/<run>/`, which must be git-ignored (add `.docket/`
+to `.git/info/exclude`) or redirected with `--out`. `import apply` refuses a run that is not ready, sources
+that changed since the dry run, edited staging and conflicting target files, before writing anything; it
+installs items create-only, journals each step in the run directory (`apply-journal.jsonl`), validates the
+whole store, writes `docs/records/migrations/docket.json`, then the `docket.json` migration marker. Rerun the
+same command after an interruption; once complete it is a no-op.
 
 ## Install
 

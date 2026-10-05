@@ -1,6 +1,6 @@
 {
   "name": "docket",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Windows CLI and local viewer over per-repo Markdown work items.",
@@ -18,11 +18,12 @@
     "src/repository/",
     "src/index/",
     "src/claims/",
+    "src/importers/",
     "src/integration/",
     "README.md"
   ],
   "scripts": {
-    "test": "npm run test:bootstrap && npm run test:format && npm run test:core && npm run test:storage && npm run test:cli && npm run test:coordination && npm run test:integration && npm run test:packaging && npm run test:layout",
+    "test": "npm run test:bootstrap && npm run test:format && npm run test:core && npm run test:storage && npm run test:cli && npm run test:coordination && npm run test:importers && npm run test:integration && npm run test:packaging && npm run test:layout",
     "test:bootstrap": "node src/bootstrap/check.mjs --repo .",
     "test:format": "node --test \"tests/format/*.test.mjs\"",
     "test:core": "node --test \"tests/core/*.test.mjs\"",
@@ -36,7 +37,9 @@
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:importers": "node --test \"tests/importers/*.test.mjs\"",
+    "test:evileye-gate": "node --test tests/integration/evileye-gate.test.mjs"
   },
   "devDependencies": {
     "oxlint": "^1.86.0",

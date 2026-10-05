@@ -1,7 +1,7 @@
 # ARCHITECTURE
 
-How Docket works. Code map is in `../STRUCTURE.md`; reasons are in `DECISIONS.md`. Status: M0 to M1c
-implemented (CLI, core, storage, index, claims, gate); M2+ is design only. Authority: `PLAN.md` and `research/ITEM-SPEC.md`.
+How Docket works. Code map is in `../STRUCTURE.md`; reasons are in `DECISIONS.md`. Status: M0 to M2b
+implemented (CLI, core, storage, index, claims, gate, EvilEye import dry run and apply); M3+ is design only. Authority: `PLAN.md` and `research/ITEM-SPEC.md`.
 
 ## Truth and caches
 
@@ -81,6 +81,34 @@ Editing requires an explicitly selected checkout; observations of other worktree
 work) are labeled advisory hints and are never written into the main checkout. Paths are restricted to
 registered, contained locations; traversal, foreign origins and unsafe HTML are rejected. Living docs
 are rendered read-only; there is no document-write endpoint.
+
+## Legacy import
+
+`docket import evileye --dry-run` reads the register (`docs/BACKLOG.md`) and shards
+(`docs/work/backlog/{open,done}/*.md`), freezes their SHA-256 and HEAD blob ids, and splits each file
+into contiguous spans that cover every character: entry, register row (metadata of an item), wrapper
+(titles, section and group headings, table header), retained prose (with a reason) and blank. Each entry
+becomes one staged item through core allocation, rank and serializer. Its body is the entry's own text
+run through recorded, reversible steps (CRLF to LF, list marker and indent off, ID comment removed,
+relative links rebased to `docs/items/`, register flags appended as a note). Verification works from
+disk only: sources must still match their hashes, every file must rebuild byte for byte (recorded text
+for non-item spans, inverted staged bodies for item spans), every span needs a known disposition, every
+item comes from exactly one span, and the staged set must pass `check`. Decisions are recorded per item;
+ambiguous ones (struck leads without a status word, duplicate IDs) need an `--overrides` file before a
+run is `ready`. A run lives in `<repo>/.docket/import/<run>/` (must be git-ignored) as
+`manifest.json`, `source-map.json`, `items/` and, when needed, `overrides.template.json`. A later run
+reuses the IDs an earlier run allocated (matched by file and first-line hash).
+
+`docket import apply --manifest <run>/manifest.json` installs a ready run. Under the worktree lock it first
+checks everything that could make the result wrong (run ready, same repo, no other migration marker, sources
+still at their frozen hashes, staged files at their manifest hashes, a fresh full verification, no target
+file with different bytes), then creates each item (create-only), validates the whole store, writes the
+committed provenance `docs/records/migrations/docket.json` and finally the `docket.json` marker
+`{migration: {state: "complete", run, record, ...}}`. Each step appends to `<run>/apply-journal.jsonl`; the
+filesystem stays the authority on resume (an item already present with identical bytes counts as
+installed), so rerunning after a crash finishes the job. Sources are never written; after completion apply
+is a no-op, so the register can be replaced by a navigation page. Legacy tools key their retirement on that
+marker (EvilEye's portal guard).
 
 ## External interfaces
 

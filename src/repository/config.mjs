@@ -1,6 +1,7 @@
 // `docket.json`: committed store version and explicit migration state. No configurable vocabulary.
 import fs from "node:fs";
 import { STORE_VERSION } from "../core/format/schema.mjs";
+import { atomicWrite } from "../storage/atomic-write.mjs";
 
 export const DEFAULT_CONFIG = Object.freeze({ version: STORE_VERSION });
 
@@ -42,4 +43,9 @@ export function readConfigBytes(ctx) {
     if (err.code === "ENOENT") return null;
     throw err;
   }
+}
+
+/** Replace docket.json atomically (pretty JSON, LF, trailing newline). */
+export function writeConfig(ctx, config) {
+  atomicWrite(ctx.configPath, `${JSON.stringify(config, null, 2)}\n`);
 }
