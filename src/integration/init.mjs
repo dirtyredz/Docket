@@ -103,15 +103,18 @@ function ensureAgentSnippet(ctx, dryRun) {
 /**
  * Initialise the repo containing `start`. Returns {root, dryRun, initialised, created: string[] (paths
  * that are new or changed), files: [{path, state}], agentFiles, gate}. Throws DOCKET_NOT_A_REPO outside
- * a git worktree (resolveRepo).
+ * a git worktree (resolveRepo). `agentSnippet: false` leaves CLAUDE.md / AGENTS.md alone (never creates one).
  */
-export function initRepo(start, { gate = false, dryRun = false, gateOptions = {} } = {}) {
+export function initRepo(
+  start,
+  { gate = false, dryRun = false, agentSnippet = true, gateOptions = {} } = {},
+) {
   const ctx = resolveRepo(start);
   const files = [
     { path: "docs/items/", state: ensureItemsDir(ctx, dryRun) },
     { path: "docket.json", state: ensureConfig(ctx, dryRun) },
     { path: ".gitignore", state: ensureIgnore(ctx, dryRun) },
-    ...ensureAgentSnippet(ctx, dryRun),
+    ...(agentSnippet ? ensureAgentSnippet(ctx, dryRun) : []),
   ];
   const prettier = ensurePrettierIgnore(ctx, dryRun);
   if (prettier) files.push(prettier);
@@ -125,6 +128,7 @@ export function initRepo(start, { gate = false, dryRun = false, gateOptions = {}
     created: changed.map((f) => f.path),
     files,
     agentFiles,
+    agentSnippet,
     gate: gateResult,
   };
 }

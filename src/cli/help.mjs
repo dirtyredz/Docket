@@ -10,11 +10,12 @@ Values:
 const COMMON = "\nEvery command also takes --repo <path>, --json and --help.";
 
 const HELP = {
-  init: `Usage: docket init [--gate] [--dry-run]
+  init: `Usage: docket init [--gate] [--no-agent-snippet] [--dry-run]
 
 Make this repo a Docket repo (idempotent). Creates docs/items/ and docket.json, ignores .docket/ and
 adds the agent snippet to CLAUDE.md / AGENTS.md. Reports each file as created, updated or unchanged.
   --gate      also install the pre-push gate (see docket gate install)
+  --no-agent-snippet  leave CLAUDE.md / AGENTS.md alone (never creates CLAUDE.md)
   --dry-run   report what would change; write nothing`,
   check: `Usage: docket check [--ref <rev>]
 

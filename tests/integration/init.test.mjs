@@ -288,3 +288,68 @@ describe("docket init: Prettier (0.4.4)", () => {
     assert.equal(fs.existsSync(ignorePath(r)), false);
   });
 });
+
+describe("docket init --no-agent-snippet (0.4.5)", () => {
+  const mk = () => {
+    const r = makeRepo();
+    cleanups.push(r.cleanup);
+    return r;
+  };
+  const run = (r, ...extra) => runCli(["init", "--json", "--repo", r.root, ...extra], { env: {} });
+
+  test("an existing CLAUDE.md is left byte-identical; everything else is still set up", () => {
+    const r = mk();
+    fs.writeFileSync(path.join(r.root, "CLAUDE.md"), "# Global\r\nrules\r\n");
+    const out = run(r, "--no-agent-snippet");
+    assert.equal(out.status, 0, out.stdout + out.stderr);
+    assert.equal(text(r, "CLAUDE.md"), "# Global\r\nrules\r\n");
+    assert.deepEqual(out.json.data.created, ["docs/items/", "docket.json", ".gitignore"]);
+    assert.equal(out.json.data.agentSnippet, false);
+    assert.match(text(r, ".gitignore"), /^\.docket\/$/m);
+  });
+
+  test("no CLAUDE.md is created; text report says agent files are skipped", () => {
+    const r = mk();
+    const out = runCli(["init", "--no-agent-snippet", "--repo", r.root], { env: {} });
+    assert.equal(fs.existsSync(path.join(r.root, "CLAUDE.md")), false);
+    assert.match(out.stdout, /agent files: skipped \(--no-agent-snippet\)/);
+  });
+
+  test("dry-run writes nothing and reports no agent file", () => {
+    const r = mk();
+    const out = run(r, "--no-agent-snippet", "--dry-run");
+    assert.equal(
+      out.json.data.files.some((f) => f.path === "CLAUDE.md"),
+      false,
+    );
+    assert.equal(fs.existsSync(path.join(r.root, "CLAUDE.md")), false);
+    assert.equal(fs.existsSync(path.join(r.root, "docket.json")), false);
+  });
+
+  test(
+    "works with --gate",
+    { skip: templateAvailable() ? false : `no hook template at ${TEMPLATE}` },
+    () => {
+      const home = tempDir("docket gate home ");
+      cleanups.push(home.cleanup);
+      promoteCheckout(path.join(home.dir, "gate"));
+      const r = mk();
+      const out = runCli(["init", "--gate", "--no-agent-snippet", "--json", "--repo", r.root], {
+        env: { DOCKET_HOME: home.dir },
+      });
+      assert.equal(out.status, 0, out.stdout + out.stderr);
+      assert.equal(out.json.data.gate.hook.state, "installed");
+      assert.equal(fs.existsSync(path.join(r.root, "CLAUDE.md")), false);
+    },
+  );
+
+  test("a later run without the flag still appends the snippet, once", () => {
+    const r = mk();
+    fs.writeFileSync(path.join(r.root, "CLAUDE.md"), "# Mine\n");
+    run(r, "--no-agent-snippet");
+    run(r);
+    run(r);
+    assert.equal(count(text(r, "CLAUDE.md"), SNIPPET), 1);
+    assert.ok(text(r, "CLAUDE.md").startsWith("# Mine\n"));
+  });
+});

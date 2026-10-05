@@ -8,7 +8,7 @@ approved the new item list.
 
 1. **Branch.** `git switch -c move-into-docket` (the default branch may be `master`, not `main`). All of this happens on the branch.
 2. **Initialise.** Preview, then apply: `docket init --dry-run`, then `docket init` (add `--gate` for the
-   pre-push check). Each file is reported created, updated or unchanged; re-running is harmless. In a Prettier repo it also lists `docs/items/` in `.prettierignore`.
+   pre-push check). Each file is reported created, updated or unchanged; re-running is harmless. In a Prettier repo it also lists `docs/items/` in `.prettierignore`. Add `--no-agent-snippet` to leave CLAUDE.md / AGENTS.md untouched (when the root CLAUDE.md is global instructions).
 3. **Read the old backlog completely.** Write down the counts first: open, done and dropped entries.
    Step 7 must match them. Note where entries live and how they mark status and priority.
 4. **Write one JSON file** in a private folder outside the repo, with a unique name per repo (shared temp

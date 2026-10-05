@@ -2,7 +2,7 @@
 
 Capability inventory. Status vocabulary: planned, in progress, built (in the checkout, not yet in an installed tarball),
 shipped. Shipped in 0.1.0 (2026-10-04): M0 to M1c. 0.2.0 (2026-10-05): the one-off legacy import and cutover for
-the first adopter. 0.3.0 (2026-10-05): importers removed, `docket init` and the move-in playbook added. 0.4.0 (2026-10-05): move-in ergonomics. 0.4.1 (2026-10-05): move-in fixes from the first real batch. 0.4.2 (2026-10-05): batch dates and playbook gaps. 0.4.3 (2026-10-05): `set --title`. 0.4.4 (2026-10-05): `init` keeps Prettier off `docs/items/`. Items and their statuses live
+the first adopter. 0.3.0 (2026-10-05): importers removed, `docket init` and the move-in playbook added. 0.4.0 (2026-10-05): move-in ergonomics. 0.4.1 (2026-10-05): move-in fixes from the first real batch. 0.4.2 (2026-10-05): batch dates and playbook gaps. 0.4.3 (2026-10-05): `set --title`. 0.4.4 (2026-10-05): `init` keeps Prettier off `docs/items/`. 0.4.5 (2026-10-05): `init --no-agent-snippet`. Items and their statuses live
 in `docs/items/`; this page does not duplicate them. Milestones are in `ROADMAP.md`.
 
 | Capability                                                                         | Milestone | Status  |
@@ -28,6 +28,7 @@ in `docs/items/`; this page does not duplicate them. Milestones are in `ROADMAP.
 | 0.4.1: dry-run reports git config keys as "would be created"; MOVE-IN rules        | M3        | shipped |
 | 0.4.2: `add --batch` entries take `created`/`since` historical dates (ADR-21)      | M3        | shipped |
 | 0.4.4: `init` lists `docs/items/` in `.prettierignore` when the repo uses Prettier | M3        | shipped |
+| 0.4.5: `init --no-agent-snippet` skips CLAUDE.md / AGENTS.md (never creates one)   | M3        | shipped |
 | Repo registry (`docket repo add/list/remove`)                                      | M3        | planned |
 | Local viewer/editor (`docket serve`): board, editor, relations                     | M4        | planned |
 | Read-only rendering of the seven living docs                                       | M4        | planned |
