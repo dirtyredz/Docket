@@ -1,0 +1,172 @@
+# DECISIONS
+
+ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADR-19 is 2026-10-05.
+Evidence paths are relative to `docs/research/`.
+
+## ADR-19: Importers removed; init + agent move-in
+
+- **Context:** Docket must be project-agnostic. The first adopter import was byte-verified because it ran once
+  against one real backlog; its cutover is done. Other repos have seven different legacy shapes.
+- **Decision:** Importer code (`src/importers/`, `docket import`) is deleted. New projects start with
+  `docket init`; an existing repo moves in once, through an agent following `docs/MOVE-IN.md` (`dk add`
+  and `dk set` per old entry, count check, owner review). `bl-` stays valid as a generic legacy-ID
+  prefix. The superseded import ADRs (17, 18) moved to `records/decisions/2026-10.md`.
+- **Rejected:** one importer per legacy shape (code to maintain for single-use runs); keeping the
+  the first adopter importer as an example (its provenance and journal machinery only served that run).
+- **Evidence:** owner ruling 2026-10-05.
+
+> ADRs 17 and 18 (lossless import, resumable apply) moved to `records/decisions/2026-10.md`.
+
+## ADR-16: Grammar strictness applies to the frontmatter; the body is free Markdown
+
+- **Context:** ITEM-SPEC forbids tabs and trailing spaces in the strict YAML subset; the prototype
+  applied that to the whole file, which rejects code blocks and Markdown hard line breaks in bodies.
+- **Decision:** BOM, invalid UTF-8 and CR are rejected file-wide; tabs and trailing spaces only inside
+  the frontmatter. Body bytes are never rewritten.
+- **Rejected:** whole-file rule (punishes ordinary Markdown); no file-wide line-ending rule.
+- **Evidence:** `tests/core/conformance.test.mjs` pins this and every other prototype difference.
+
+## ADR-15: Gate opt-in is local git config, read by the managed template
+
+- **Context:** M1c needs a per-repo switch in a template shared by every gated repo, and un-opted repos
+  must behave exactly as before.
+- **Decision:** `docket gate install` writes `docket.gateLauncher` / `docket.gateNode` to the clone's
+  local git config (shared by its linked worktrees). The template branches on that key only; without it
+  the hook runs its old steps unchanged. The launcher contract (`<entry> --repo <root> --pre-push`,
+  refs on stdin) also carried the bootstrap checker, so the template change landed in M0, not M1c.
+- **Rejected:** a committed flag in `docket.json` (a fresh clone has no installed gate to run); appending
+  a call to installed hooks (hook-sync replaces managed hooks from the template); a Docket-owned
+  `core.hooksPath` (clobbers the first adopter's wrapper).
+- **Evidence:** `tests/integration/pre-push.test.mjs` "un-opted repos behave exactly as before" runs the
+  pre-change template from the harness repo's HEAD against the new one in six scenarios.
+
+## ADR-14: CLI output contract
+
+- **Decision:** `--json` prints exactly one document on stdout, `{ok, command, data, warnings}` or
+  `{ok:false, command, error:{code, message, details?}}`, and nothing on stderr. Exit codes: 0 ok,
+  1 failed, 2 usage, 3 conflict (revision, lock, claim, existing file), 4 not found, 5 internal. `list`
+  is bounded (default 50, max 500) and reports malformed files in `invalid` instead of hiding them.
+- **Rejected:** NDJSON streams; warnings on stderr in JSON mode (agents would have to merge streams).
+
+## ADR-13: Run on Node 22 LTS as well as 24
+
+- **Context:** PLAN chose Node 24, but this machine runs Node 22.20 and installing 24 is a system change
+  outside the milestone.
+- **Decision:** `engines` is `>=22`. Code uses only APIs stable in 22 (`util.parseArgs`, `fs.cpSync`,
+  `node --test` with quoted globs). Moving to 24 later needs no code change.
+- **Rejected:** requiring Node 24 now (blocks every install on this machine).
+
+## ADR-12: Fix the claims lock race with rename-then-verify
+
+- **Context:** The parallel-claims test lost 1-2 of 40 claims in about 1 run in 5: a waiter judged a
+  lock stale from a dead pid, the lock was released and re-taken, and the waiter deleted the new lock.
+- **Decision:** A stale lock is renamed aside and deleted only if its content (with a random token)
+  matches what was judged; a dead owner counts only after a 1-second grace; release removes only its
+  own lock.
+- **Evidence:** regression test in `tests/storage/atomic-write.test.mjs`.
+
+## ADR-11: No central database
+
+- **Context:** Several repos, each with its own history; a central store would own data that belongs to
+  repos and cannot branch or merge with them.
+- **Decision:** Items live only in their owning repo. The registry (`%LOCALAPPDATA%/Docket/`) holds
+  paths and aliases, never items; indexes are per checkout.
+- **Rejected:** a machine-wide SQLite/server store (loses branch semantics, needs sync); aggregating
+  items into one repo.
+- **Evidence:** `markdown-vs-db-project-docs.md`, `round2-md-vs-db-workflow.md`.
+
+## ADR-10: the first adopter portal retired at M2
+
+- **Context:** The first adopter backlog portal is the only writable frontend for legacy shards. Owner ruling
+  2026-10-04: the portal is not in active use.
+- **Decision:** Stop and retire it at the M2b cutover (startup retired, mutation path returns 410),
+  before the viewer exists. The CLI is the early usable slice; no second writable frontend.
+- **Rejected:** keeping the portal alive until the M4 viewer ships (two writers on one data set).
+- **Evidence:** `PLAN.md` sections 2, 3 and 7; owner ruling 2026-10-04.
+
+## ADR-09: Merge driver deferred; log conflicts for two weeks first
+
+- **Context:** Remaining conflicts are same-field edits and concurrent relation-list appends; volume is
+  unknown and probably low.
+- **Decision:** No custom merge driver. From the first adopter cutover, record real conflicts
+  (`docket conflicts`) for two weeks, then decide in `docs/records/conflicts/`.
+- **Rejected:** building a field-level driver now (unproven need, installation burden on every clone).
+- **Evidence:** `MERGE-TEST-RESULTS.md` implication 4, scenarios c5, g1, g2.
+
+## ADR-08: Last-good gate for self-hosting
+
+- **Context:** Docket validates its own items in pre-push; a broken working tree must not block or
+  silently pass pushes.
+- **Decision:** Pre-push runs a tested checker promoted into `%LOCALAPPDATA%/Docket/gate/versions/`,
+  previous version retained, never a build or working-tree import. A quarantined prototype copy
+  bridges M0 to M1b.
+- **Rejected:** running the checkout's code in the hook; linking the working tree globally.
+- **Evidence:** `PLAN.md` section 3 (M1b, M1c) and section 7.
+
+## ADR-07: `add` assigns ID and rank
+
+- **Context:** In the agent test, hand-written ranks collided immediately; hand-written IDs risk the
+  same.
+- **Decision:** `docket add` generates the ID (4 random bytes, collision retry) and the end-of-priority
+  rank. Agents never supply either; reordering takes relative placement. Duplicate rank stays a
+  warning because git cannot catch it.
+- **Rejected:** agent-chosen ranks; sequential counters (merge hot spot).
+- **Evidence:** `MERGE-TEST-RESULTS.md` implications 5 and 6, scenario i2; `ITEM-SPEC.md` Settled.
+
+## ADR-06: Final field order
+
+- **Context:** Order decides which same-item edits conflict in git.
+- **Decision:** `id, type, created, status, since, area, priority, rank, parent, fixes, blocked_by,
+relates`. Status moves (the most frequent concurrent edit) are fenced by near-immutable fields;
+  `priority`/`rank` are normally edited together as one hunk.
+- **Rejected:** the old order (8/28 conflicts but worse for status vs `type`); the "alt" order fencing
+  `since` with `parent` (ties at 9/28, just moves the conflict).
+- **Evidence:** `MERGE-TEST-RESULTS.md` "Re-test (field order)": old 8, new 9, alt 9 of 28; c2 and c4
+  flip to clean.
+
+## ADR-05: `.docket/index.json` before SQLite
+
+- **Context:** Reverse relations and filtered lists need an index; scale is hundreds of items per repo.
+- **Decision:** A per-worktree JSON cache rebuilt from source hashes, queried in memory. `check` never
+  reads it.
+- **Rejected:** SQLite now (native dependency, Windows install friction); a cache shared across
+  worktrees (branches differ).
+- **Evidence:** `PLAN.md` section 2; `ITEM-SPEC.md` Relations. Revisit if scale outgrows memory.
+
+## ADR-04: CLI with JSON over MCP
+
+- **Context:** Agents need to read and mutate items; MCP adds a server, schema surface and context cost.
+- **Decision:** A CLI (`docket` and `dk`) with `--repo`, bounded `--json` output and stable exit codes.
+  No MCP server in this scope; a short snippet in each repo's CLAUDE.md/AGENTS.md teaches it.
+- **Rejected:** Backlog.md's MCP; an HTTP-only API.
+- **Evidence:** `existing-solutions-survey.md`; `PLAN.md` section 2.
+
+## ADR-03: Name Docket, `dk-<8hex>` prefix, the first adopter `bl-` IDs preserved indefinitely
+
+- **Context:** The prototype used `bl-` IDs, already present throughout the first adopter history and references.
+- **Decision:** The product is Docket; new IDs are `dk-<8hex>`. Existing `bl-<8hex>` IDs stay valid,
+  immutable identities (not aliases needing lookup), at the cost of permanent dual-prefix support.
+  ITEM-SPEC amended accordingly.
+- **Rejected:** rewriting `bl-` to `dk-` (breaks historical references); continuing to mint `bl-`.
+- **Evidence:** `PLAN.md` sections 2 and 7; `ITEM-SPEC.md` amendment note.
+
+## ADR-02: Borrow Backlog.md's file-per-item format, not its sequential IDs or MCP
+
+- **Context:** Backlog.md already proves Markdown-file-per-task with frontmatter.
+- **Decision:** Adopt the shape (one file per item, frontmatter plus body). Reject sequential numeric IDs
+  (two branches adding items both take the next number) and the MCP server.
+- **Rejected:** adopting Backlog.md wholesale (ID scheme, schema vocabulary, MCP); building a different
+  format.
+- **Evidence:** `existing-solutions-survey.md`; scenarios a1 and a2 in `MERGE-TEST-RESULTS.md`.
+
+## ADR-01: Markdown file-per-item over SQLite or JSONL as source of truth
+
+- **Context:** Items must branch, merge and diff with the code they describe, and be readable by
+  agents without tooling.
+- **Decision:** One Markdown file per item, strict 12-key frontmatter, git as history; every cache is
+  rebuildable.
+- **Rejected:** SQLite (binary, unmergeable); JSONL (line-per-item still conflicts on adjacent edits);
+  one BACKLOG.md (17 of 21 shared merge scenarios conflict).
+- **Evidence:** merge test, file-per-item 8 of 25 conflicts vs one-file 17 of 21 (silent-wrong: 0),
+  `MERGE-TEST-RESULTS.md`; research rounds 1 and 2 (`markdown-vs-db-project-docs.md`,
+  `round2-md-vs-db-workflow.md`).

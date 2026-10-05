@@ -1,0 +1,13 @@
+# .gitignore is honoured automatically by prettier 3; this covers the rest.
+package-lock.json
+dist/
+.docket/
+# Historical evidence: kept verbatim, never reformatted.
+docs/research/
+docs/PLAN.md
+docs/PLAN.md.*
+# Item files are validated byte-exact by docket; prettier must never touch them.
+docs/items/
+tests/fixtures/
+# Recovered prototype: kept as recovered.
+src/bootstrap/prototype-check.mjs

@@ -1,0 +1,13 @@
+# Review gate markers
+.structure-review-pending*
+.structure-review-paused
+
+# Docket local state
+.docket/
+
+node_modules/
+dist/
+
+# Codex job artifacts
+*.events.jsonl
+*.job.json

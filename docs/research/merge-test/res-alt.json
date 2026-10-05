@@ -1,0 +1,562 @@
+[
+ {
+  "id": "a1",
+  "title": "both ADD 1 new item",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "a2",
+  "title": "both ADD 3 new items",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "a3",
+  "title": "ADD at distant positions (index 2 vs 17)",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "b1",
+  "title": "edit DIFFERENT items, adjacent (5,6)",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "b2",
+  "title": "edit DIFFERENT items, distant (5,15)",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c1",
+  "title": "same item: status move (status+since) vs priority",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c2",
+  "title": "same item: status move (status+since) vs type (adjacent to since)",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c3",
+  "title": "same item: status move vs fixes append",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c4",
+  "title": "same item: area vs rank (adjacent)",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c5",
+  "title": "same item: fixes append vs blocked_by append (adjacent lists)",
+  "mode": "items",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c6",
+  "title": "same item: priority vs rank (separated by created)",
+  "mode": "items",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c7",
+  "title": "same item: status ONLY vs type (separated by since)",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c8",
+  "title": "same item: status ONLY vs priority",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c9",
+  "title": "same item: status move (status+since) vs area",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c10",
+  "title": "same item: since-neighbour test, area vs priority",
+  "mode": "items",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c11",
+  "title": "same item: status move vs parent set",
+  "mode": "items",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "d1",
+  "title": "SAME field, SAME value (status todo->done)",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "d2",
+  "title": "SAME field, DIFFERENT value (status done vs dropped)",
+  "mode": "items",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "d3",
+  "title": "SAME field, DIFFERENT value (priority)",
+  "mode": "items",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "e1",
+  "title": "body edit vs status move",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "e2",
+  "title": "H1 title edit vs relates append (last fm line)",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "e3",
+  "title": "body para 1 vs body para 2",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "e4",
+  "title": "both edit the same body line",
+  "mode": "items",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "g1",
+  "title": "fixes [a] -> [a,b] vs [a,c]",
+  "mode": "items",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "g2",
+  "title": "relates [] -> [b] vs [c]",
+  "mode": "items",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "h1",
+  "title": "3 worktrees: each adds 2 items + moves a distinct item",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "i1",
+  "title": "semantic: A drops item 6, B links item 15 -> 6 (rule 9 would warn)",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "i2",
+  "title": "semantic: both add an item with the SAME rank (rule 9 would warn)",
+  "mode": "items",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "a1",
+  "title": "both ADD 1 new item",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "a2",
+  "title": "both ADD 3 new items",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "a3",
+  "title": "ADD at distant positions (index 2 vs 17)",
+  "mode": "backlog",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "b1",
+  "title": "edit DIFFERENT items, adjacent (5,6)",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "b2",
+  "title": "edit DIFFERENT items, distant (5,15)",
+  "mode": "backlog",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c1",
+  "title": "same item: status move (status+since) vs priority",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c2",
+  "title": "same item: status move (status+since) vs type (adjacent to since)",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c3",
+  "title": "same item: status move vs fixes append",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c4",
+  "title": "same item: area vs rank (adjacent)",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c5",
+  "title": "same item: fixes append vs blocked_by append (adjacent lists)",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c6",
+  "title": "same item: priority vs rank (separated by created)",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c7",
+  "title": "same item: status ONLY vs type (separated by since)",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c8",
+  "title": "same item: status ONLY vs priority",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c9",
+  "title": "same item: status move (status+since) vs area",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c10",
+  "title": "same item: since-neighbour test, area vs priority",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c11",
+  "title": "same item: status move vs parent set",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "d1",
+  "title": "SAME field, SAME value (status todo->done)",
+  "mode": "backlog",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "d2",
+  "title": "SAME field, DIFFERENT value (status done vs dropped)",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "d3",
+  "title": "SAME field, DIFFERENT value (priority)",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "g1",
+  "title": "fixes [a] -> [a,b] vs [a,c]",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "g2",
+  "title": "relates [] -> [b] vs [c]",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "h1",
+  "title": "3 worktrees: each adds 2 items + moves a distinct item",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "i1",
+  "title": "semantic: A drops item 6, B links item 15 -> 6 (rule 9 would warn)",
+  "mode": "backlog",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "i2",
+  "title": "semantic: both add an item with the SAME rank (rule 9 would warn)",
+  "mode": "backlog",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "a1",
+  "title": "both ADD 1 new item",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "a2",
+  "title": "both ADD 3 new items",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "a3",
+  "title": "ADD at distant positions (index 2 vs 17)",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "b1",
+  "title": "edit DIFFERENT items, adjacent (5,6)",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "b2",
+  "title": "edit DIFFERENT items, distant (5,15)",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c1",
+  "title": "same item: status move (status+since) vs priority",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c2",
+  "title": "same item: status move (status+since) vs type (adjacent to since)",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c3",
+  "title": "same item: status move vs fixes append",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c4",
+  "title": "same item: area vs rank (adjacent)",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c5",
+  "title": "same item: fixes append vs blocked_by append (adjacent lists)",
+  "mode": "items-ml",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c6",
+  "title": "same item: priority vs rank (separated by created)",
+  "mode": "items-ml",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c7",
+  "title": "same item: status ONLY vs type (separated by since)",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c8",
+  "title": "same item: status ONLY vs priority",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c9",
+  "title": "same item: status move (status+since) vs area",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "c10",
+  "title": "same item: since-neighbour test, area vs priority",
+  "mode": "items-ml",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "c11",
+  "title": "same item: status move vs parent set",
+  "mode": "items-ml",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "d1",
+  "title": "SAME field, SAME value (status todo->done)",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "d2",
+  "title": "SAME field, DIFFERENT value (status done vs dropped)",
+  "mode": "items-ml",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "d3",
+  "title": "SAME field, DIFFERENT value (priority)",
+  "mode": "items-ml",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "e1",
+  "title": "body edit vs status move",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "e2",
+  "title": "H1 title edit vs relates append (last fm line)",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "e3",
+  "title": "body para 1 vs body para 2",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "e4",
+  "title": "both edit the same body line",
+  "mode": "items-ml",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "g1",
+  "title": "fixes [a] -> [a,b] vs [a,c]",
+  "mode": "items-ml",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "g2",
+  "title": "relates [] -> [b] vs [c]",
+  "mode": "items-ml",
+  "outcome": "conflict",
+  "detail": "1 conflict(s)"
+ },
+ {
+  "id": "h1",
+  "title": "3 worktrees: each adds 2 items + moves a distinct item",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "i1",
+  "title": "semantic: A drops item 6, B links item 15 -> 6 (rule 9 would warn)",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ },
+ {
+  "id": "i2",
+  "title": "semantic: both add an item with the SAME rank (rule 9 would warn)",
+  "mode": "items-ml",
+  "outcome": "clean",
+  "detail": ""
+ }
+]

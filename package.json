@@ -1,0 +1,45 @@
+{
+  "name": "docket",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "Windows CLI and local viewer over per-repo Markdown work items.",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "docket": "src/cli/main.mjs",
+    "dk": "src/cli/main.mjs"
+  },
+  "files": [
+    "src/cli/",
+    "src/core/",
+    "src/storage/",
+    "src/repository/",
+    "src/state/",
+    "src/integration/",
+    "docs/MOVE-IN.md",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "npm run test:bootstrap && npm run test:format && npm run test:core && npm run test:storage && npm run test:cli && npm run test:coordination && npm run test:integration && npm run test:packaging && npm run test:layout",
+    "test:bootstrap": "node src/bootstrap/check.mjs --repo .",
+    "test:format": "node --test \"tests/format/*.test.mjs\"",
+    "test:core": "node --test \"tests/core/*.test.mjs\"",
+    "test:storage": "node --test \"tests/storage/*.test.mjs\"",
+    "test:cli": "node --test \"tests/cli/*.test.mjs\"",
+    "test:coordination": "node --test \"tests/state/*.test.mjs\"",
+    "test:integration": "node --test \"tests/integration/*.test.mjs\"",
+    "test:packaging": "node --test \"tests/packaging/*.test.mjs\"",
+    "test:layout": "node src/tooling/layout-check.mjs",
+    "build": "node src/tooling/build.mjs",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "oxlint": "^1.86.0",
+    "prettier": "^3.9.9"
+  }
+}
