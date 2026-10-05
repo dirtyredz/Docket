@@ -76,3 +76,13 @@ Non-obvious traps, from `PLAN.md` sections 6 and 7, the merge test, and building
 - **`list --count-by` counts the filtered view** (open only unless `--all` or `--status`); `--limit` does not apply.
 - **`--dry-run` still reads the gate.** `init --gate --dry-run` and `gate install --dry-run` fail if no gate is
   promoted or the hook template is missing, exactly as the real run would.
+- **Unavailable registrations are listed, never pruned.** `repo remove` is the only way out.
+- **Duplicate doc locations** (repo root and `docs/`): root wins unless a `--doc` override says otherwise; both reported.
+- **Viewer writes go to the selected checkout only.** Switching checkouts changes the edit target; the overview counts the preferred checkout.
+- **Claims shown in the viewer are advisory and per clone.**
+- **The external-editor race applies to viewer saves too.** The revision check narrows it, does not close it.
+- **A 409 keeps the browser draft; drafts live only in the open tab.** Reload or close prompts and loses them.
+- **Viewer Markdown deps are lazy.** A gate-promoted copy has no `node_modules`; never import `src/viewer/server` from the gate or CLI paths.
+- **`docket serve` writes each checkout's `.docket/index.json` cache**, as `dk list` does.
+- **Playwright e2e** uses Playwright's Chromium if installed, else system Edge/Chrome (the Chromium download failed on this
+  machine on 2026-10-05); the test skips only if no browser starts.

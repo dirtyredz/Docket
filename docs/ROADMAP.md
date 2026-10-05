@@ -25,11 +25,21 @@ preservation, priority and status mapping, byte-verified reconstruction; no unex
 legacy-write guards, documentation-checker adapter, composed gate. The two-week conflict observation
 runs 2026-10-05 to 2026-10-19 (`records/conflicts/`).
 
-**M3 - Registry, init and move-in.** `docket repo` commands and document-location overrides; `docket init`
-and `docs/MOVE-IN.md` (done 2026-10-05, no importer); small then large pilot by agent move-in.
+**M3 - Init and move-in.** (done 2026-10-05) `docket init` and `docs/MOVE-IN.md`, no importer; small then large pilot by
+agent move-in.
 
-**M4 - Local viewer/editor.** `docket serve` on loopback: repo selector, board, editor, relations,
-worktree overlays, read-only living docs.
+**M3a - Registry.** (done 2026-10-05) `docket repo add/list/remove`: canonical identity, worktree groups, aliases,
+preferred checkout, document overrides.
+
+**M3b - Scan.** (done 2026-10-05) `docket repo scan <dir> [--dry-run]`: one-shot, additive discovery.
+
+**M4a - Read-only overview.** (done 2026-10-05) `docket serve`: loopback boundary, scoped catalog, overview counts, title search.
+
+**M4b - Browsing.** (done 2026-10-05) Per-checkout board, item detail, relations, worktree hints, read-only living docs.
+
+**M4c - Editing.** (done 2026-10-05) Title, status, priority and relation edits with revision checks, conflict drafts.
+
+**M4d - Hardening.** (done 2026-10-05) Browser end-to-end tests, security and accessibility pass, docs, 0.5.0.
 
 **M5 - Evidence review.** `docket conflicts record/list`; after two weeks decide whether a merge driver
 earns its own item. Everything else (other backlog shapes, cross-machine claims, MCP) stays deferred.

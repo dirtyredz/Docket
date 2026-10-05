@@ -1,7 +1,7 @@
 # ARCHITECTURE
 
-How Docket works. Code map is in `../STRUCTURE.md`; reasons are in `DECISIONS.md`. Status: M0 to M2b
-implemented (CLI, core, storage, index, claims, gate, init); M3+ is design only. Authority: `PLAN.md` and `research/ITEM-SPEC.md`.
+How Docket works. Code map is in `../STRUCTURE.md`; reasons are in `DECISIONS.md`. Status: M0 to M4d
+implemented (CLI, core, storage, index, claims, gate, init, registry, viewer; 0.5.0). Authority: `PLAN.md`, `PLAN-VIEWER.md` and `research/ITEM-SPEC.md`.
 
 ## Truth and caches
 
@@ -15,15 +15,15 @@ implemented (CLI, core, storage, index, claims, gate, init); M3+ is design only.
 
 ## State locations
 
-| Location                                                       | Contents                                               | Committed |
-| -------------------------------------------------------------- | ------------------------------------------------------ | --------- |
-| `<repo>/docs/items/<id>.md`                                    | the items                                              | yes       |
-| `<repo>/docket.json`                                           | store version                                          | yes       |
-| `<repo>/.docket/index.json`                                    | disposable index for this checkout                     | no        |
-| `<git-common-dir>/docket-claims.json`                          | advisory claims shared by linked worktrees             | no        |
-| `<git-common-dir>/docket-conflicts.jsonl`                      | local conflict observations                            | no        |
-| `%LOCALAPPDATA%/Docket/registry.json`                          | repo aliases, canonical paths, doc overrides; no items | no        |
-| `%LOCALAPPDATA%/Docket/gate/versions/<v>/`, `gate/active.json` | tested checker installs, selected last-good            | no        |
+| Location                                                       | Contents                                                    | Committed |
+| -------------------------------------------------------------- | ----------------------------------------------------------- | --------- |
+| `<repo>/docs/items/<id>.md`                                    | the items                                                   | yes       |
+| `<repo>/docket.json`                                           | store version                                               | yes       |
+| `<repo>/.docket/index.json`                                    | disposable index for this checkout                          | no        |
+| `<git-common-dir>/docket-claims.json`                          | advisory claims shared by linked worktrees                  | no        |
+| `<git-common-dir>/docket-conflicts.jsonl`                      | local conflict observations                                 | no        |
+| `%LOCALAPPDATA%/Docket/registry.json`                          | repo ids, aliases, checkout groups, doc overrides; no items | no        |
+| `%LOCALAPPDATA%/Docket/gate/versions/<v>/`, `gate/active.json` | tested checker installs, selected last-good                 | no        |
 
 ## Write and lock model
 
@@ -54,9 +54,18 @@ claim cleanup failure is reported without pretending the item write failed.
 
 ## Registry
 
-Per-machine list of repos (alias, canonical path, linked-worktree identity, relative document
-overrides). Unavailable repos are reported, never deleted. It holds no items, so the viewer aggregates
-transiently while persisted indexes stay per checkout.
+`%LOCALAPPDATA%/Docket/registry.json` (`DOCKET_HOME` overrides; no fallback into a repo), written under its
+own lock, atomically. It holds no items, counts or claims.
+
+- **Identity.** Registry ids are `r-` (repo group) and `c-` (checkout). A group is the canonical Git common
+  dir: linked worktrees join it, independent clones stay separate. Paths compare by real path
+  (`repository/canonical`), case-insensitively on Windows. Aliases are unique.
+- **Preferred checkout.** The first registered, or, from a scan, the main checkout. Changed only by the owner
+  (`repo add --preferred`); removing it prefers the first remaining one and says so. Never silent failover.
+- **Scan.** `repo scan <dir>` is one-shot and additive: it walks for Git checkout roots holding `docket.json`
+  (nested repos and `.claude/worktrees/` included), reports skipped links and junctions without following
+  them, keeps existing aliases and overrides, and never initialises, watches or prunes.
+- **Unavailable** checkouts are listed with a reason, never deleted; `repo remove` is the only exit.
 
 ## Last-good gate
 
@@ -78,13 +87,24 @@ versions shared that contract. A missing launcher fails closed. Version director
 `<package version>-<tarball sha256 prefix>` so a promotion never overwrites an installed version.
 Promotion, smoke test, and repo opt-in are separate modules under `integration/gate/`.
 
-## Viewer checkout targeting
+## Viewer
 
-`docket serve` binds loopback and calls the same core operations as the CLI. Reads return revisions.
-Editing requires an explicitly selected checkout; observations of other worktrees (claims, branch-local
-work) are labeled advisory hints and are never written into the main checkout. Paths are restricted to
-registered, contained locations; traversal, foreign origins and unsafe HTML are rejected. Living docs
-are rendered read-only; there is no document-write endpoint.
+`docket serve` binds `127.0.0.1` only, prints the URL, and runs in the foreground.
+
+- **Targeting.** Overview and title search read one preferred checkout per group (counted once). Other
+  checkouts load on demand. Edits need an explicitly selected checkout, addressed by registry ids only (never
+  client paths), re-verified against Git on every mutation. Other worktrees' claims and branch work are
+  advisory hints, never written.
+- **Catalog.** Transient summaries built from each checkout's `.docket/index.json`, loaded progressively
+  (preferred checkouts first, yielding between repos); coverage and unavailable repos are reported. Nothing
+  persisted.
+- **Request security.** Exact loopback Host and port; a present Origin must be the server's own; Sec-Fetch-Site
+  cross-site refused. Mutations also need a per-process CSRF token, a JSON body and the Origin. CSP, nosniff,
+  `X-Frame-Options: DENY`, no CORS, known static assets only, bodies capped at 64 KB. Item storage is checked
+  for links and containment before core touches it.
+- **Revision flow.** Detail returns the item's revision plus the revisions of relation holders. Save and relation
+  actions send them back; core asserts them inside the lock (ADR-24). A 409 keeps the browser draft.
+- **Documents** are read-only: per-repo override, then repo root, then `docs/`; Markdown is sanitized (ADR-23).
 
 ## Init and move-in
 

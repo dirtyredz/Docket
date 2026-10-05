@@ -1,7 +1,7 @@
 # Docket
 
 Windows 11 CLI (`docket` / `dk`) and local viewer over per-repo Markdown work items. Status: the CLI, core, pre-push
-gate, `docket init` and the move-in playbook are shipped (importers removed, ADR-19); the viewer (M3+) is design only (`docs/PLAN.md`).
+gate, `docket init`, the move-in playbook, the repo registry and the local viewer (`docket serve`) are shipped in 0.5.0 (importers removed, ADR-19; viewer plan `docs/PLAN-VIEWER.md`).
 
 ## Working here
 
@@ -9,7 +9,7 @@ gate, `docket init` and the move-in playbook are shipped (importers removed, ADR
   flows, `docs/DECISIONS.md` for why.
 - Stack: Node >= 22 (24 planned, ADR-13), plain ESM (`.mjs`), npm, `node:test`. No TypeScript.
 - Tests: `npm test` (everything), or `npm run test:<area>` for bootstrap, format, core, storage, cli,
-  coordination (tests/state), integration, packaging, layout (bootstrap and layout are scripts, not test folders). Integration and packaging do real pushes to temp bare
+  coordination (tests/state), registry, viewer, e2e (Playwright; Edge/Chrome fallback), integration, packaging, layout (bootstrap and layout are scripts, not test folders). Integration and packaging do real pushes to temp bare
   remotes and need the harness template (`~/.claude/hooks/structure/pre-push.template.sh`).
 - `npm run build` packs `dist/docket-<v>.tgz`. Ship it: `npm install --global <tgz>`, (ABSOLUTE tarball path: a relative one is misread as a GitHub spec), then
   `docket gate promote <tgz>` (last-good gate) and `docket gate install --repo .`.

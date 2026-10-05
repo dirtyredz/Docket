@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { after, before, describe, test } from "node:test";
 import { installRepo } from "../../src/integration/gate/install.mjs";
 import { readActive } from "../../src/integration/gate/paths.mjs";
@@ -131,5 +132,34 @@ describe("last-good gate", () => {
       const out = spawnSync(bin, ["--version"], { encoding: "utf8", shell: win, cwd: work.dir });
       assert.equal(out.stdout.trim(), version, out.stderr);
     }
+  });
+});
+
+describe("last-good gate: promoted copy without dependencies", () => {
+  test("CLI commands run, and the viewer's dependencies load only lazily", () => {
+    const active = promoteTarball(tarball, { gateRoot });
+    const src = path.join(gateRoot, readActive(gateRoot).dir ?? active.dir, "src");
+    assert.ok(!fs.existsSync(path.join(src, "..", "node_modules")), "no node_modules in the copy");
+    const cli = path.join(src, "cli", "main.mjs");
+    const node = (...args) => spawnSync(process.execPath, args, { encoding: "utf8" });
+    for (const args of [["--version"], ["repo", "--help"], ["serve", "--help"]]) {
+      const r = node(cli, ...args);
+      assert.equal(r.status, 0, `${args.join(" ")}: ${r.stderr}`);
+    }
+    const r = makeRepo(
+      { "dk-0000c003": itemText({ id: "dk-0000c003" }) },
+      { prefix: "docket-pkg-chk-" },
+    );
+    try {
+      r.commit("valid");
+      const check = node(cli, "check", "--repo", r.root);
+      assert.equal(check.status, 0, check.stdout + check.stderr);
+    } finally {
+      r.cleanup();
+    }
+    const viewer = pathToFileURL(path.join(src, "viewer", "server", "main.mjs")).href;
+    const imp = node("-e", `import(${JSON.stringify(viewer)})`);
+    assert.notEqual(imp.status, 0, "the viewer needs marked and sanitize-html");
+    assert.match(imp.stderr, /marked|sanitize-html|ERR_MODULE_NOT_FOUND/);
   });
 });

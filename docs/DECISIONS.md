@@ -1,7 +1,53 @@
 # DECISIONS
 
-ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-21 are 2026-10-05.
+ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-25 are 2026-10-05.
 Evidence paths are relative to `docs/research/`.
+
+## ADR-25: Documents and item bodies are read-only in the viewer
+
+- **Context:** The viewer could edit more than the CLI exposes, and Markdown editing needs merge, draft
+  and sanitization rules the format does not give.
+- **Decision:** No document-write or body-write endpoint exists. Living docs render read-only (a per-repo
+  override wins, then the repo root, then `docs/`). Only title, status, priority and relations are
+  editable, all through the core operations the CLI uses.
+- **Rejected:** a Markdown body editor (re-opens body-byte guarantees); document editing (any write path
+  to arbitrary repo files).
+- **Evidence:** owner ruling 2026-10-05 (PLAN-VIEWER section 7); `tests/viewer/` route tests.
+
+## ADR-24: Relation actions are single-edge and revision-checked inside the lock
+
+- **Context:** A form that saved scalars and relations together could overwrite a concurrent edit, and
+  `link` can write a second file (a relation stored on the other side).
+- **Decision:** Scalar Save (title, status, priority) is separate from single-edge relation actions. Each
+  request carries the revisions it read: the item, plus every relation holder it will touch (including
+  reverse-stored `relates`). Core asserts them inside the lock, before planning, also for no-ops. A 409 is
+  never retried automatically and keeps the browser draft. The CLI's `--expect` shares the same checks.
+- **Rejected:** one combined save (hides which edge conflicted); asserting outside the lock (race);
+  auto-retry (silently overwrites).
+- **Evidence:** `core/items/revisions.mjs`; `tests/core` and `tests/viewer` conflict cases.
+
+## ADR-23: Native-module viewer, lazy sanitized Markdown
+
+- **Context:** The viewer ships in the same tarball the pre-push gate promotes, so UI dependencies must
+  not reach the checker.
+- **Decision:** Server on `node:http`, UI as native ES modules; no framework, bundler or build step.
+  Markdown uses `marked` then `sanitize-html` with a strict allowlist (no scripts, styles, forms, event
+  handlers or remote images). Both are imported dynamically inside `docket serve` only, so the CLI and
+  the gate never load them.
+- **Rejected:** a framework or bundler (a build in the gate path); client-side rendering of raw Markdown;
+  a denylist sanitizer.
+- **Evidence:** `tests/viewer/` sanitization cases; packaging test imports the gate without them.
+
+## ADR-22: One logical repo per Git common dir; the overview counts the preferred checkout
+
+- **Context:** Linked worktrees of one clone repeat the same items. Counting each would inflate totals,
+  and falling back to another branch would show wrong work.
+- **Decision:** The registry groups checkouts by canonical Git common directory: linked worktrees join a
+  group, independent clones stay separate. Overview and search read one preferred checkout per group,
+  never failing over silently when it disappears (it reports unavailable). Editing needs an explicit
+  checkout selection.
+- **Rejected:** counting every worktree; automatic failover to any available checkout; one entry per path.
+- **Evidence:** owner ruling 2026-10-05; `tests/registry/` grouping cases.
 
 ## ADR-21: Batch entries may set historical dates
 
@@ -78,61 +124,4 @@ Evidence paths are relative to `docs/research/`.
   `node --test` with quoted globs). Moving to 24 later needs no code change.
 - **Rejected:** requiring Node 24 now (blocks every install on this machine).
 
-## ADR-12: Fix the claims lock race with rename-then-verify
-
-- **Context:** The parallel-claims test lost 1-2 of 40 claims in about 1 run in 5: a waiter judged a
-  lock stale from a dead pid, the lock was released and re-taken, and the waiter deleted the new lock.
-- **Decision:** A stale lock is renamed aside and deleted only if its content (with a random token)
-  matches what was judged; a dead owner counts only after a 1-second grace; release removes only its
-  own lock.
-- **Evidence:** regression test in `tests/storage/atomic-write.test.mjs`.
-
-## ADR-11: No central database
-
-- **Context:** Several repos, each with its own history; a central store would own data that belongs to
-  repos and cannot branch or merge with them.
-- **Decision:** Items live only in their owning repo. The registry (`%LOCALAPPDATA%/Docket/`) holds
-  paths and aliases, never items; indexes are per checkout.
-- **Rejected:** a machine-wide SQLite/server store (loses branch semantics, needs sync); aggregating
-  items into one repo.
-- **Evidence:** `markdown-vs-db-project-docs.md`, `round2-md-vs-db-workflow.md`.
-
-## ADR-10: the first adopter portal retired at M2
-
-- **Context:** The first adopter backlog portal is the only writable frontend for legacy shards. Owner ruling
-  2026-10-04: the portal is not in active use.
-- **Decision:** Stop and retire it at the M2b cutover (startup retired, mutation path returns 410),
-  before the viewer exists. The CLI is the early usable slice; no second writable frontend.
-- **Rejected:** keeping the portal alive until the M4 viewer ships (two writers on one data set).
-- **Evidence:** `PLAN.md` sections 2, 3 and 7; owner ruling 2026-10-04.
-
-## ADR-09: Merge driver deferred; log conflicts for two weeks first
-
-- **Context:** Remaining conflicts are same-field edits and concurrent relation-list appends; volume is
-  unknown and probably low.
-- **Decision:** No custom merge driver. From the first adopter cutover, record real conflicts
-  (`docket conflicts`) for two weeks, then decide in `docs/records/conflicts/`.
-- **Rejected:** building a field-level driver now (unproven need, installation burden on every clone).
-- **Evidence:** `MERGE-TEST-RESULTS.md` implication 4, scenarios c5, g1, g2.
-
-## ADR-08: Last-good gate for self-hosting
-
-- **Context:** Docket validates its own items in pre-push; a broken working tree must not block or
-  silently pass pushes.
-- **Decision:** Pre-push runs a tested checker promoted into `%LOCALAPPDATA%/Docket/gate/versions/`,
-  previous version retained, never a build or working-tree import. A quarantined prototype copy
-  bridges M0 to M1b.
-- **Rejected:** running the checkout's code in the hook; linking the working tree globally.
-- **Evidence:** `PLAN.md` section 3 (M1b, M1c) and section 7.
-
-## ADR-07: `add` assigns ID and rank
-
-- **Context:** In the agent test, hand-written ranks collided immediately; hand-written IDs risk the
-  same.
-- **Decision:** `docket add` generates the ID (4 random bytes, collision retry) and the end-of-priority
-  rank. Agents never supply either; reordering takes relative placement. Duplicate rank stays a
-  warning because git cannot catch it.
-- **Rejected:** agent-chosen ranks; sequential counters (merge hot spot).
-- **Evidence:** `MERGE-TEST-RESULTS.md` implications 5 and 6, scenario i2; `ITEM-SPEC.md` Settled.
-
-> ADRs 01-06 (inception: storage format, naming, CLI vs MCP, index, field order, `add`) moved to `records/decisions/2026-10.md`.
+> ADRs 07-12 moved to `records/decisions/2026-10.md`.

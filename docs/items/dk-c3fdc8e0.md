@@ -2,8 +2,8 @@
 id: dk-c3fdc8e0
 type: feature
 created: 2026-10-04
-status: todo
-since: 2026-10-04
+status: done
+since: 2026-10-05
 area: viewer
 priority: P2
 rank: l

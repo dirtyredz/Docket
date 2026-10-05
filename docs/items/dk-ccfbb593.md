@@ -2,8 +2,8 @@
 id: dk-ccfbb593
 type: feature
 created: 2026-10-04
-status: todo
-since: 2026-10-04
+status: done
+since: 2026-10-05
 area: registry
 priority: P2
 rank: f
