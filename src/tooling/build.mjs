@@ -18,6 +18,9 @@ const REQUIRED = [
   "package/src/integration/init.mjs",
   "package/src/cli/commands/init.mjs",
   "package/docs/MOVE-IN.md",
+  "package/docs/AGENT-GUIDE.md",
+  "package/src/cli/commands/guide.mjs",
+  "package/src/integration/agent-snippet.mjs",
   "package/src/cli/commands/viewer.mjs",
   "package/src/viewer/server/main.mjs",
   "package/src/viewer/documents/render.mjs",
@@ -25,8 +28,9 @@ const REQUIRED = [
 ];
 // The viewer's Markdown dependencies must be declared so `npm install <tgz>` brings them.
 const RUNTIME_DEPENDENCIES = ["marked", "sanitize-html"];
-// docs/MOVE-IN.md is the one shipped playbook; every other doc stays out.
-const FORBIDDEN = /^package\/(src\/bootstrap|src\/tooling|tests|docs\/(?!MOVE-IN\.md$))/;
+// docs/MOVE-IN.md (move-in playbook) and docs/AGENT-GUIDE.md (`docket guide`) ship; every other doc stays out.
+const FORBIDDEN =
+  /^package\/(src\/bootstrap|src\/tooling|tests|docs\/(?!(MOVE-IN|AGENT-GUIDE)\.md$))/;
 
 const dist = path.join(ROOT, "dist");
 fs.mkdirSync(dist, { recursive: true });

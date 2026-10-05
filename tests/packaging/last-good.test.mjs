@@ -142,7 +142,12 @@ describe("last-good gate: promoted copy without dependencies", () => {
     assert.ok(!fs.existsSync(path.join(src, "..", "node_modules")), "no node_modules in the copy");
     const cli = path.join(src, "cli", "main.mjs");
     const node = (...args) => spawnSync(process.execPath, args, { encoding: "utf8" });
-    for (const args of [["--version"], ["repo", "--help"], ["serve", "--help"]]) {
+    for (const args of [
+      ["--version"],
+      ["repo", "--help"],
+      ["serve", "--help"],
+      ["note", "--help"],
+    ]) {
       const r = node(cli, ...args);
       assert.equal(r.status, 0, `${args.join(" ")}: ${r.stderr}`);
     }

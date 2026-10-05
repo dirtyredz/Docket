@@ -1,17 +1,28 @@
 # ARCHITECTURE
 
 How Docket works. Code map is in `../STRUCTURE.md`; reasons are in `DECISIONS.md`. Status: M0 to M4d
-implemented (CLI, core, storage, index, claims, gate, init, registry, viewer; 0.5.0). Authority: `PLAN.md`, `PLAN-VIEWER.md` and `research/ITEM-SPEC.md`.
+implemented (CLI, core, storage, index, claims, gate, init, registry, viewer; 0.6.0 built, unpushed). Authority: `PLAN.md`, `PLAN-VIEWER.md` and `research/ITEM-SPEC.md`.
 
 ## Truth and caches
 
 - **Item files are the only truth.** One Markdown file per item at `docs/items/<id>.md` in the owning
-  repo, strict 12-key frontmatter, H1 title, free body. Git is the history; items never leave their repo.
-- **Everything else is rebuildable.** `<repo>/.docket/index.json` is a per-worktree cache built from
+  repo, strict 12-key frontmatter, H1 title, facts body, optional final `## Notes`. Git is the history; items never leave their repo.
+- **Everything else is rebuildable.** `<repo>/.docket/index.json` is a per-worktree cache (version 2) built from
   source hashes; missing, stale or corrupt means rebuild. `docket check` always reads the files, never
   the index.
 - **`<repo>/docket.json`** (committed) holds the store version and explicit migration state. No
   configurable schema vocabulary.
+
+## Content model
+
+An item file is three byte ranges: frontmatter, the H1 title plus the **body** (authoritative facts), and an
+optional final **Notes** section (untrusted discussion; ADR-26). `core/format/content.mjs` finds the
+boundaries and owns the Notes grammar; `core/items/content/` holds body replacement and note
+append/resolve. They write through the **preserved-prefix** path of the shared transaction: the frontmatter
+is kept verbatim and only the bytes of the edited range change, then the result is reparsed and revision
+checked (ADR-27). Scalar and relation edits keep the canonical rewrite. Index version 2 caches
+`openNoteCount` per item and no body or note text, so discussion filters need no file reads; version 1
+caches rebuild on first run.
 
 ## State locations
 
@@ -104,13 +115,20 @@ Promotion, smoke test, and repo opt-in are separate modules under `integration/g
   for links and containment before core touches it.
 - **Revision flow.** Detail returns the item's revision plus the revisions of relation holders. Save and relation
   actions send them back; core asserts them inside the lock (ADR-24). A 409 keeps the browser draft.
-- **Documents** are read-only: per-repo override, then repo root, then `docs/`; Markdown is sanitized (ADR-23).
+- **Body and notes.** `POST …/items/:id/body {expected, body}`, `…/notes {expected, text}` and
+  `…/notes/:ref/resolve {expected}` call the CLI's content operations. The item editor has a facts panel
+  (rendered, or Markdown source with Save/Discard) and a plain-text notes panel labelled untrusted. Drafts are
+  kept per repo, checkout, item and kind, survive a 409 and are reconciled explicitly, never merged
+  silently. Overview and board show open-note counts and a discussion filter.
+- **Documents** (not item bodies, ADR-27) are read-only: per-repo override, then repo root, then `docs/`; Markdown is sanitized (ADR-23).
 
 ## Init and move-in
 
 `docket init` (`integration/init.mjs`, adapter `cli/commands/init.mjs`) makes the current worktree a Docket
-repo: it creates `docs/items/` and `docket.json` (store version only), ignores `.docket/`, appends the agent
-snippet to `CLAUDE.md` and `AGENTS.md` (creating `CLAUDE.md` when neither exists), and with `--gate` runs the
+repo: it creates `docs/items/` and `docket.json` (store version only), ignores `.docket/`, writes the managed agent
+snippet (`integration/agent-snippet.mjs`, ADR-28) into both `CLAUDE.md` and `AGENTS.md` (creating either; an
+older managed or the exact pre-0.6 snippet is upgraded in place, anything customised is reported for manual
+review), and with `--gate` runs the
 gate install. Every step is skipped when already done; a run that changes nothing reports "already
 initialised". It refuses outside a git worktree. There is no importer: an existing backlog moves in once,
 through an agent following `MOVE-IN.md` with the ordinary `dk add` / `dk set` commands (ADR-19).

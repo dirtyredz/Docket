@@ -89,6 +89,18 @@ describe("composed pre-push gate", { skip }, () => {
     assert.equal(remoteHas(r, "main"), null);
   });
 
+  test("a pushed tip with malformed Notes (check group 10) is rejected", () => {
+    const r = setup();
+    const notes = "## Notes\n\n### not-a-timestamp · open · owner\n\nQuestion.\n";
+    r.write(BAD, itemText({ id: BAD }, { title: "Bad notes", body: `Facts.\n\n${notes}` }));
+    r.commit("bad notes");
+    const out = push(r.root, ["origin", "main"]);
+    assert.notEqual(out.status, 0);
+    assert.match(out.stderr, /dk-0000b001\.md/);
+    assert.match(out.stderr, /note/);
+    assert.equal(remoteHas(r, "main"), null);
+  });
+
   test("several refs: one bad tip rejects the push, all good passes", () => {
     const r = setup();
     git(r.root, "branch", "side");

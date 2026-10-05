@@ -16,7 +16,8 @@ const npm = (args, cwd) => spawnSync("npm", args, { cwd, encoding: "utf8", shell
 function copyCheckout(dest) {
   fs.cpSync(path.join(ROOT, "src"), path.join(dest, "src"), { recursive: true });
   fs.mkdirSync(path.join(dest, "docs"));
-  fs.copyFileSync(path.join(ROOT, "docs", "MOVE-IN.md"), path.join(dest, "docs", "MOVE-IN.md"));
+  for (const doc of ["MOVE-IN.md", "AGENT-GUIDE.md"])
+    fs.copyFileSync(path.join(ROOT, "docs", doc), path.join(dest, "docs", doc));
   for (const f of ["package.json", "README.md"])
     fs.copyFileSync(path.join(ROOT, f), path.join(dest, f));
 }
@@ -75,6 +76,38 @@ test(
 
     const version = run("--version");
     assert.equal(version.stdout.trim(), pkg.version, version.stderr);
+    const guide = JSON.parse(run("guide", "--json").stdout);
+    assert.equal(guide.ok, true);
+    assert.match(guide.data.text, /^# Docket agent guide/);
+    assert.ok(guide.data.path.includes("node_modules"), guide.data.path);
+
+    const fresh = tempDir("docket-viewer-pkg-init-");
+    t.after(() => fresh.cleanup());
+    spawnSync("git", ["init", "-q", fresh.dir]);
+    const init = JSON.parse(run("init", "--json", "--repo", fresh.dir).stdout);
+    assert.equal(init.ok, true, JSON.stringify(init));
+    for (const f of ["CLAUDE.md", "AGENTS.md"]) {
+      const text = fs.readFileSync(path.join(fresh.dir, f), "utf8");
+      assert.match(text, /<!-- docket:agent-snippet begin v2 -->/);
+      assert.match(text, /docket guide/);
+    }
+
+    const added = JSON.parse(
+      run(
+        "add",
+        "--repo",
+        repo.root,
+        "--type",
+        "task",
+        "--priority",
+        "P1",
+        "--title",
+        "Pkg",
+        "--json",
+      ).stdout,
+    );
+    const noted = run("note", added.data.id, "<b>question</b>", "--repo", repo.root);
+    assert.equal(noted.status, 0, noted.stderr);
 
     fs.mkdirSync(path.join(repo.root, "docs"), { recursive: true });
     fs.writeFileSync(
@@ -121,5 +154,10 @@ test(
     const doc = await api(`/api/repos/${r.id}/checkouts/${r.preferred}/documents/ARCHITECTURE`);
     assert.ok(doc.html.includes("<h1>Arch</h1>"), doc.html);
     assert.ok(!doc.html.includes("<script"), doc.html);
+    const item = await api(`/api/repos/${r.id}/checkouts/${r.preferred}/items/${added.data.id}`);
+    assert.equal(item.openNoteCount, 1);
+    assert.equal(item.notes[0].text, "<b>question</b>");
+    assert.ok(!item.bodyHtml.includes("question"), item.bodyHtml);
+    assert.equal(r.counts.openNotes, 1);
   },
 );

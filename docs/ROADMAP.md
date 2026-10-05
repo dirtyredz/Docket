@@ -39,7 +39,9 @@ preferred checkout, document overrides.
 
 **M4c - Editing.** (done 2026-10-05) Title, status, priority and relation edits with revision checks, conflict drafts.
 
-**M4d - Hardening.** (done 2026-10-05) Browser end-to-end tests, security and accessibility pass, docs, 0.5.0.
+**M4d - Hardening.** (done 2026-10-05) Browser end-to-end tests, security and accessibility pass, docs, 0.5.0 (built, unpushed).
 
 **M5 - Evidence review.** `docket conflicts record/list`; after two weeks decide whether a merge driver
 earns its own item. Everything else (other backlog shapes, cross-machine claims, MCP) stays deferred.
+
+**M6 - Facts and notes.** (built 2026-10-05, 0.6.0, unpushed) Body as facts plus untrusted Notes, `dk note`, `set --body-file`, viewer facts and notes panels, managed agent snippet, `docket guide`. Release steps are in the README.

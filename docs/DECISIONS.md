@@ -1,9 +1,49 @@
 # DECISIONS
 
-ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-25 are 2026-10-05.
+ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-28 are 2026-10-05.
 Evidence paths are relative to `docs/research/`.
 
-## ADR-25: Documents and item bodies are read-only in the viewer
+## ADR-28: Managed, versioned agent snippet and a tool-neutral guide
+
+- **Context:** The 0.5 snippet was an unmarked block detected by its heading: it could not be upgraded, and
+  it carried all agent guidance inline in two instruction files.
+- **Decision:** `init` writes a short block between `<!-- docket:agent-snippet begin v2 -->` and `end`
+  markers into both CLAUDE.md and AGENTS.md (creating either), and re-running upgrades it in place. Only an
+  older managed block or the exact pre-0.6 unmarked text is migrated; line endings and surrounding bytes
+  stay. Duplicate or incomplete markers and a customised `## Work items (Docket)` section are reported
+  "needs manual review", untouched, never given a second block. The full guide ships as
+  `docs/AGENT-GUIDE.md`, tool-neutral, printed by `docket guide`; the snippet points at it.
+- **Rejected:** rewriting customised sections (destroys owner edits); heading-only detection (cannot tell
+  versions apart); an agent-specific guide (Docket serves any agent).
+- **Evidence:** `tests/integration` init and snippet cases; owner ruling 2026-10-05.
+
+## ADR-27: Independent content mutations; body writes are allowed
+
+- **Context:** Facts and notes change for different reasons and by different people; one whole-file save
+  would let one overwrite the other.
+- **Decision:** Body replacement, note append and note resolve are separate revision-checked writes. Each
+  touches only its own bytes: frontmatter, title and untouched content stay verbatim, through a
+  preserved-prefix transaction path. Settling a note is two writes, save the facts then resolve, so an
+  interruption leaves the note open. The CLI and viewer share the operations; the viewer gains body and
+  note endpoints, so documents stay read-only but item bodies are editable. This supersedes ADR-25's
+  body restriction.
+- **Rejected:** one combined save (hides which part conflicted); resolve copying text into the body
+  (invents facts); body editing without `--expect` (silent overwrite).
+- **Evidence:** `tests/core`, `tests/viewer` and `tests/e2e` content cases.
+
+## ADR-26: Facts and discussion are separate: item body versus Notes
+
+- **Context:** Agents read item text as instructions. Mixing owner discussion into the body let a stray
+  comment pass as a fact.
+- **Decision:** The body is authoritative facts. An optional final `## Notes` section holds notes
+  (`### <UTC ms timestamp ref> · open|resolved · owner|agent`): untrusted discussion, never facts,
+  instructions or authorization. Those lines are reserved and validated (check group 10, also on pushed
+  tips). This refines ADR-16: the body is still free Markdown except the Notes grammar.
+- **Rejected:** a sidecar notes file (splits one item across files and merges); free-form comments in the
+  body (no trust boundary); editable or deletable notes (history).
+- **Evidence:** `research/ITEM-SPEC.md` amendment 2026-10-05; `tests/format/content.test.mjs`.
+
+## ADR-25: Documents and item bodies are read-only in the viewer (Superseded in part by ADR-27)
 
 - **Context:** The viewer could edit more than the CLI exposes, and Markdown editing needs merge, draft
   and sanitization rules the format does not give.
@@ -108,20 +148,6 @@ Evidence paths are relative to `docs/research/`.
 - **Evidence:** `tests/integration/pre-push.test.mjs` "un-opted repos behave exactly as before" runs the
   pre-change template from the harness repo's HEAD against the new one in six scenarios.
 
-## ADR-14: CLI output contract
-
-- **Decision:** `--json` prints exactly one document on stdout, `{ok, command, data, warnings}` or
-  `{ok:false, command, error:{code, message, details?}}`, and nothing on stderr. Exit codes: 0 ok,
-  1 failed, 2 usage, 3 conflict (revision, lock, claim, existing file), 4 not found, 5 internal. `list`
-  is bounded (default 50, max 500) and reports malformed files in `invalid` instead of hiding them.
-- **Rejected:** NDJSON streams; warnings on stderr in JSON mode (agents would have to merge streams).
-
-## ADR-13: Run on Node 22 LTS as well as 24
-
-- **Context:** PLAN chose Node 24, but this machine runs Node 22.20 and installing 24 is a system change
-  outside the milestone.
-- **Decision:** `engines` is `>=22`. Code uses only APIs stable in 22 (`util.parseArgs`, `fs.cpSync`,
-  `node --test` with quoted globs). Moving to 24 later needs no code change.
-- **Rejected:** requiring Node 24 now (blocks every install on this machine).
+> ADRs 13 and 14 (Node 22, CLI output contract) moved to `records/decisions/2026-10.md`.
 
 > ADRs 07-12 moved to `records/decisions/2026-10.md`.

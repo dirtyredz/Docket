@@ -55,8 +55,7 @@ Non-obvious traps, from `PLAN.md` sections 6 and 7, the merge test, and building
 - **Spawn Docket as `node <main.mjs>`, not `docket.cmd`.** Node refuses to spawn `.cmd` files without a shell;
   adapters find `node_modules/docket/src/cli/main.mjs` beside the `docket` launcher on PATH, or `DOCKET_CLI`.
 - **`init` leaves an empty `docs/items/`.** Git does not track empty directories; the folder appears in the
-  repo with the first `dk add`. Re-running `init` is safe: the snippet is detected by its heading, so do not
-  rename `## Work items (Docket)` in an agent file or it is appended again.
+  repo with the first `dk add`. Re-running `init` is safe: the managed snippet is found by its markers (ADR-28).
 - **Prettier rewrites item files.** Prettier on markdown (e.g. lint-staged) adds a blank line after the frontmatter
   on every commit; `dk check` still passes but the bytes churn. `init` (0.4.4+) adds `docs/items/` to
   `.prettierignore` when it detects Prettier; older Docket repos need `docket init` re-run.
@@ -80,9 +79,21 @@ Non-obvious traps, from `PLAN.md` sections 6 and 7, the merge test, and building
 - **Duplicate doc locations** (repo root and `docs/`): root wins unless a `--doc` override says otherwise; both reported.
 - **Viewer writes go to the selected checkout only.** Switching checkouts changes the edit target; the overview counts the preferred checkout.
 - **Claims shown in the viewer are advisory and per clone.**
-- **The external-editor race applies to viewer saves too.** The revision check narrows it, does not close it.
+- **The external-editor race applies to viewer and content saves too.** The revision check narrows it, does not close it.
 - **A 409 keeps the browser draft; drafts live only in the open tab.** Reload or close prompts and loses them.
 - **Viewer Markdown deps are lazy.** A gate-promoted copy has no `node_modules`; never import `src/viewer/server` from the gate or CLI paths.
 - **`docket serve` writes each checkout's `.docket/index.json` cache**, as `dk list` does.
+- **Reserved Notes lines.** Outside fenced code, a column-zero `## Notes` line starts the Notes section, a body line
+  shaped like a note header (`### <ref> · open|resolved · owner|agent`) is an error, and inside Notes any `#`/`##`
+  heading is. Fence or escape literal examples.
+- **`--body-file` is exactly the text after the H1.** Start it with a blank line to keep one under the title; edit
+  from `bodySource`, not `body`. It rejects CR, invalid UTF-8 and `## Notes`, and `--expect` is required.
+- **Settling a note is two writes.** Save the facts (`set --body-file --expect`), then resolve with the returned
+  revision. An interrupted run leaves the note open; resolve copies nothing into the body.
+- **Customised snippets are not upgraded.** A `## Work items (Docket)` section that was edited, or duplicate or incomplete
+  markers, reads "needs manual review" and is left alone; `--no-agent-snippet` skips both files.
+- **Adopting repos: a pre-existing `## Notes` section becomes Notes.** Prose there fails check group 10. Look for it
+  (`dk check`) before upgrading, and rename or fence it.
+- **Index v2 rebuilds on first run.** Older caches are discarded and rebuilt; nothing to migrate.
 - **Playwright e2e** uses Playwright's Chromium if installed, else system Edge/Chrome (the Chromium download failed on this
   machine on 2026-10-05); the test skips only if no browser starts.

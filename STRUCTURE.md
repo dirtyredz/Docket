@@ -1,8 +1,8 @@
 # STRUCTURE
 
 Code-shape map for Docket: a Windows 11 CLI (`docket` / `dk`) and local viewer over per-repo Markdown
-items. Authority for layout: `docs/PLAN.md` section 2. Status: M0 to M4d built (strict core, CLI,
-storage, state/index, state/claims, last-good gate, `docket init`, repo registry and scan, local viewer; 0.5.0). Importers were removed in 0.3.0
+items. Authority for layout: `docs/PLAN.md` section 2. Status: M0 to M4d and M6 built (strict core, CLI,
+storage, state/index, state/claims, last-good gate, `docket init`, repo registry and scan, local viewer, facts and notes, managed agent snippet; 0.6.0 built, unpushed). Importers were removed in 0.3.0
 (ADR-19).
 
 Last full review: 2026-10-05
@@ -12,14 +12,14 @@ Last full review: 2026-10-05
 ```
 src/
   bootstrap/            quarantined recovered validator (not shipped)
-  cli/                  main, args, output, report, help (overview + per-command)        commands/  one adapter per command family
-  core/                 errors.mjs                  format/ validation/ identity/ items/
-  integration/          agent snippet, init         gate/  promote, smoke, install, launcher, pre-push
+  cli/                  main, args, output, report, help (overview + per-command), input, guide        commands/  one adapter per command family
+  core/                 errors.mjs                  format/ validation/ identity/ items/ (content/)
+  integration/          agent snippet (versioned), init         gate/  promote, smoke, install, launcher, pre-push
   repository/           checkout facts: context, config, snapshot, paths, canonical, containment, worktrees
   state/                claims/  index/  registry/     observability/ (planned)
   storage/              atomic write, lock, item store, revisions
   tooling/              build, layout-check
-  viewer/               server/ (routes/)   ui/ (views/)   documents/
+  viewer/               server/ (routes/)   ui/ (views/ item/)   documents/
 tests/                  one suite folder per responsibility; helpers/ fixtures/
 docs/                   living docs, items/, records/, research/ (historical)
 ```
@@ -47,24 +47,27 @@ integration/init  -->  repository, storage, integration/gate (install)
 
 - `src/bootstrap/` — recovered merge-test validator and a bootstrap adapter (quarantined; not shipped)
 - `src/core/` — the shared error type (`errors.mjs`)
-- `src/core/format/` — schema constants, strict parser, canonical serializer and round-trip guard
+- `src/core/format/` — schema constants, strict parser, canonical serializer, round-trip guard and the content grammar (body/Notes boundaries, note header and ref rules)
 - `src/core/validation/` — item checks, relation graph integrity, warnings, check orchestration, `checkStore`
 - `src/core/identity/` — random ID allocation, fractional rank, local-date rules
-- `src/core/items/` — add, batch add, set (with claim release on completion), link, query, detail and the shared mutation transaction (CLI and viewer)
+- `src/core/items/` — add, batch add, set (with claim release on completion), link, query, detail and the shared mutation transaction, canonical and preserved-prefix (CLI and viewer)
+- `src/core/items/content/` — body replacement and note lifecycle (append, resolve): the content operations behind `set --body-file`, `note` and the viewer
 - `src/storage/` — content revisions, atomic write, lock, item store
 - `src/repository/` — worktree and common-dir discovery, `docket.json`, working-tree or Git-tree snapshot, path identity, canonical real paths, containment, worktree listing
 - `src/state/claims/` — common-dir advisory claims store
 - `src/state/index/` — rebuildable per-worktree JSON cache
 - `src/state/registry/` — per-machine repo registry: identity, registration, one-shot scan, document-location overrides
 - `src/state/observability/` — local merge-conflict recording and reporting (planned, M3+)
-- `src/cli/` — dispatch, argument handling, output contracts, shared report vocabulary, help
+- `src/cli/` — dispatch, argument handling, output contracts, shared report vocabulary, help, shared file/stdin input, `docket guide`
 - `src/cli/commands/` — thin adapters per command family (items, validation, coordination, init, gate, registry, viewer; conflicts planned)
-- `src/integration/` — agent CLAUDE.md/AGENTS.md snippet and `docket init` (`init.mjs`)
+- `src/cli/commands/items/` — one adapter per item command (add, set, link, list, show, index, notes) plus shared item-flag options
+- `src/integration/` — the managed, versioned agent snippet (`agent-snippet.mjs`, text in `agent-snippet.md`; markers, exact-legacy migration, manual review) and `docket init` (`init.mjs`)
 - `src/integration/gate/` — gate promotion, smoke test, repo opt-in, stable launcher, tarball reader, pre-push validation
 - `src/viewer/server/` — server lifecycle, request safety (boundary), registered-checkout scope, static assets, transient catalog, worktree hints
-- `src/viewer/server/routes/` — scoped HTTP adapters: repos, items, relations, documents, search
+- `src/viewer/server/routes/` — scoped HTTP adapters: repos, items, body, notes, relations, documents, search
 - `src/viewer/ui/` — browser shell, HTTP client, DOM helper, session drafts, styles
-- `src/viewer/ui/views/` — one module per view: repo picker, overview, board, item editor, relations, documents, search, worktree hints
+- `src/viewer/ui/views/` — one module per view: repo picker, overview, board, item editor shell, relations, documents, search, worktree hints
+- `src/viewer/ui/views/item/` — the item editor's panels: scalar fields, facts (body) and notes
 - `src/viewer/documents/` — living-doc catalog and read-only Markdown rendering
 - `src/tooling/` — distributable build and layout/size checker
 - `tests/` — responsibility-matched suites: format, core, storage, cli, state, registry, viewer, e2e, integration, packaging
@@ -82,13 +85,13 @@ the raw runs behind it (frozen historical evidence). It is not a code home and i
 | Component          | Responsibility                                                                                                      |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------- |
 | `core/errors`      | `docketError`, the code table and exit kinds, `notFound`; the one error shape.                                      |
-| `core/format`      | The only code that reads or writes item frontmatter; body bytes pass through unchanged.                             |
-| `core/validation`  | The nine ITEM-SPEC check groups; `checkStore` runs them over a checkout or a Git ref.                               |
+| `core/format`      | The only code that reads or writes item frontmatter and the body/Notes grammar; untouched bytes pass through.       |
+| `core/validation`  | The ten ITEM-SPEC check groups; `checkStore` runs them over a checkout or a Git ref.                                |
 | `core/identity`    | `dk-<8hex>` allocation with collision retry, LexoRank-style `[a-z]+` ranks, local dates.                            |
-| `core/items`       | Mutations (incl. `batch` add) and queries; `transaction.mjs` is the one lock/write path.                            |
+| `core/items`       | Mutations (incl. `batch` add, `content/` body and notes) and queries; `transaction.mjs` is the one lock/write path. |
 | `storage`          | Revision check, temp-write/fsync/rename, per-worktree lock.                                                         |
 | `repository`       | Checkout, Git common dir, tree or ref reads; canonical real paths, containment, worktrees.                          |
-| `state/index`      | `.docket/index.json`, rebuilt from source hashes; `check` never trusts it.                                          |
+| `state/index`      | `.docket/index.json` (v2, open-note count only), rebuilt from source hashes; `check` never trusts it.               |
 | `state/claims`     | `<git-common-dir>/docket-claims.json`, separate lock, expiry on read.                                               |
 | `state/registry`   | `registry.json`: ids, aliases, checkout groups by Git common dir, preferred checkout, doc overrides; locked atomic. |
 | `integration/init` | `docket init`: items dir, `docket.json`, ignore entry, agent snippet, optional gate.                                |
