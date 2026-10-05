@@ -6,6 +6,7 @@ import { rankAtEnd, rankAtStart, rankBetween } from "../identity/rank.mjs";
 import { editableRecord } from "./transaction.mjs";
 import { withTitle } from "../format/serialize.mjs";
 import { bandRanks, cleanTitle } from "./add.mjs";
+import { assertRevision } from "./revisions.mjs";
 
 const usage = (message) => docketError(CODES.USAGE, message);
 
@@ -35,10 +36,12 @@ export function placeRank(records, id, priority, placement) {
 
 /**
  * Plan a set. changes: {status?, priority?, type?, area?, title?, placement?}. title rewrites only the H1. A placement relative to another
- * item adopts that item's priority when --priority is not given.
+ * item adopts that item's priority when --priority is not given. A supplied `expect` must match the
+ * current revision, even when the change turns out to be a no-op.
  */
 export function planSet({ records, byId }, id, changes, { today, expect }) {
   const rec = editableRecord(byId, id);
+  assertRevision(rec, expect);
   const before = rec.fields;
   const f = { ...before };
   if (changes.type !== undefined) f.type = changes.type;

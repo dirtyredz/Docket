@@ -13,6 +13,7 @@ export const ASSETS = Object.freeze([
   "app.mjs",
   "api.mjs",
   "dom.mjs",
+  "drafts.mjs",
   "views/repo-picker.mjs",
   "views/overview.mjs",
   "views/board.mjs",

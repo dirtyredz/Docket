@@ -1,7 +1,10 @@
 // Relations of one item: parent and children, fixes and the bugs filed against it (reverse `fixes`),
 // blockers and the items it blocks, symmetric relates. Every target links within the same checkout;
 // missing or malformed targets are shown as such.
+import { api } from "../api.mjs";
 import { h } from "../dom.mjs";
+
+const REL_KEYS = ["parent", "fixes", "blocked_by", "relates"];
 
 const SECTIONS = [
   { label: "Parent", get: (r) => (r.forward.parent ? [r.forward.parent] : []), key: "parent" },
@@ -56,4 +59,85 @@ export function relationsBlock(rel, { base, removeAction = () => null, addForm =
     SECTIONS.every((s) => !s.get(rel).length) ? h("p", { class: "muted" }, "No relations.") : null,
     addForm,
   );
+}
+
+/**
+ * One-edge relation actions for the item editor: a remove button per editable edge and an add form.
+ * Each action sends every revision the edit may rewrite; a 409 reloads instead of retrying.
+ */
+export function relationControls(ctx) {
+  const { route, base } = ctx;
+  const controls = [];
+  const note = h("p", { class: "muted", "data-testid": "relations-note" });
+  const act = async (relations, action, relKey, target) => {
+    try {
+      await api.relate(route.repo, route.checkout, relations.id, {
+        action,
+        key: relKey,
+        target,
+        expected: relations.revisions,
+      });
+      await ctx.onSaved([]);
+    } catch (err) {
+      note.textContent =
+        err.status === 409 ? "Changed elsewhere; reloaded. Try again." : err.message;
+      note.className = "error";
+      if (err.status === 409) await ctx.reload();
+    }
+  };
+  const track = (el) => (controls.push(el), el);
+  return {
+    setEnabled(on) {
+      for (const c of controls) c.disabled = !on;
+      note.textContent = on ? "" : "Save or discard field changes before changing relations.";
+      note.className = "muted";
+    },
+    block(relations) {
+      const keySel = track(
+        h(
+          "select",
+          { "aria-label": "Relation", "data-testid": "rel-key" },
+          REL_KEYS.map((k) => h("option", { value: k }, k)),
+        ),
+      );
+      const target = track(
+        h("input", {
+          placeholder: "dk-xxxxxxxx",
+          "aria-label": "Target item id",
+          "data-testid": "rel-target",
+        }),
+      );
+      const add = track(h("button", { type: "submit", "data-testid": "rel-add" }, "Add"));
+      const form = h(
+        "form",
+        {
+          class: "actions",
+          onsubmit: (e) => {
+            e.preventDefault();
+            act(relations, "add", keySel.value, target.value.trim());
+          },
+        },
+        keySel,
+        target,
+        add,
+      );
+      return relationsBlock(relations, {
+        base,
+        removeAction: (relKey, id) =>
+          track(
+            h(
+              "button",
+              {
+                type: "button",
+                title: `Remove ${relKey} ${id}`,
+                "data-testid": `rel-remove-${relKey}-${id}`,
+                onclick: () => act(relations, "remove", relKey, id),
+              },
+              "remove",
+            ),
+          ),
+        addForm: [form, note],
+      });
+    },
+  };
 }

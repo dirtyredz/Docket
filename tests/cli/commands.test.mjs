@@ -291,3 +291,31 @@ describe("claim and release", () => {
     assert.equal(dk(r, "claim", A).json.error.code, "DOCKET_NOT_FOUND");
   });
 });
+
+describe("--expect parity (revision preconditions)", () => {
+  const STALE = "0000000000000000";
+
+  test("set with a stale --expect fails even when nothing would change", () => {
+    const r = repo({ [A]: itemText({ id: A }) });
+    const out = dk(r, "set", A, "--status", "todo", "--expect", STALE);
+    assert.equal(out.status, 3);
+    assert.equal(out.json.error.code, "DOCKET_CONFLICT");
+  });
+
+  test("set with the current --expect reports a no-op", () => {
+    const r = repo({ [A]: itemText({ id: A }) });
+    const shown = ok(dk(r, "show", A));
+    const data = ok(dk(r, "set", A, "--status", "todo", "--expect", shown.revision));
+    assert.equal(data.noop, true);
+  });
+
+  test("link with a stale --expect fails even when the relation already exists", () => {
+    const r = repo({
+      [A]: itemText({ id: A, relates: [B] }),
+      [B]: itemText({ id: B, rank: "b" }),
+    });
+    const out = dk(r, "link", A, "--relates", B, "--expect", STALE);
+    assert.equal(out.status, 3);
+    assert.equal(out.json.error.code, "DOCKET_CONFLICT");
+  });
+});

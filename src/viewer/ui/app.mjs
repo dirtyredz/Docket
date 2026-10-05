@@ -2,6 +2,7 @@
 // Routes: #/ (overview), #/search?q=..&closed=1, #/r/<repo>/<checkout>/<board|docs|worktrees>/...
 import { api } from "./api.mjs";
 import { h, replace } from "./dom.mjs";
+import { anyDirty } from "./drafts.mjs";
 import { renderBoard } from "./views/board.mjs";
 import { renderDocuments } from "./views/documents.mjs";
 import { renderItemDetail } from "./views/item-editor.mjs";
@@ -129,6 +130,9 @@ async function renderBoardRoute(view, route) {
     return;
   }
   els.detail.hidden = false;
+  // A background refresh never re-renders the editor under the user's cursor (drafts survive anyway).
+  const shown = els.detail.dataset.item === `${route.checkout}/${selected}`;
+  if (shown && els.detail.contains(document.activeElement)) return;
   await renderDetail(route, base, selected);
 }
 
@@ -137,7 +141,20 @@ export async function renderDetail(route, base, id) {
     api.item(route.repo, route.checkout, id),
     api.relations(route.repo, route.checkout, id).catch(() => null),
   ]);
-  renderItemDetail(els.detail, { item, relations, base });
+  els.detail.dataset.item = `${route.checkout}/${id}`;
+  renderItemDetail(els.detail, {
+    item,
+    relations,
+    base,
+    route,
+    reload: () => renderDetail(route, base, id),
+    onSaved: async (warnings) => {
+      els.detail.dataset.item = ""; // force the detail to re-read the saved item
+      await render();
+      if (warnings.length) showError({ message: warnings.map((w) => w.message).join("; ") });
+      else setStatus("saved");
+    },
+  });
 }
 
 async function renderDocsRoute(view, route) {
@@ -155,6 +172,11 @@ function navigateSearch() {
 
 function wire() {
   window.addEventListener("hashchange", () => render());
+  window.addEventListener("beforeunload", (e) => {
+    if (!anyDirty()) return;
+    e.preventDefault();
+    e.returnValue = ""; // drafts are session-only: reload or close loses them
+  });
   els.searchForm.addEventListener("submit", (e) => {
     e.preventDefault();
     navigateSearch();

@@ -2,14 +2,19 @@
 // queries but stored once: adding A relates B when B already relates A is a no-op, and removing it
 // edits whichever file holds it.
 import { LIST_KEYS } from "../format/schema.mjs";
+import { assertRevision, assertRevisions } from "./revisions.mjs";
 import { editableRecord } from "./transaction.mjs";
 
 /**
  * Plan a link. change: {parent?, clearParent?, remove?, fixes?, blocked_by?, relates?} where the list
  * keys hold target IDs. Returns a transaction plan result; value.changes lists what actually changed.
+ * options: {expect?: revision of `id` (checked even for a no-op), expectRevisions?: {id: revision}}.
+ * With expectRevisions, every other item the edit rewrites (reverse-stored relates) must be listed and
+ * current; all checks run before any write.
  */
-export function planLink({ byId }, id, change, { expect }) {
+export function planLink({ byId }, id, change, { expect, expectRevisions } = {}) {
   const rec = editableRecord(byId, id);
+  assertRevision(rec, expect);
   const own = {
     ...rec.fields,
     fixes: [...rec.fields.fixes],
@@ -56,6 +61,7 @@ export function planLink({ byId }, id, change, { expect }) {
     }
   }
 
+  assertRevisions(byId, [...others.keys()], expectRevisions);
   const writes = [];
   const ownChanged = changes.some((c) => !c.storedOn);
   if (ownChanged)
