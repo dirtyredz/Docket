@@ -166,3 +166,56 @@ test("the catalog holds summaries only, never bodies", async () => {
   }
   assert.equal(seen, TOTAL);
 });
+
+test("note counts are complete beyond 500 items and the catalog stays body-free", async (t) => {
+  const NOTED = 510;
+  const TOTAL_ITEMS = 520;
+  const data = appData();
+  const r = docketRepo({}, { prefix: "docket perf notes " });
+  t.after(() => {
+    r.cleanup();
+    data.cleanup();
+  });
+  const dir = path.join(r.root, "docs", "items");
+  fs.mkdirSync(dir, { recursive: true });
+  for (let k = 0; k < TOTAL_ITEMS; k++) {
+    const id = `dk-${(k + 1).toString(16).padStart(8, "0")}`;
+    const ms = String(k % 1000).padStart(3, "0");
+    const notes =
+      k < NOTED
+        ? `\n## Notes\n\n### 2026-10-05T14:03:00.${ms}Z · open · owner\n\nQuestion ${k}.\n`
+        : "";
+    const status = k % 7 === 0 ? "done" : "todo"; // open notes on closed items still count
+    fs.writeFileSync(
+      path.join(dir, `${id}.md`),
+      itemText(
+        { id, status, rank: rank(k) },
+        { title: `Noted ${k}`, body: `Facts ${k}.\n${notes}` },
+      ),
+    );
+  }
+  r.commit("noted items");
+  register(data.registryFile, r.root, { alias: "noted" });
+  const v = await viewer(data.registryFile);
+  t.after(() => v.close());
+  const row = (await v.settled(60000)).repos.find((x) => x.alias === "noted");
+  assert.equal(row.counts.openNotes, NOTED);
+  assert.equal(row.counts.discussion, NOTED);
+  assert.ok(row.counts.open < TOTAL_ITEMS, "some items are closed");
+
+  const catalog = createCatalog({
+    registrySource: createRegistrySource(data.registryFile),
+    openCheckout: createCheckoutOpener(),
+  });
+  await catalog.refresh({ force: true });
+  let seen = 0;
+  for (const entry of catalog.entries.values()) {
+    for (const item of entry.items) {
+      seen++;
+      for (const key of ["body", "rest", "content", "bodySource", "notes", "notesSource"]) {
+        assert.ok(!(key in item), `${item.id} carries ${key}`);
+      }
+    }
+  }
+  assert.equal(seen, TOTAL_ITEMS);
+});

@@ -1,10 +1,11 @@
 // Item resources of one registered checkout:
 //   GET  /api/repos/:repo/checkouts/:checkout/items        board (every item, core order, + invalid)
-//   GET  /api/repos/:repo/checkouts/:checkout/items/:id    detail (fresh bytes, rendered body)
+//   GET  /api/repos/:repo/checkouts/:checkout/items/:id    detail (fresh bytes, rendered facts, notes)
 //   POST /api/repos/:repo/checkouts/:checkout/items/:id    scalar save {expected, status?, priority?, title?}
 // Saves call core setItem (date, rank and claim-cleanup rules included) on exactly the selected checkout,
-// re-verified for the request; a stale `expected` is a 409. Bodies, identity, rank and other fields are
-// not editable here.
+// re-verified for the request; a stale `expected` is a 409. Bodies (routes/body.mjs), notes
+// (routes/notes.mjs), identity, rank and other fields are not editable here. Detail renders only the
+// facts body as Markdown; note payloads are returned as plain text for the UI to show as untrusted.
 import { ENUMS } from "../../../core/format/schema.mjs";
 import { localDate } from "../../../core/identity/date.mjs";
 import { setItem } from "../../../core/items/complete.mjs";

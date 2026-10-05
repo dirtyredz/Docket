@@ -16,8 +16,10 @@ import {
 import { createCatalog } from "./catalog.mjs";
 import { createCheckoutOpener, createRegistrySource } from "./scope.mjs";
 import { loadAssets } from "./static.mjs";
+import { bodyRoutes } from "./routes/body.mjs";
 import { documentRoutes } from "./routes/documents.mjs";
 import { itemRoutes } from "./routes/items.mjs";
+import { noteRoutes } from "./routes/notes.mjs";
 import { relationRoutes } from "./routes/relations.mjs";
 import { repoRoutes } from "./routes/repos.mjs";
 import { searchRoutes } from "./routes/search.mjs";
@@ -62,6 +64,8 @@ export async function startServer({ registryFile, port = 0, log = defaultLog } =
     ...searchRoutes(deps),
     ...itemRoutes(deps),
     ...relationRoutes(deps),
+    ...bodyRoutes(deps),
+    ...noteRoutes(deps),
     ...documentRoutes(deps),
   ]);
   const asset = loadAssets(token);

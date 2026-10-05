@@ -52,7 +52,17 @@ test("counts by priority and status, zero buckets present, closed excluded", asy
   const o = await v.settled();
   const row = byAlias(o, "alpha");
   assert.equal(row.state, "ready");
-  assert.deepEqual(row.counts, { P0: 2, P1: 0, P2: 1, P3: 0, todo: 2, wip: 1, open: 3 });
+  assert.deepEqual(row.counts, {
+    P0: 2,
+    P1: 0,
+    P2: 1,
+    P3: 0,
+    todo: 2,
+    wip: 1,
+    open: 3,
+    openNotes: 0,
+    discussion: 0,
+  });
   assert.equal(row.invalid, 0);
   assert.deepEqual(o.coverage, { total: 1, ready: 1, loading: 0, unavailable: 0 });
 });
@@ -146,4 +156,42 @@ test("an empty registry lists no repos", async (t) => {
   const o = await v.settled();
   assert.deepEqual(o.repos, []);
   assert.equal(o.coverage.total, 0);
+});
+
+const noted = (n, state = "open", fields = {}) =>
+  itemText(
+    { id: hex(n), rank: rank(n), ...fields },
+    {
+      title: `Item ${n}`,
+      body: `Facts.\n\n## Notes\n\n### 2026-10-05T14:03:00.${String(n).padStart(3, "0")}Z · ${state} · owner\n\nQuestion.\n`,
+    },
+  );
+
+test("openNotes and discussion count every status, from the preferred checkout only", async (t) => {
+  let wt;
+  const { v, data } = await start(t, (d, track) => {
+    const main = docketRepo({
+      [hex(1)]: noted(1),
+      [hex(2)]: noted(2, "open", { status: "done" }),
+      [hex(3)]: noted(3, "resolved"),
+      [hex(4)]: item(4),
+    });
+    track(main.cleanup);
+    wt = addWorktree(main, "wt");
+    fs.writeFileSync(path.join(wt, "docs", "items", `${hex(4)}.md`), noted(4));
+    fs.writeFileSync(path.join(wt, "docs", "items", `${hex(5)}.md`), noted(5));
+    register(d.registryFile, main.root, { alias: "alpha" });
+    register(d.registryFile, wt, { alias: "alpha" });
+  });
+  let o = await v.settled();
+  assert.equal(o.repos.length, 1);
+  assert.equal(o.repos[0].counts.openNotes, 2);
+  assert.equal(o.repos[0].counts.discussion, 2);
+  assert.equal(o.repos[0].counts.open, 3); // the done item is not open work, yet its note counts
+
+  register(data.registryFile, wt, { alias: "alpha", prefer: true });
+  await v.get("/api/repos?refresh=1&force=1");
+  o = await v.settled();
+  assert.equal(o.repos[0].counts.openNotes, 4);
+  assert.equal(o.repos[0].counts.discussion, 4);
 });

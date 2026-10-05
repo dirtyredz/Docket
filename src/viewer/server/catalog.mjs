@@ -10,7 +10,10 @@ const OPEN = ["todo", "wip"];
 const MIN_REFRESH_MS = 1000;
 const SEARCH_LIMIT = 200;
 
-/** Overview counts for one checkout's complete item list: open totals by priority and by status. */
+/**
+ * Overview counts for one checkout's complete item list: open totals by priority and by status, plus
+ * discussion across every status (open notes, items with at least one).
+ */
 export function overviewCounts(items) {
   const open = items.filter((i) => !CLOSED_STATUSES.includes(i.status));
   const byStatus = countBy(open, "status");
@@ -19,6 +22,8 @@ export function overviewCounts(items) {
     todo: byStatus.todo,
     wip: byStatus.wip,
     open: open.length,
+    openNotes: items.reduce((n, i) => n + (i.openNoteCount ?? 0), 0),
+    discussion: items.filter((i) => i.openNoteCount > 0).length,
   };
 }
 

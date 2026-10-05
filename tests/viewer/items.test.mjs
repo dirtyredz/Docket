@@ -209,3 +209,29 @@ test("item body HTML is sanitized", async (t) => {
   }
   assert.ok(html.includes('<a href="https://example.com"'), html);
 });
+
+test("item detail separates facts from notes and sanitizes only the facts", async (t) => {
+  const ref = "2026-10-05T14:03:00.000Z";
+  const hostile = "<script>alert(1)</script> <img src=x onerror=alert(2)>";
+  const notes = `\n## Notes\n\n### ${ref} · open · owner\n\n${hostile}\n`;
+  const { v, reg } = await start(
+    t,
+    oneRepo({ [hex(1)]: item(1, {}, { body: `Facts only.\n${notes}` }) }),
+  );
+  const d = (await v.get(`${base(reg)}/items/${hex(1)}`)).json;
+  assert.equal(d.body, "Facts only.\n");
+  assert.ok(!d.body.includes("Notes") && !d.body.includes("script"));
+  assert.ok(d.bodySource.includes("Facts only."));
+  assert.ok(!d.bodyHtml.includes("<script") && !d.bodyHtml.includes("onerror"));
+  assert.ok(!d.bodyHtml.includes("alert"));
+  assert.equal(d.notes.length, 1);
+  assert.equal(d.notes[0].ref, ref);
+  assert.equal(d.notes[0].state, "open");
+  assert.equal(d.notes[0].author, "owner");
+  assert.ok(d.notes[0].text.includes(hostile));
+  assert.equal(d.openNoteCount, 1);
+  assert.equal(d.notesMalformed, false);
+  assert.ok("notesSource" in d);
+  const board = (await v.get(`${base(reg)}/items`)).json.items[0];
+  assert.equal(board.openNoteCount, 1);
+});
