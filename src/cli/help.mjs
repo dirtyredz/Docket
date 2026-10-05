@@ -63,6 +63,7 @@ Last-good pre-push gate. install writes the managed pre-push hook and local git 
   repo: `Usage: docket repo add <path> [--alias NAME] [--preferred] [--doc NAME=relative/path.md]...
        docket repo list
        docket repo remove <alias> [--checkout <path>]
+       docket repo scan <dir> [--dry-run]
 
 Per-machine registry of Docket repos: DOCKET_HOME or %LOCALAPPDATA%/Docket, registry.json (metadata only).
 add registers a checkout that has docket.json. Linked worktrees join their clone's group; independent
@@ -70,7 +71,9 @@ clones stay separate. Re-adding updates --alias, --preferred (prefer this checko
   --doc NAME=PATH   where a living doc lives (STRUCTURE, ARCHITECTURE, DECISIONS, FEATURES, ROADMAP,
                     BACKLOG, GOTCHAS), relative to the checkout; NAME= removes the override
 list shows every checkout and marks unavailable ones with the reason (never deleted automatically).
-remove drops the registration only (files untouched); --checkout drops one checkout of the group.`,
+remove drops the registration only (files untouched); --checkout drops one checkout of the group.
+scan walks <dir> once for Git checkout roots holding docket.json (nested repos and worktrees included,
+links not followed) and adds new ones; existing aliases and overrides are kept. --dry-run writes nothing.`,
 };
 
 // One line per command, in display order; the top-level overview is built from this.
@@ -86,7 +89,7 @@ const SUMMARY = {
   claim: "advisory claim for this worktree",
   release: "release a claim",
   gate: "last-good pre-push gate (promote | install | status)",
-  repo: "per-machine repo registry (add | list | remove)",
+  repo: "per-machine repo registry (add | list | remove | scan)",
 };
 
 /** Top-level overview: one line per command; `docket <command> --help` has the options. */

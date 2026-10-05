@@ -8,6 +8,7 @@ import {
   registerCheckout,
   unregister,
 } from "../../state/registry/registration.mjs";
+import { mergeDiscovered, scanForRepos } from "../../state/registry/scan.mjs";
 import { readRegistry, updateRegistry } from "../../state/registry/store.mjs";
 import { many, parseCommand, requirePositional, usageError } from "../args.mjs";
 
@@ -53,20 +54,13 @@ function list(argv, io) {
       const note = flags.filter(Boolean).join("; ");
       lines.push(`  ${c.path}${note ? `  [${note}]` : ""}`);
     }
-    for (const [name, rel] of Object.entries(r.docs))
-      lines.push(`  doc ${name} = ${rel}`);
+    for (const [name, rel] of Object.entries(r.docs)) lines.push(`  doc ${name} = ${rel}`);
   }
-  return {
-    data: { registry: fileOf(io), repos },
-    text: lines.join("\n") || "no repos registered",
-  };
+  return { data: { registry: fileOf(io), repos }, text: lines.join("\n") || "no repos registered" };
 }
 
 function remove(argv, io) {
-  const args = parseCommand(argv, {
-    positionals: 1,
-    options: { checkout: { type: "string" } },
-  });
+  const args = parseCommand(argv, { positionals: 1, options: { checkout: { type: "string" } } });
   const alias = requirePositional(args, "alias");
   const { value } = updateRegistry(fileOf(io), (reg) => ({
     value: unregister(reg, alias, { checkout: args.checkout }),
@@ -79,16 +73,37 @@ function remove(argv, io) {
   return { data: value, text };
 }
 
-const SUB = { add, list, remove };
+function scan(argv, io) {
+  const args = parseCommand(argv, { positionals: 1, options: { "dry-run": { type: "boolean" } } });
+  const dir = requirePositional(args, "dir");
+  const dryRun = Boolean(args["dry-run"]);
+  const found = scanForRepos(dir);
+  const { value } = updateRegistry(fileOf(io), (reg) => ({ value: mergeDiscovered(reg, found) }), {
+    dryRun,
+  });
+  const lines = [`${dryRun ? "dry run, nothing written: " : ""}scanned ${found.root}`];
+  for (const r of value.repos) {
+    const what = r.change === "created" ? "new" : r.change;
+    lines.push(`  ${r.alias}: ${what} (${r.checkouts.length} checkout(s))`);
+    for (const c of r.added) lines.push(`    + ${c}`);
+  }
+  for (const a of value.aliases) lines.push(`  alias ${a.alias}: ${a.reason}`);
+  for (const s of found.skipped) lines.push(`  skipped ${s.path}: ${s.reason}`);
+  if (!value.repos.length) lines.push("  no Docket repos found");
+  return {
+    data: { dryRun, root: found.root, ...value, skipped: found.skipped },
+    text: lines.join("\n"),
+  };
+}
+
+const SUB = { add, list, remove, scan };
 
 export async function repo(argv, io) {
   const [sub, ...rest] = argv;
   const handler = SUB[sub];
   if (!handler) {
     throw usageError(
-      sub
-        ? `unknown repo command "${sub}" (add | list | remove)`
-        : "missing repo command",
+      sub ? `unknown repo command "${sub}" (add | list | remove | scan)` : "missing repo command",
     );
   }
   return handler(rest, io);

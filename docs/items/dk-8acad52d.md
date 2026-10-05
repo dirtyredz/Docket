@@ -2,7 +2,7 @@
 id: dk-8acad52d
 type: feature
 created: 2026-10-05
-status: todo
+status: done
 since: 2026-10-05
 area: registry
 priority: P2

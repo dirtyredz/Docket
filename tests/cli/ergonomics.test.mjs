@@ -228,6 +228,7 @@ describe("repo help", () => {
     assert.equal(direct.status, 0);
     assert.match(direct.stdout, /^Usage: docket repo add/);
     assert.match(direct.stdout, /--doc NAME=PATH/);
+    assert.match(direct.stdout, /docket repo scan <dir>/);
     assert.equal(runCli(["help", "repo"]).stdout, direct.stdout);
   });
 
