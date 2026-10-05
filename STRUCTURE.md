@@ -58,9 +58,11 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `src/cli/commands/` — thin adapters per command family (items, validation, coordination, init, gate; registry, viewer, conflicts planned)
 - `src/integration/` — agent CLAUDE.md/AGENTS.md snippet and `docket init` (`init.mjs`)
 - `src/integration/gate/` — gate promotion, smoke test, repo opt-in, stable launcher, tarball reader, pre-push validation
-- `src/viewer/server/` — server lifecycle, request safety, scoped API routes, worktree overlays (planned, M3+)
-- `src/viewer/ui/` — browser shell and UI modules: board, editor, relations (planned, M3+)
-- `src/viewer/documents/` — living-doc catalog and read-only Markdown rendering (planned, M3+)
+- `src/viewer/server/` — server lifecycle, request safety (boundary), registered-checkout scope, static assets, transient catalog, worktree hints
+- `src/viewer/server/routes/` — scoped HTTP adapters: repos, items, relations, documents, search
+- `src/viewer/ui/` — browser shell, HTTP client, DOM helper, session drafts, styles
+- `src/viewer/ui/views/` — one module per view: repo picker, overview, board, item editor, relations, documents, search, worktree hints
+- `src/viewer/documents/` — living-doc catalog and read-only Markdown rendering
 - `src/tooling/` — distributable build and layout/size checker
 - `tests/` — responsibility-matched suites: format, core, storage, cli, state, integration, packaging
 - `tests/helpers/` — disposable-repo, clock and gate support

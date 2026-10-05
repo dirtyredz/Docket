@@ -18,11 +18,12 @@
     "src/repository/",
     "src/state/",
     "src/integration/",
+    "src/viewer/",
     "docs/MOVE-IN.md",
     "README.md"
   ],
   "scripts": {
-    "test": "npm run test:bootstrap && npm run test:format && npm run test:core && npm run test:storage && npm run test:cli && npm run test:coordination && npm run test:registry && npm run test:integration && npm run test:packaging && npm run test:layout",
+    "test": "npm run test:bootstrap && npm run test:format && npm run test:core && npm run test:storage && npm run test:cli && npm run test:coordination && npm run test:registry && npm run test:viewer && npm run test:e2e && npm run test:integration && npm run test:packaging && npm run test:layout",
     "test:bootstrap": "node src/bootstrap/check.mjs --repo .",
     "test:format": "node --test \"tests/format/*.test.mjs\"",
     "test:core": "node --test \"tests/core/*.test.mjs\"",
@@ -30,6 +31,8 @@
     "test:cli": "node --test \"tests/cli/*.test.mjs\"",
     "test:coordination": "node --test \"tests/state/*.test.mjs\"",
     "test:registry": "node --test \"tests/registry/*.test.mjs\"",
+    "test:viewer": "node --test \"tests/viewer/*.test.mjs\"",
+    "test:e2e": "node --test \"tests/e2e/*.test.mjs\"",
     "test:integration": "node --test \"tests/integration/*.test.mjs\"",
     "test:packaging": "node --test \"tests/packaging/*.test.mjs\"",
     "test:layout": "node src/tooling/layout-check.mjs",
@@ -41,6 +44,11 @@
   },
   "devDependencies": {
     "oxlint": "^1.86.0",
+    "playwright": "1.63.0",
     "prettier": "^3.9.9"
+  },
+  "dependencies": {
+    "marked": "18.1.0",
+    "sanitize-html": "2.18.0"
   }
 }

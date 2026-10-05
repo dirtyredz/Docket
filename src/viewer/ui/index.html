@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="docket-token" content="__DOCKET_TOKEN__" />
+    <title>Docket</title>
+    <link rel="stylesheet" href="/ui/styles.css" />
+    <script type="module" src="/ui/app.mjs"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#/">Docket</a>
+      <form id="search-form" class="search" role="search">
+        <input
+          id="search-input"
+          type="search"
+          placeholder="Search titles ( / )"
+          aria-label="Search item titles"
+          autocomplete="off"
+        />
+        <label class="check"><input id="search-closed" type="checkbox" /> closed</label>
+      </form>
+      <button id="refresh" type="button" title="Refresh (r)">Refresh</button>
+      <span id="status" class="muted" role="status" aria-live="polite"></span>
+    </header>
+    <div class="layout">
+      <nav id="sidebar" class="sidebar" aria-label="Repositories"></nav>
+      <main id="main" class="main" tabindex="-1"></main>
+      <aside id="detail" class="detail" aria-label="Item detail" hidden></aside>
+    </div>
+  </body>
+</html>

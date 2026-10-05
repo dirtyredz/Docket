@@ -74,6 +74,11 @@ list shows every checkout and marks unavailable ones with the reason (never dele
 remove drops the registration only (files untouched); --checkout drops one checkout of the group.
 scan walks <dir> once for Git checkout roots holding docket.json (nested repos and worktrees included,
 links not followed) and adds new ones; existing aliases and overrides are kept. --dry-run writes nothing.`,
+  serve: `Usage: docket serve [--port N]
+
+Run the local viewer over every registered repo (docket repo add / scan) until Ctrl+C. Binds 127.0.0.1
+only, on a free port unless --port is given, and prints the URL (--json: one startup envelope).
+Item edits go through the same core operations as the CLI; living docs are read-only.`,
 };
 
 // One line per command, in display order; the top-level overview is built from this.
@@ -90,6 +95,7 @@ const SUMMARY = {
   release: "release a claim",
   gate: "last-good pre-push gate (promote | install | status)",
   repo: "per-machine repo registry (add | list | remove | scan)",
+  serve: "local viewer on 127.0.0.1 over every registered repo",
 };
 
 /** Top-level overview: one line per command; `docket <command> --help` has the options. */
