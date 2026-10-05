@@ -1,4 +1,4 @@
-// The one mutation sequence shared by add, set and link (and the viewer later):
+// The one mutation sequence shared by add, set, link and the content (body, notes) operations:
 // lock the worktree -> load every item -> plan the change -> serialize and reparse each output ->
 // reject any validation error the change introduces -> revision-checked atomic write.
 import { CODES, docketError, notFound } from "../errors.mjs";
@@ -24,8 +24,26 @@ export function editableRecord(byId, id) {
 }
 
 /**
+ * Look up a record whose content (title, body, Notes) can be edited: editable, with an H1 and no
+ * Notes-grammar errors, so a content edit never guesses at ambiguous text. Throws DOCKET_INVALID.
+ */
+export function editableContent(byId, id) {
+  const rec = editableRecord(byId, id);
+  const bad = rec.errors.filter((e) => e.rule === 5 || e.rule === 10);
+  if (bad.length || !rec.content) {
+    throw docketError(
+      CODES.INVALID,
+      `${id} has malformed content: ${bad.map((e) => e.message).join("; ")}; fix it by hand first (docket check)`,
+      { id, errors: bad },
+    );
+  }
+  return rec;
+}
+
+/**
  * Run a planned mutation. plan({records, byId}) returns {writes, value}; each write is
- * {id, fields, rest, expectedRevision} (expectedRevision null = must not exist yet).
+ * {id, fields, rest, frontmatter?, expectedRevision} (expectedRevision null = must not exist yet;
+ * frontmatter = the original frontmatter text to keep verbatim, checked against fields).
  * Returns {value, written: [{id, revision}]}.
  */
 export function mutateStore(ctx, plan, { lock } = {}) {

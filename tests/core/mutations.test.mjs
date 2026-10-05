@@ -400,3 +400,39 @@ describe("field-named add errors", () => {
     );
   });
 });
+
+describe("Notes survive other mutations", () => {
+  const NOTES_BODY =
+    "Facts.\n\n## Notes\n\n### 2026-10-05T14:03:00.000Z · open · owner\n\nQuestion?\n\n" +
+    "### 2026-10-05T14:04:00.000Z · resolved · agent\n\n\tTabbed  \n";
+  const withNotes = () => {
+    const env = setup({ [id(1)]: [{}, { title: "T", body: NOTES_BODY }], [id(2)]: {} });
+    const suffix = (text) => text.slice(text.indexOf("\n## Notes"));
+    return { ...env, suffix, before: readItem(env.root, id(1)) };
+  };
+
+  test("set status and priority keep the Notes section byte for byte", () => {
+    const { ctx, root, suffix, before } = withNotes();
+    set(ctx, id(1), { status: "wip", priority: "P1" });
+    const after = readItem(root, id(1));
+    assert.notEqual(after, before);
+    assert.equal(suffix(after), suffix(before));
+    assert.equal(after.slice(after.indexOf("# T\n")), before.slice(before.indexOf("# T\n")));
+  });
+
+  test("set title rewrites only the H1", () => {
+    const { ctx, root, before } = withNotes();
+    set(ctx, id(1), { title: "Renamed" });
+    assert.equal(readItem(root, id(1)), before.replace("# T\n", "# Renamed\n"));
+  });
+
+  test("link keeps the Notes section byte for byte", () => {
+    const { ctx, root, suffix, before } = withNotes();
+    link(ctx, id(1), { relates: [id(2)], parent: id(2) });
+    const after = readItem(root, id(1));
+    assert.notEqual(after, before);
+    assert.equal(suffix(after), suffix(before));
+    link(ctx, id(1), { relates: [id(2)], remove: true });
+    assert.equal(suffix(readItem(root, id(1))), suffix(before));
+  });
+});
