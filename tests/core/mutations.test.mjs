@@ -50,6 +50,14 @@ const link = (ctx, target, change, opts = {}) =>
 const task = { type: "task", priority: "P2", title: "x" };
 
 describe("planAdd", () => {
+  test("is date-free: created/since inputs are ignored, always today", () => {
+    const { ctx } = setup();
+    const { value } = add(ctx, { ...task, created: "2020-01-01", since: "2021-02-02" });
+    const f = fieldsOf(ctx, value.id);
+    assert.equal(f.created, TODAY);
+    assert.equal(f.since, TODAY);
+  });
+
   test("mints dk id, defaults, dates, title and body", () => {
     const { ctx, root } = setup();
     const { value, written } = add(ctx, {

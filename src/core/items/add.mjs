@@ -16,15 +16,19 @@ export function bandRanks(records, priority, exceptId = null) {
 
 /**
  * Plan an add. input: {type, priority, title, body?, area?, status?, parent?, fixes?, blocked_by?,
- * relates?, created?, since?}. created/since come from batch move-ins (already validated). ctx: {today, random?}. Returns a transaction plan result.
+ * relates?}. Always dated today: created/since in input are ignored; historical dates are batch-only
+ * policy (batch.mjs). ctx: {today, random?}. Returns a transaction plan result.
  */
 export function planAdd(store, input, ctx) {
-  const { write, value } = planAddOne(store, input, ctx);
+  const { write, value } = planAddOne(store, input, ctx, { created: ctx.today, since: ctx.today });
   return { writes: [write], value };
 }
 
-/** Plan one add. Returns {write, value}; planAdd wraps it as a transaction plan, batch collects many. */
-export function planAddOne({ records }, input, { today, random }) {
+/**
+ * Internal seam: plan one add with already-validated dates {created, since}. Only add.mjs (today) and
+ * batch.mjs (after withDates) call it. Returns {write, value}; planAdd wraps it, batch collects many.
+ */
+export function planAddOne({ records }, input, { random }, dates) {
   if (!ENUMS.type.includes(input.type))
     throw invalid(`type must be one of ${ENUMS.type.join(", ")}`);
   if (!ENUMS.priority.includes(input.priority)) {
@@ -40,9 +44,9 @@ export function planAddOne({ records }, input, { today, random }) {
   const fields = {
     id,
     type: input.type,
-    created: input.created ?? today,
+    created: dates.created,
     status: input.status ?? "todo",
-    since: input.since ?? input.created ?? today,
+    since: dates.since,
     area: input.area ?? "",
     priority: input.priority,
     rank: rankAtEnd(bandRanks(records, input.priority)),

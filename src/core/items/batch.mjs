@@ -38,11 +38,11 @@ export function parseBatch(text) {
 
 /**
  * Resolve optional historical dates for a move-in entry: real calendar dates, not after today, since >=
- * created. Only one given means both are that date; none keeps today (the planner default).
+ * created. Only one given means both are that date; none means today. Returns {created, since}.
  */
 export function withDates(input, today) {
   const { created, since } = input;
-  if (created === undefined && since === undefined) return input;
+  if (created === undefined && since === undefined) return { created: today, since: today };
   for (const [k, v] of [
     ["created", created],
     ["since", since],
@@ -54,7 +54,7 @@ export function withDates(input, today) {
   const c = created ?? since;
   const s = since ?? created;
   if (s < c) throw invalid(`since ${s} is before created ${c}`);
-  return { ...input, created: c, since: s };
+  return { created: c, since: s };
 }
 
 /**
@@ -68,7 +68,7 @@ export function planAddBatch({ records }, inputs, ctx) {
   inputs.forEach((input, i) => {
     let plan;
     try {
-      plan = planAddOne({ records: view }, withDates(input, ctx.today), ctx);
+      plan = planAddOne({ records: view }, input, ctx, withDates(input, ctx.today));
     } catch (err) {
       err.message = `batch[${i}]: ${err.message}`;
       throw err;
