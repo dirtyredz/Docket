@@ -118,6 +118,38 @@ describe("scanForRepos", () => {
   });
 });
 
+describe("build output skipping", () => {
+  test("build and output folders are never entered or reported, however deep", () => {
+    const base = sandbox();
+    const a = initRepo(path.join(base, "a"));
+    for (const name of [
+      ".next",
+      "dist",
+      "build",
+      "out",
+      "coverage",
+      ".turbo",
+      ".cache",
+      "target",
+    ]) {
+      fs.mkdirSync(path.join(a, name, ...Array(15).fill("d")), { recursive: true });
+    }
+    // a repo hiding inside build output is intentionally not found
+    initRepo(path.join(a, "dist", "inner"));
+    const found = scanForRepos(base);
+    assert.deepEqual(roots(found), keys(a));
+    assert.deepEqual(found.skipped, []);
+  });
+
+  test("worktrees under .claude/worktrees are still found", () => {
+    const base = sandbox();
+    const a = initRepo(path.join(base, "a"));
+    const w = path.join(a, ".claude", "worktrees", "w1");
+    git(a, "worktree", "add", "-q", "-b", "w1", w);
+    assert.deepEqual(roots(scanForRepos(base)), keys(a, w));
+  });
+});
+
 describe("mergeDiscovered", () => {
   test("a linked worktree under .claude/worktrees groups with its main checkout", () => {
     const base = sandbox();
@@ -160,6 +192,68 @@ describe("mergeDiscovered", () => {
       out.aliases.map((a) => a.alias),
       ["app-beta"],
     );
+  });
+});
+
+describe("repo scan output (CLI)", () => {
+  const text = (...args) => {
+    const home = tempDir("docket home ");
+    cleanups.push(home.cleanup);
+    return runCli(["repo", ...args], { env: { DOCKET_HOME: home.dir } });
+  };
+
+  function fixture() {
+    const base = sandbox();
+    const a = initRepo(path.join(base, "a"));
+    initRepo(path.join(base, "b"));
+    git(a, "worktree", "add", "-q", "-b", "w2", path.join(base, "w2"));
+    fs.mkdirSync(path.join(base, "deep", ...Array(14).fill("d")), { recursive: true });
+    fs.mkdirSync(path.join(a, ".next", "server", ...Array(14).fill("d")), { recursive: true });
+    return base;
+  }
+
+  test("default output is one line per repo and a totals line; skips are counted, not listed", () => {
+    const out = text("scan", fixture(), "--dry-run");
+    assert.equal(out.status, 0, out.stdout + out.stderr);
+    const lines = out.stdout.trimEnd().split("\n");
+    assert.match(lines[0], /^dry run, nothing written: scanned /);
+    assert.equal(lines[1], "  a  new  2 checkouts");
+    assert.equal(lines[2], "  b  new  1 checkout");
+    assert.equal(lines[3], "2 repos (2 new), 3 checkouts; skipped 1 folder, use --verbose to list");
+    assert.equal(lines.length, 4);
+    assert.doesNotMatch(out.stdout, /depth limit|\.next|\+ /);
+  });
+
+  test("--verbose lists checkout paths and every skip with its reason", () => {
+    const out = text("scan", fixture(), "--dry-run", "--verbose");
+    assert.match(out.stdout, /^ {4}\+ .*w2$/m);
+    assert.match(out.stdout, /^ {2}skipped .*: depth limit 12$/m);
+    assert.match(out.stdout, /2 repos \(2 new\), 3 checkouts; skipped 1 folder$/m);
+    assert.doesNotMatch(out.stdout, /\.next/);
+  });
+
+  test("a rescan reports existing and updated repos; --json keeps its shape", () => {
+    const base = sandbox();
+    const a = initRepo(path.join(base, "a"));
+    initRepo(path.join(base, "b"));
+    const home = tempDir("docket home ");
+    cleanups.push(home.cleanup);
+    const env = { DOCKET_HOME: home.dir };
+    runCli(["repo", "scan", base], { env });
+    git(a, "worktree", "add", "-q", "-b", "w2", path.join(base, "w2"));
+    const out = runCli(["repo", "scan", base], { env });
+    const lines = out.stdout.trimEnd().split("\n");
+    assert.equal(lines[1], "  a  updated  2 checkouts");
+    assert.equal(lines[2], "  b  existing  1 checkout");
+    assert.equal(lines[3], "2 repos (1 updated, 1 existing), 3 checkouts");
+    const json = runCli(["repo", "scan", base, "--json"], { env });
+    assert.deepEqual(Object.keys(json.json.data).sort(), [
+      "aliases",
+      "dryRun",
+      "repos",
+      "root",
+      "skipped",
+    ]);
   });
 });
 

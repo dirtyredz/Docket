@@ -14,7 +14,12 @@ import {
   joinGroup,
 } from "./registration.mjs";
 
-/** Directory names never descended into: Git internals, Docket state, dependency trees. */
+/**
+ * Directory names never descended into, never reported: Git internals, Docket state, dependency trees
+ * and build/output folders (thousands of generated directories, never a checkout root). Gitignore-based
+ * skipping is deliberately not used: `.claude/worktrees/` is routinely ignored yet holds real checkouts.
+ * `bin`/`obj` are not listed because they are plausible project folder names.
+ */
 export const SKIP_DIRS = new Set([
   ".git",
   ".docket",
@@ -24,6 +29,15 @@ export const SKIP_DIRS = new Set([
   "venv",
   "__pycache__",
   ".tox",
+  ".next",
+  ".nuxt",
+  "dist",
+  "build",
+  "out",
+  "coverage",
+  ".turbo",
+  ".cache",
+  "target",
 ]);
 export const MAX_DEPTH = 12;
 

@@ -26,7 +26,7 @@ docket claim <id> [--takeover]   /   docket release <id>
 docket repo add <path> [--alias A] [--preferred] [--doc NAME=rel.md]   register a checkout (worktrees group by Git common dir)
 docket repo list
 docket repo remove <alias> [--checkout <path>]
-docket repo scan <dir> [--dry-run]               one-shot, additive discovery of Docket checkouts
+docket repo scan <dir> [--dry-run] [--verbose]    one-shot, additive discovery of Docket checkouts
 docket serve [--port N]                          local viewer on 127.0.0.1
 docket gate promote <tarball>  /  docket gate install [--dry-run]  /  docket gate status
 ```
@@ -36,7 +36,8 @@ CLAUDE.md / AGENTS.md (`--no-agent-snippet` skips that, for repos whose CLAUDE.m
 
 ## Viewer
 
-Register repos (`docket repo scan C:/path/to/projects`, or `docket repo add <path>`), then run `docket serve`. It
+Register repos (`docket repo scan C:/path/to/projects`, which prints one line per repo and a totals line; `--verbose`
+lists checkout paths and every skipped folder, and build output such as `.next` or `dist` is never entered; or `docket repo add <path>`), then run `docket serve`. It
 prints `http://127.0.0.1:<port>/`; open it in a browser. It listens on loopback only, never auto-starts, and
 Ctrl+C stops it. `--json` prints one startup envelope after binding. The registry is
 `%LOCALAPPDATA%/Docket/registry.json` (`DOCKET_HOME` overrides). The viewer edits title, status, priority and

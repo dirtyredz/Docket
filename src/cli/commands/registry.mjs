@@ -73,23 +73,44 @@ function remove(argv, io) {
   return { data: value, text };
 }
 
+const STATUS = { created: "new", joined: "updated", unchanged: "existing" };
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/** Text report: one line per repo and a totals line; --verbose adds checkout paths and every skip. */
+function scanLines(found, value, { dryRun, verbose }) {
+  const lines = [`${dryRun ? "dry run, nothing written: " : ""}scanned ${found.root}`];
+  for (const r of value.repos) {
+    lines.push(`  ${r.alias}  ${STATUS[r.change]}  ${plural(r.checkouts.length, "checkout")}`);
+    if (verbose) for (const c of r.added) lines.push(`    + ${c}`);
+  }
+  for (const a of value.aliases) lines.push(`  alias ${a.alias}: ${a.reason}`);
+  if (verbose) for (const s of found.skipped) lines.push(`  skipped ${s.path}: ${s.reason}`);
+  if (!value.repos.length) lines.push("  no Docket repos found");
+  const parts = Object.keys(STATUS)
+    .map((change) => [value.repos.filter((r) => r.change === change).length, STATUS[change]])
+    .filter(([n]) => n > 0)
+    .map(([n, label]) => `${n} ${label}`);
+  const checkouts = value.repos.reduce((n, r) => n + r.checkouts.length, 0);
+  let total = `${plural(value.repos.length, "repo")}${parts.length ? ` (${parts.join(", ")})` : ""}, ${plural(checkouts, "checkout")}`;
+  if (found.skipped.length) {
+    total += `; skipped ${plural(found.skipped.length, "folder")}${verbose ? "" : ", use --verbose to list"}`;
+  }
+  lines.push(total);
+  return lines;
+}
+
 function scan(argv, io) {
-  const args = parseCommand(argv, { positionals: 1, options: { "dry-run": { type: "boolean" } } });
+  const args = parseCommand(argv, {
+    positionals: 1,
+    options: { "dry-run": { type: "boolean" }, verbose: { type: "boolean" } },
+  });
   const dir = requirePositional(args, "dir");
   const dryRun = Boolean(args["dry-run"]);
   const found = scanForRepos(dir);
   const { value } = updateRegistry(fileOf(io), (reg) => ({ value: mergeDiscovered(reg, found) }), {
     dryRun,
   });
-  const lines = [`${dryRun ? "dry run, nothing written: " : ""}scanned ${found.root}`];
-  for (const r of value.repos) {
-    const what = r.change === "created" ? "new" : r.change;
-    lines.push(`  ${r.alias}: ${what} (${r.checkouts.length} checkout(s))`);
-    for (const c of r.added) lines.push(`    + ${c}`);
-  }
-  for (const a of value.aliases) lines.push(`  alias ${a.alias}: ${a.reason}`);
-  for (const s of found.skipped) lines.push(`  skipped ${s.path}: ${s.reason}`);
-  if (!value.repos.length) lines.push("  no Docket repos found");
+  const lines = scanLines(found, value, { dryRun, verbose: Boolean(args.verbose) });
   return {
     data: { dryRun, root: found.root, ...value, skipped: found.skipped },
     text: lines.join("\n"),

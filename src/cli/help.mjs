@@ -63,7 +63,7 @@ Last-good pre-push gate. install writes the managed pre-push hook and local git 
   repo: `Usage: docket repo add <path> [--alias NAME] [--preferred] [--doc NAME=relative/path.md]...
        docket repo list
        docket repo remove <alias> [--checkout <path>]
-       docket repo scan <dir> [--dry-run]
+       docket repo scan <dir> [--dry-run] [--verbose]
 
 Per-machine registry of Docket repos: DOCKET_HOME or %LOCALAPPDATA%/Docket, registry.json (metadata only).
 add registers a checkout that has docket.json. Linked worktrees join their clone's group; independent
@@ -73,7 +73,10 @@ clones stay separate. Re-adding updates --alias, --preferred (prefer this checko
 list shows every checkout and marks unavailable ones with the reason (never deleted automatically).
 remove drops the registration only (files untouched); --checkout drops one checkout of the group.
 scan walks <dir> once for Git checkout roots holding docket.json (nested repos and worktrees included,
-links not followed) and adds new ones; existing aliases and overrides are kept. --dry-run writes nothing.`,
+links not followed) and adds new ones; existing aliases and overrides are kept. --dry-run writes nothing.
+Build and output folders (.next, dist, build, out, coverage, target, ...) are never entered. Output is one
+line per repo plus a totals line; --verbose adds checkout paths and lists every skipped folder with its
+reason. --json always carries the full detail.`,
   serve: `Usage: docket serve [--port N]
 
 Run the local viewer over every registered repo (docket repo add / scan) until Ctrl+C. Binds 127.0.0.1
