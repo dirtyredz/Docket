@@ -7,7 +7,7 @@ import { emitError, emitResult, EXIT } from "./output.mjs";
 import * as coordination from "./commands/coordination.mjs";
 import * as gate from "./commands/gate.mjs";
 import * as items from "./commands/items.mjs";
-import { importCommand } from "./commands/migration.mjs";
+import { init } from "./commands/init.mjs";
 import * as validation from "./commands/validation.mjs";
 
 const COMMANDS = {
@@ -21,13 +21,14 @@ const COMMANDS = {
   claim: coordination.claim,
   release: coordination.release,
   gate: gate.gate,
-  import: importCommand,
+  init,
 };
 
 const HELP = `docket (dk) - Markdown work items per repo
 
 Usage: docket <command> [options]      every command takes --repo <path> and --json
 
+  init    [--gate]                               make this repo a Docket repo (idempotent)
   check   [--ref <rev>]                          validate every item (errors fail, warnings print)
   add     --type T --priority P --title "..."    create an item (ID and rank are assigned)
           [--body TEXT | --body-file F] [--area A] [--status S] [--parent ID]
@@ -43,9 +44,6 @@ Usage: docket <command> [options]      every command takes --repo <path> and --j
   claim   <id> [--takeover] [--agent NAME]       advisory claim for this worktree
   release <id> [--force]
   gate    promote <tarball> | install | status   last-good pre-push gate
-  import  evileye --dry-run [--out DIR] [--run NAME] [--overrides FILE]
-          verify --manifest PATH                 stage, byte-verify and re-verify a legacy import
-          apply --manifest PATH                  install a ready run (resumable; marker published last)
 
   --version, -v   print the version`;
 

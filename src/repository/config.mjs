@@ -1,4 +1,4 @@
-// `docket.json`: committed store version and explicit migration state. No configurable vocabulary.
+// `docket.json`: committed store version. No configurable vocabulary.
 import fs from "node:fs";
 import { atomicWrite } from "../storage/atomic-write.mjs";
 

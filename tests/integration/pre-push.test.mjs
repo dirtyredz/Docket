@@ -166,7 +166,7 @@ describe("composed pre-push gate", { skip }, () => {
     assert.equal(fs.readFileSync(hook, "utf8"), "#!/bin/sh\necho foreign\nexit 0\n");
   });
 
-  test("core.hooksPath is preserved; an EvilEye-style delegating wrapper replays stdin", () => {
+  test("core.hooksPath is preserved; a delegating wrapper replays stdin", () => {
     const r = setup({ install: false });
     const custom = path.join(r.root, "tools", "hooks");
     fs.mkdirSync(custom, { recursive: true });

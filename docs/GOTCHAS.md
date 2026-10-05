@@ -48,22 +48,14 @@ Non-obvious traps, from `PLAN.md` sections 6 and 7, the merge test, and building
 - **The prototype rejects a BOM only by accident** (the BOM breaks its line-1 fence match); its header
   gaps list is otherwise accurate: no warnings, no real-date or `fixes`-target checks, whole-file
   tab and trailing-space ban.
-- **Import staging must be git-ignored.** `docket import` refuses to stage under `<repo>/.docket/`
-  unless Git ignores it there (EvilEye: `.docket/` in `.git/info/exclude`, local only); use `--out`
-  otherwise. A dry run freezes the working-tree files, uncommitted edits included; `matchesHead` per
-  source says whether they equal HEAD. Edit a source afterwards and `import verify` reports drift.
-- **The import date is the local date at run time.** A run just after midnight dates undated entries
-  with the new day; rerun rather than hand-edit dates.
 - **`git push` from GUI clients may lack `node` on PATH.** The gate records `docket.gateNode` (an
   absolute node path) at install; re-run `docket gate install` after moving Node.
-- **Apply checks sources only until it completes.** Replace the register (or edit a shard) only after
-  `import apply` reports the run applied; before that, any source edit is drift and apply refuses. After
-  completion apply never looks at sources again.
-- **Branches cut before a cutover still write the legacy store.** Merging one adds entries to retired shards
-  that Docket never sees. EvilEye's documentation checker reports a shard marker with no item; recreate the
-  entry with `dk add` (the avatar branch's `bl-5f2b9e47` is the known case at M2b).
-- **`list` is bounded at 500.** Tools that need every item (EvilEye's checker and snapshot) page by priority,
-  then status, and fail loudly if a slice still truncates.
+- **`list` is bounded at 500.** Tools that need every item page by priority, then status, and fail loudly if
+  a slice still truncates.
 - **Spawn Docket as `node <main.mjs>`, not `docket.cmd`.** Node refuses to spawn `.cmd` files without a shell;
-  EvilEye's adapter finds `node_modules/docket/src/cli/main.mjs` beside the `docket` launcher on PATH, or
-  `DOCKET_CLI`.
+  adapters find `node_modules/docket/src/cli/main.mjs` beside the `docket` launcher on PATH, or `DOCKET_CLI`.
+- **`init` leaves an empty `docs/items/`.** Git does not track empty directories; the folder appears in the
+  repo with the first `dk add`. Re-running `init` is safe: the snippet is detected by its heading, so do not
+  rename `## Work items (Docket)` in an agent file or it is appended again.
+- **Legacy `bl-` IDs are valid, not special.** A repo moved in from an older backlog may keep `bl-<8hex>` IDs
+  verbatim, but the move-in playbook mints fresh `dk-` IDs with `dk add`.

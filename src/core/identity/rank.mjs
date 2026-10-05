@@ -50,27 +50,3 @@ export function rankAtStart(ranks) {
   const min = ranks.reduce((m, r) => (r < m ? r : m));
   return rankBetween(null, min);
 }
-
-/**
- * `count` ranks for a fresh band, evenly spread and strictly increasing, all the same length and never
- * ending in 'a' (so each keeps a gap below it). Used by importers to rank a whole band at once instead
- * of appending one at a time, which would grow keys by a letter every few items.
- */
-export function spreadRanks(count) {
-  if (!Number.isInteger(count) || count < 0) throw new RangeError("count must be a whole number");
-  let width = 1;
-  while (26 ** width < 2 * (count + 1)) width++;
-  const space = 26 ** width;
-  const ranks = [];
-  for (let i = 1; i <= count; i++) {
-    let n = Math.floor((i * space) / (count + 1));
-    if (n % 26 === 0) n++; // never end in 'a'; spacing >= 2 keeps it below the next key
-    let s = "";
-    for (let d = 0; d < width; d++) {
-      s = char(n % 26) + s;
-      n = Math.floor(n / 26);
-    }
-    ranks.push(s);
-  }
-  return ranks;
-}

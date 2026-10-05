@@ -6,7 +6,7 @@
 
 ## Question and decision at stake
 
-**Question:** Does an existing tool already cover the owner's need well enough to adopt or adapt, instead of building a `bl` CLI plus a global viewer on the EvilEye portal code?
+**Question:** Does an existing tool already cover the owner's need well enough to adopt or adapt, instead of building a `bl` CLI plus a global viewer on the a game repo (the first adopter) portal code?
 
 **The need:**
 - About 30 independent git repos, each with a living markdown doc set: STRUCTURE, ARCHITECTURE, DECISIONS, FEATURES, ROADMAP, BACKLOG, GOTCHAS.
@@ -30,7 +30,7 @@
 **Recommendation: hybrid.**
 1. **Borrow the per-item format** (Backlog.md-compatible frontmatter, one file per item).
 2. **Optionally adopt Backlog.md's CLI and MCP** for agents in repos without parallel worktrees.
-3. **Build only the global viewer**, a read-mostly aggregator across repos, reusing the EvilEye portal's conflict-checked atomic writes and its post-edit re-parse check.
+3. **Build only the global viewer**, a read-mostly aggregator across repos, reusing the a game repo (the first adopter) portal's conflict-checked atomic writes and its post-edit re-parse check.
 4. **Do not use Obsidian as the primary global editor.** It is fine as an optional read view.
 
 The confidence is not High because two things are still untested: Backlog.md's ID behaviour with parallel agents in this owner's workflow, and how Obsidian rewrites frontmatter.
@@ -43,7 +43,7 @@ These are director scores, reconciled from both sides; their raw scores are in b
 |---|---|---|---|
 | 1 | **Hybrid: Backlog.md-format files per repo + a custom global viewer (reusing portal write/verify code)** | **8.5** | Meets every hard constraint. The only thing built is the part nobody offers. |
 | 2 | **Backlog.md as is** | **7** (7/7) | Plain markdown in the repo, CLI, MCP, kanban, relations, Windows OK. Against it: no cross-repo view, sequential IDs that collide across branches, the MCP ignores worktrees, and it wants its own folder layout. |
-| 3 | **Build everything (`bl` + viewer from scratch)** | **6.5** | Meets every constraint and fits the doc set exactly. Against it: roughly 3-4.5k lines, and the owner maintains it alone forever. Most of the portal's parser is EvilEye-specific and would be rewritten, not lifted. |
+| 3 | **Build everything (`bl` + viewer from scratch)** | **6.5** | Meets every constraint and fits the doc set exactly. Against it: roughly 3-4.5k lines, and the owner maintains it alone forever. Most of the portal's parser is a game repo (the first adopter)-specific and would be rewritten, not lifted. |
 | 4 | **Backlog.md + Obsidian (Bases kanban) as the global viewer** | **6** (8/4) | Obsidian is free, one window, covers the free-form docs too. Against it: Obsidian warns against symlinks and junctions, a vault rooted at `projects\` indexes node_modules and the UE folders, native Bases kanban is early access in 1.14, and frontmatter rewriting is untested. |
 | 5 | **tk / ticket (wedow)** | 5 | Ideal frontmatter vocabulary (statuses, deps with cycle detection, parent, links, type). But it's a POSIX bash script (Git Bash or WSL on Windows), with no UI and one repo at a time. ~905 stars. |
 | 5 | **beads_rust (`br`)** | 5 | JSONL in git plus a rebuildable SQLite index, rich dependency types, cross-workspace routing. But Windows means WSL or Scoop, the author doesn't accept contributions, JSONL isn't a doc format, there's no UI, and nothing for docs. |
@@ -102,7 +102,7 @@ Not assessed (all recent and small): trackfile, tkr, grite, slips, Claude-Projec
 2. **How serious are Backlog.md's ID and worktree bugs?** Optimist: "unproven." Pessimist: a disqualifier. **Resolved by director spot-check: real, open or closed-not-planned, but containable.** They downgrade Backlog.md from "adopt as is" to "borrow the format, and wrap or replace ID minting", and they argue for using random IDs as the portal already does (`patch.mjs:20-25`).
 3. **How much portal code is reusable?** The brief implied a lossless parser ready for reuse. **The pessimist's code reading (with file:line refs) wins.**
    - What carries over: atomic writes, span patching, the post-edit re-parse check, line handling, random IDs, and path containment. About 200-300 lines plus the technique.
-   - What doesn't: `parse.mjs` and `patch.mjs` (~865 lines) are bound to EvilEye's priority-section, ranking-table and strikethrough format. They would mostly be rewritten.
+   - What doesn't: `parse.mjs` and `patch.mjs` (~865 lines) are bound to a game repo (the first adopter)'s priority-section, ranking-table and strikethrough format. They would mostly be rewritten.
    - The server is single-repo.
    - So building everything from scratch costs more than "reuse the portal" suggests.
 
@@ -139,7 +139,7 @@ Not assessed (all recent and small): trackfile, tkr, grite, slips, Claude-Projec
 
 ### Try first (under a day)
 
-1. **(1h)** `npm i -g backlog.md`. Run `backlog init` in EvilEye plus one small Vite app, with a custom folder (`docs/backlog`) and statuses To Do / In Progress / Done. Have an agent migrate 10 items, including one parent/child pair and one dependency.
+1. **(1h)** `npm i -g backlog.md`. Run `backlog init` in a game repo (the first adopter) plus one small Vite app, with a custom folder (`docs/backlog`) and statuses To Do / In Progress / Done. Have an agent migrate 10 items, including one parent/child pair and one dependency.
 2. **(1h) The decisive test.** Run two agents in parallel worktrees that each create tasks, then merge. Check for duplicate IDs and conflicts. Also confirm #1034: create a task through the MCP from inside a worktree and see where it lands.
 3. **(30m)** Check whether the Backlog.md config supports a non-sequential ID scheme or a custom prefix per agent. Measure tokens for `task list --json --max-count 20` against `cat` of one file.
 4. **(1-2h)** Write a ~100-line Node script that walks a registry of repo paths, parses the frontmatter of every `docs/backlog/**/*.md`, and prints or serves one cross-repo board. This is the seed of the viewer and proves the aggregation is cheap.
@@ -188,12 +188,12 @@ Not assessed (all recent and small): trackfile, tkr, grite, slips, Claude-Projec
 **OKF** (secondary sources)
 - https://www.gitbook.com/blog/what-is-okf-open-knowledge-format, https://heise.de/-11332310, https://noqta.tn/en/news/google-cloud-open-knowledge-format-okf-ai-agents-2026
 
-**EvilEye portal code**
-- `C:\Users\dirty\projects\EvilEye\tools\portal\src\storage\documents.mjs:4-5, 17-83` (atomic, hash-checked writes)
-- `C:\Users\dirty\projects\EvilEye\tools\portal\src\backlog\patch.mjs:20-25` (random IDs), `:27-50` (span patching), `:478-494` (post-edit re-parse check), `:136-160, 268-310, 403-428` (EvilEye-specific)
-- `C:\Users\dirty\projects\EvilEye\tools\portal\src\backlog\parse.mjs:5-11, 33-51, 267-316`
-- `C:\Users\dirty\projects\EvilEye\tools\portal\src\backlog\status.mjs:25-37`
-- `C:\Users\dirty\projects\EvilEye\tools\portal\src\documents\paths.mjs:52` (single repo)
+**a game repo (the first adopter) portal code**
+- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\src\storage\documents.mjs:4-5, 17-83` (atomic, hash-checked writes)
+- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\src\backlog\patch.mjs:20-25` (random IDs), `:27-50` (span patching), `:478-494` (post-edit re-parse check), `:136-160, 268-310, 403-428` (a game repo (the first adopter)-specific)
+- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\src\backlog\parse.mjs:5-11, 33-51, 267-316`
+- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\src\backlog\status.mjs:25-37`
+- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\src\documents\paths.mjs:52` (single repo)
 
 **Prior research**
 - `...\scratchpad\research\markdown-vs-db-project-docs.md:60, 114-132`

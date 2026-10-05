@@ -9,7 +9,6 @@ import { newItemRest, bodyOf, serializeChecked } from "../../src/core/format/ser
 import { setItem } from "../../src/core/items/complete.mjs";
 import { readItem } from "../../src/core/items/detail.mjs";
 import { checkStore } from "../../src/core/validation/store.mjs";
-import { readOverrides } from "../../src/importers/evileye/convert.mjs";
 import { resolveRepo } from "../../src/repository/context.mjs";
 import { samePath, toSlash } from "../../src/repository/paths.mjs";
 import * as claims from "../../src/state/claims/store.mjs";
@@ -40,13 +39,6 @@ describe("core/errors", () => {
     assert.equal(exitCodeFor({ code: "DOCKET_UNLISTED" }), EXIT.failed);
     assert.equal(exitCodeFor({ code: CODES.INTERNAL }), EXIT.internal);
     assert.equal(KIND_OF_CODE[CODES.INTERNAL], "internal");
-  });
-
-  test("a bad overrides document is an importer error that still exits as usage", () => {
-    assert.throws(
-      () => readOverrides({ version: 2, entries: {} }),
-      (err) => err.code === CODES.IMPORT_OVERRIDES && exitCodeFor(err) === EXIT.usage,
-    );
   });
 });
 

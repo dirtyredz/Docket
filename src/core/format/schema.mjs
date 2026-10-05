@@ -38,7 +38,7 @@ export const ENUMS = Object.freeze({
 /** Statuses that end work: completion removes claims and stops counting as a blocker. */
 export const CLOSED_STATUSES = Object.freeze(["done", "dropped"]);
 
-/** `dk-` is minted for new items; `bl-` (migrated EvilEye items) stays valid and immutable. */
+/** `dk-` is minted for new items; `bl-` (a legacy ID prefix carried over from older backlogs) stays valid and immutable. */
 export const ID_PREFIXES = Object.freeze(["dk", "bl"]);
 export const NEW_ID_PREFIX = "dk";
 export const ID_RE = /^(dk|bl)-[0-9a-f]{8}$/;

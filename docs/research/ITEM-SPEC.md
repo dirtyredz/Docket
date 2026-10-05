@@ -5,8 +5,8 @@
 One markdown file per backlog item, FEATURES and BACKLOG merged into one typed store. Source of truth is git; everything else (index, claims) is local and rebuildable.
 
 ## Location and identity
-- Path: `docs/items/<id>.md` (`dk-<8hex>.md` for new items, `bl-<8hex>.md` for migrated EvilEye items). Flat directory. A file never moves or is renamed; done and dropped items stay put.
-- ID: `dk-` (new items) or `bl-` (existing EvilEye items, kept verbatim and valid indefinitely) + 8 random lowercase hex chars (`crypto.randomBytes(4)`), type-neutral, immutable. `docket add` mints only `dk-` IDs and assigns the ID (agents never hand-write one) and retries until no file `docs/items/<id>.md` exists. Collisions across unmerged branches are caught by `docket check` after merge (an add/add of the same path is a git conflict anyway). 
+- Path: `docs/items/<id>.md` (`dk-<8hex>.md` for new items, `bl-<8hex>.md` for legacy items carried over from an older backlog). Flat directory. A file never moves or is renamed; done and dropped items stay put.
+- ID: `dk-` (new items) or `bl-` (legacy IDs carried over from an older backlog, kept verbatim and valid indefinitely) + 8 random lowercase hex chars (`crypto.randomBytes(4)`), type-neutral, immutable. `docket add` mints only `dk-` IDs and assigns the ID (agents never hand-write one) and retries until no file `docs/items/<id>.md` exists. Collisions across unmerged branches are caught by `docket check` after merge (an add/add of the same path is a git conflict anyway). 
 - Cross-repo references (viewer/index only, never in `fixes/blocked_by/relates`): `repo#<id>`.
 
 ## File grammar
@@ -90,7 +90,7 @@ Free prose: description, acceptance criteria.
 
 ## Open questions (assumptions made)
 - Empty scalar: reports are silent; assumed `parent:` / `area:` present with empty value rather than omitted (keeps line positions stable for merges). Validated by the agent check in MERGE-TEST-RESULTS (Haiku reproduced it correctly).
-- `priority` set P0-P3 assumed (EvilEye's "wishlist" maps to `type: idea` P3).
+- `priority` set P0-P3 assumed (a legacy "wishlist" status maps to `type: idea` P3).
 - `rank` charset `[a-z]+` assumed; midpoint generation is a `docket` implementation detail.
 - Always-present relation lists (`[]`) assumed over omitted keys, same reason.
 - `docket set` writes `since` as local date, not UTC; reports do not say.

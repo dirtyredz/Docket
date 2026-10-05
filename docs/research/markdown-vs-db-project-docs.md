@@ -1,6 +1,6 @@
 # Markdown vs database as the source of truth for project docs and backlogs
 
-*Research director report, 2026-10-04. Adversarial investigation: an optimist and a pessimist researcher, two rounds each, plus my own spot-checks of the EvilEye repo.*
+*Research director report, 2026-10-04. Adversarial investigation: an optimist and a pessimist researcher, two rounds each, plus my own spot-checks of the a game repo (the first adopter) repo.*
 
 ## Question and decision at stake
 
@@ -16,7 +16,7 @@ The owner is a solo developer running Claude Code and Codex agents across about 
 
 **Hard constraint:** no central database. State lives in each repo and travels with it in git.
 
-**The decision this feeds:** which storage model to build on, and what to build first. A single-project version already exists in EvilEye (`tools/portal`).
+**The decision this feeds:** which storage model to build on, and what to build first. A single-project version already exists in a game repo (the first adopter) (`tools/portal`).
 
 ## Bottom line
 
@@ -26,13 +26,13 @@ The storage format turned out not to be the real dispute. By round 2 the pessimi
 - the token argument;
 - the concurrency race, now rated minor;
 - the beads precedent, which turns out to favour files plus a local index at solo scale;
-- the EvilEye drift, which comes from duplicated fields, not from markdown.
+- the a game repo (the first adopter) drift, which comes from duplicated fields, not from markdown.
 
 That left one disagreement: **how writes are controlled.** The surviving risk is agents hand-editing a structured markdown file until it drifts from the format. A database does not solve that; a validating write path does. The three amendments:
 
-1. **Every field has exactly one home.** Today EvilEye stores priority in the register row, in a P-heading in the shard, and in the entry's prose, and titles are copied between register and entry. That duplication is the cause of the drift observed. The new BACKLOG format should keep each field in one place, with no register table repeating entry fields.
-2. **"One item per line" means one *header line* per item with a fixed field grammar, plus an optional indented free-prose body.** EvilEye's real entries are multi-paragraph narratives (`docs/work/backlog/open/engineering.md:11-29`). A strictly one-line format would be ignored, as it already has been.
-3. **Structured writes go through one shared, validating tool.** That means a small `bl` CLI plus the viewer, both using the same parser and serializer. A lint check runs in every repo's test tier and pre-push hook. Hand edits become a fallback that the lint catches, not the normal path. Agents keep to a format when a checker enforces it, and drift where nothing does. EvilEye shows both: every entry carries its enforced bl-id marker, while priority and title, which nothing checks, drifted.
+1. **Every field has exactly one home.** Today a game repo (the first adopter) stores priority in the register row, in a P-heading in the shard, and in the entry's prose, and titles are copied between register and entry. That duplication is the cause of the drift observed. The new BACKLOG format should keep each field in one place, with no register table repeating entry fields.
+2. **"One item per line" means one *header line* per item with a fixed field grammar, plus an optional indented free-prose body.** a game repo (the first adopter)'s real entries are multi-paragraph narratives (`docs/work/backlog/open/engineering.md:11-29`). A strictly one-line format would be ignored, as it already has been.
+3. **Structured writes go through one shared, validating tool.** That means a small `bl` CLI plus the viewer, both using the same parser and serializer. A lint check runs in every repo's test tier and pre-push hook. Hand edits become a fallback that the lint catches, not the normal path. Agents keep to a format when a checker enforces it, and drift where nothing does. a game repo (the first adopter) shows both: every entry carries its enforced bl-id marker, while priority and title, which nothing checks, drifted.
 
 ## The case for (claims that survived scrutiny)
 
@@ -55,14 +55,14 @@ That left one disagreement: **how writes are controlled.** The surviving risk is
    - The same DoltHub post admits the move "added friction for solo Beads users" ([Restoring beads classic](https://www.dolthub.com/blog/2026-04-02-restoring-beads-classic/), 2026-04-02, primary).
    - The fork `beads_rust`/`br` deliberately freezes the classic design: a file in git plus a local SQLite index, with no daemon ([gascity](https://gascity.com/guide/beads-vs-br/)).
    - Beads' core failure was **two writable copies of the data** (SQLite and JSONL) drifting apart. Option A avoids that by having one source of truth and a disposable index.
-7. **The approach already works in EvilEye.**
-   - The portal is markdown-authoritative, with hash-checked saves that return 409 on a stale write, narrow span patches that never re-serialize the file, atomic temp-file-and-rename writes, and a byte-checked deterministic migration (`EvilEye/tools/portal/README.md:9-14, 119-185`).
+7. **The approach already works in a game repo (the first adopter).**
+   - The portal is markdown-authoritative, with hash-checked saves that return 409 on a stale write, narrow span patches that never re-serialize the file, atomic temp-file-and-rename writes, and a byte-checked deterministic migration (`a game repo (the first adopter)/tools/portal/README.md:9-14, 119-185`).
    - Measured size, excluding `node_modules`: about 50 files and 7,060 lines. Backlog code is about 1,470 lines, roughly half of `src/`. The pessimist's "about 100 files" figure included dependencies.
 
 ## The case against (claims that survived scrutiny)
 
 1. **Parse fidelity under unrestricted writes. Severity: serious without enforcement, minor with it.**
-   - EvilEye's grammar already needs paragraph-long rules: lazy continuation, a bold-lead exception, and five different "done" wordings (`tools/portal/README.md:110-133`).
+   - a game repo (the first adopter)'s grammar already needs paragraph-long rules: lazy continuation, a bold-lead exception, and five different "done" wordings (`tools/portal/README.md:110-133`).
    - Those rules exist because outside edits keep making entries parse differently than intended.
    - Across 15 repos, any repo where agents edit BACKLOG.md directly will drift. The viewer then quietly misparses or falls back to raw markdown, which *hides* the breakage instead of showing it.
    - This is the strongest surviving objection, and it drives amendment 3.
@@ -80,16 +80,16 @@ That left one disagreement: **how writes are controlled.** The surviving risk is
 
 | Conflict | Outcome | Why |
 |---|---|---|
-| Does the EvilEye drift indict markdown? | **No. It indicts duplicated fields.** | I checked it myself: README:120-124 declares the register row authoritative and the prose priority historical. A denormalized database index would drift the same way. The pessimist conceded in round 2. |
+| Does the a game repo (the first adopter) drift indict markdown? | **No. It indicts duplicated fields.** | I checked it myself: README:120-124 declares the register row authoritative and the prose priority historical. A denormalized database index would drift the same way. The pessimist conceded in round 2. |
 | Beads moved to Dolt. Is that evidence for a database? | **Not at this scale. It is weak evidence for Option A.** | The stated reason was multi-agent scale. The maintainers acknowledged that solo users found Dolt heavy, and solo users created a fork that keeps the file-in-git design. The optimist fairly notes that the maintainers still answered with *embedded* Dolt, not files. |
 | A database gives better token efficiency? | **No difference at backlog scale.** | Neither side found a benchmark. Grep over one-line headers returns about what a query returns. Token cost is driven by how much reaches the context window, not by the store. The real token lever is CLI over MCP, which is independent of storage. |
 | A validating CLI vs hand-editing md | **Not a conflict once examined. Both sides end at "md as truth, writes through a validating tool."** | The pessimist said plainly that the only real difference from Option A is a tool-mediated write path plus a lint rejecting hand edits. The optimist accepted that as the best form of Option A. |
-| Does a database prevent bloat? | **No. Size discipline does.** | EvilEye's 290 KB files came from append-only habits. A schema with a `notes TEXT` column bloats just the same, which both sides granted. A schema *can* cap field lengths. A size lint (EvilEye's `check.mjs` `DOC_SIZE`) does the same job for markdown. |
+| Does a database prevent bloat? | **No. Size discipline does.** | a game repo (the first adopter)'s 290 KB files came from append-only habits. A schema with a `notes TEXT` column bloats just the same, which both sides granted. A schema *can* cap field lengths. A size lint (a game repo (the first adopter)'s `check.mjs` `DOC_SIZE`) does the same job for markdown. |
 
 ## Where each side overreached
 
 - **Optimist:**
-  - Cherny's RAG-versus-grep result is code-specific and partly "vibes." It does not show that grep wins over EvilEye's 7.6 MB of prose in `research/`, which is where embeddings could actually help.
+  - Cherny's RAG-versus-grep result is code-specific and partly "vibes." It does not show that grep wins over a game repo (the first adopter)'s 7.6 MB of prose in `research/`, which is where embeddings could actually help.
   - The estimate that a single-home grammar parser is "well under 371 lines" is unmeasured.
   - Treating OKF as validation hides that OKF *requires* structured frontmatter. It is markdown plus a minimum schema, not loose markdown.
 - **Pessimist:**
@@ -106,7 +106,7 @@ Storage choice barely affects token use. What matters:
 2. Size caps and the split between records and maps stop append-only growth, whichever store is used.
 3. Returning narrow results: header-line grep, `bl list --pri P1` printing `id|pri|title` rows, and never reading the whole `research/` folder.
 
-A database would move the bloat into rows rather than remove it. Embeddings (for example a local ChromaDB) are a reasonable *optional derived index* for EvilEye's `research/` prose later. They should not be the source of truth, and they are not needed for backlogs.
+A database would move the bloat into rows rather than remove it. Embeddings (for example a local ChromaDB) are a reasonable *optional derived index* for a game repo (the first adopter)'s `research/` prose later. They should not be the source of truth, and they are not needed for backlogs.
 
 ## Recommendation and first build step
 
@@ -122,10 +122,10 @@ A database would move the bloat into rows rather than remove it. Embeddings (for
    - Done items are `[x]` or move to a `## Done` section.
    - Bodies are free text.
    - Extension fields go in a `key:value` tail.
-2. **Extract one shared package** from EvilEye's portal. It holds the parser and serializer for that grammar, byte-stable span patching, hash-checked atomic writes, and a lint (`bl check`). The pieces to lift are `parse.mjs`, `patch.mjs` and the `documents.mjs` write path. Drop the register/shard reconciliation (`migrate.mjs`, `diff.mjs`).
+2. **Extract one shared package** from a game repo (the first adopter)'s portal. It holds the parser and serializer for that grammar, byte-stable span patching, hash-checked atomic writes, and a lint (`bl check`). The pieces to lift are `parse.mjs`, `patch.mjs` and the `documents.mjs` write path. Drop the register/shard reconciliation (`migrate.mjs`, `diff.mjs`).
 3. **Put a thin `bl` CLI on that package** (`add`, `set`, `done`, `list`, `check`). This is the agent write path for both Claude Code and Codex: shell calls, with no MCP overhead.
 4. **Run `bl check` in each repo's test tier and pre-push hook.** One line of agent instruction says: "edit the backlog through `bl`."
-5. **Migrate EvilEye first.** Use a deterministic, byte-checked script, as the portal's existing migration does. EvilEye has more than 240 rows and is the hardest case. Then migrate the other repos.
+5. **Migrate a game repo (the first adopter) first.** Use a deterministic, byte-checked script, as the portal's existing migration does. a game repo (the first adopter) has more than 240 rows and is the hardest case. Then migrate the other repos.
 6. **Then build the global viewer.** It reads a list of repos, renders the backlog through the shared package, and renders all other docs as read-only raw markdown via markdown-it, which removes the parse-and-write-back risk for free-form docs. Show an unparsed or invalid badge instead of silently falling back.
 7. **Later, only if needed:** a gitignored SQLite index for cross-repo sort and filter, and optionally embeddings over `research/`.
 
@@ -135,7 +135,7 @@ A database would move the bloat into rows rather than remove it. Embeddings (for
 
 - **How often do two agents edit one backlog at the same time in this workflow?** Logging write collisions (409s) for two weeks would answer it. If it becomes common, for example with parallel worktree agents, the case for a transactional store such as embedded Dolt strengthens.
 - **Will agents actually use `bl` rather than hand-editing?** Measure `bl check` failure rates after rollout.
-- **Grep vs CLI token cost on real backlogs.** No benchmark exists. A one-hour measurement on EvilEye after migration would close it.
+- **Grep vs CLI token cost on real backlogs.** No benchmark exists. A one-hour measurement on a game repo (the first adopter) after migration would close it.
 - **Whether the header grammar stays small.** If it grows past about 6 tokens, switch to frontmatter or one file per item, as Backlog.md does.
 - **The other 14 repos' current backlog shapes** were not surveyed. Migration effort is unknown.
 - I did not see the source Reddit thread myself. Its counterpoints were assessed from the brief.
@@ -167,13 +167,13 @@ A database would move the bloat into rows rather than remove it. Embeddings (for
 - MCP vs CLI benchmark (2026, vendor-adjacent): https://kaxil.substack.com/p/mcp-vs-cli-vs-rest
 - Claude Code Edit-tool issues (2026, anecdotal): https://claudeissues.com/issue/78076-edit-tool-false-string-not-found-in-file-for-multi-line-old-string-byte-identica
 
-**Code references (EvilEye):**
-- `C:\Users\dirty\projects\EvilEye\tools\portal\README.md:9-14` (markdown authoritative)
-- `C:\Users\dirty\projects\EvilEye\tools\portal\README.md:110-133` (parse rules)
-- `C:\Users\dirty\projects\EvilEye\tools\portal\README.md:120-124` (register authoritative for priority)
-- `C:\Users\dirty\projects\EvilEye\tools\portal\README.md:166-185` (migration)
-- `C:\Users\dirty\projects\EvilEye\docs\BACKLOG.md:242`, `:252` (register rows that drifted)
-- `C:\Users\dirty\projects\EvilEye\docs\work\backlog\open\engineering.md:8-29` (P-heading, multi-paragraph entries)
-- `C:\Users\dirty\projects\EvilEye\tools\portal\src\backlog\parse.mjs:1-11` (never re-serialize)
-- `C:\Users\dirty\projects\EvilEye\tools\portal\src\storage\documents.mjs:4-5, 54-67` (race window)
-- `C:\Users\dirty\projects\EvilEye\tools\documentation\check.mjs` (DOC_SIZE lint)
+**Code references (a game repo (the first adopter)):**
+- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\README.md:9-14` (markdown authoritative)
+- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\README.md:110-133` (parse rules)
+- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\README.md:120-124` (register authoritative for priority)
+- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\README.md:166-185` (migration)
+- `C:\Users\dirty\projects\a game repo (the first adopter)\docs\BACKLOG.md:242`, `:252` (register rows that drifted)
+- `C:\Users\dirty\projects\a game repo (the first adopter)\docs\work\backlog\open\engineering.md:8-29` (P-heading, multi-paragraph entries)
+- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\src\backlog\parse.mjs:1-11` (never re-serialize)
+- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\portal\src\storage\documents.mjs:4-5, 54-67` (race window)
+- `C:\Users\dirty\projects\a game repo (the first adopter)\tools\documentation\check.mjs` (DOC_SIZE lint)

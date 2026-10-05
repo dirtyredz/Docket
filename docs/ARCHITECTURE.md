@@ -1,7 +1,7 @@
 # ARCHITECTURE
 
 How Docket works. Code map is in `../STRUCTURE.md`; reasons are in `DECISIONS.md`. Status: M0 to M2b
-implemented (CLI, core, storage, index, claims, gate, EvilEye import dry run and apply); M3+ is design only. Authority: `PLAN.md` and `research/ITEM-SPEC.md`.
+implemented (CLI, core, storage, index, claims, gate, init); M3+ is design only. Authority: `PLAN.md` and `research/ITEM-SPEC.md`.
 
 ## Truth and caches
 
@@ -18,9 +18,8 @@ implemented (CLI, core, storage, index, claims, gate, EvilEye import dry run and
 | Location                                                       | Contents                                               | Committed |
 | -------------------------------------------------------------- | ------------------------------------------------------ | --------- |
 | `<repo>/docs/items/<id>.md`                                    | the items                                              | yes       |
-| `<repo>/docket.json`                                           | store version, migration marker                        | yes       |
+| `<repo>/docket.json`                                           | store version                                          | yes       |
 | `<repo>/.docket/index.json`                                    | disposable index for this checkout                     | no        |
-| `<repo>/.docket/import/<run>/`                                 | dry-run staging, source hashes, recovery journal       | no        |
 | `<git-common-dir>/docket-claims.json`                          | advisory claims shared by linked worktrees             | no        |
 | `<git-common-dir>/docket-conflicts.jsonl`                      | local conflict observations                            | no        |
 | `%LOCALAPPDATA%/Docket/registry.json`                          | repo aliases, canonical paths, doc overrides; no items | no        |
@@ -87,36 +86,17 @@ work) are labeled advisory hints and are never written into the main checkout. P
 registered, contained locations; traversal, foreign origins and unsafe HTML are rejected. Living docs
 are rendered read-only; there is no document-write endpoint.
 
-## Legacy import
+## Init and move-in
 
-`docket import evileye --dry-run` reads the register (`docs/BACKLOG.md`) and shards
-(`docs/work/backlog/{open,done}/*.md`), freezes their SHA-256 and HEAD blob ids, and splits each file
-into contiguous spans that cover every character: entry, register row (metadata of an item), wrapper
-(titles, section and group headings, table header), retained prose (with a reason) and blank. Each entry
-becomes one staged item through core allocation, rank and serializer. Its body is the entry's own text
-run through recorded, reversible steps (CRLF to LF, list marker and indent off, ID comment removed,
-relative links rebased to `docs/items/`, register flags appended as a note). Verification works from
-disk only: sources must still match their hashes, every file must rebuild byte for byte (recorded text
-for non-item spans, inverted staged bodies for item spans), every span needs a known disposition, every
-item comes from exactly one span, and the staged set must pass `check`. Decisions are recorded per item;
-ambiguous ones (struck leads without a status word, duplicate IDs) need an `--overrides` file before a
-run is `ready`. A run lives in `<repo>/.docket/import/<run>/` (must be git-ignored) as
-`manifest.json`, `source-map.json`, `items/` and, when needed, `overrides.template.json`. A later run
-reuses the IDs an earlier run allocated (matched by file and first-line hash).
-
-`docket import apply --manifest <run>/manifest.json` installs a ready run. Under the worktree lock it first
-checks everything that could make the result wrong (run ready, same repo, no other migration marker, sources
-still at their frozen hashes, staged files at their manifest hashes, a fresh full verification, no target
-file with different bytes), then creates each item (create-only), validates the whole store, writes the
-committed provenance `docs/records/migrations/docket.json` and finally the `docket.json` marker
-`{migration: {state: "complete", run, record, ...}}`. Each step appends to `<run>/apply-journal.jsonl`; the
-filesystem stays the authority on resume (an item already present with identical bytes counts as
-installed), so rerunning after a crash finishes the job. Sources are never written; after completion apply
-is a no-op, so the register can be replaced by a navigation page. Legacy tools key their retirement on that
-marker (EvilEye's portal guard).
+`docket init` (`integration/init.mjs`, adapter `cli/commands/init.mjs`) makes the current worktree a Docket
+repo: it creates `docs/items/` and `docket.json` (store version only), ignores `.docket/`, appends the agent
+snippet to `CLAUDE.md` and `AGENTS.md` (creating `CLAUDE.md` when neither exists), and with `--gate` runs the
+gate install. Every step is skipped when already done; a run that changes nothing reports "already
+initialised". It refuses outside a git worktree. There is no importer: an existing backlog moves in once,
+through an agent following `MOVE-IN.md` with the ordinary `dk add` / `dk set` commands (ADR-19).
 
 ## External interfaces
 
 CLI with `--repo` and bounded `--json` (no MCP). Git pre-push hook via the managed template's opt-in
-Docket callback. EvilEye integration (importer, legacy-writer retirement, documentation-checker
-adapter) is listed in `PLAN.md` section 2.
+Docket callback. Repo-specific adapters (legacy-writer retirement, documentation checkers) live in the
+adopting repo, not here.

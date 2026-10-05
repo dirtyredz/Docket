@@ -84,8 +84,8 @@ Extract revision/atomic-write techniques into Docket storage; use span accountin
 | `tools/documentation/{policy.json,README.md,check.test.mjs,baseline-snapshot.test.mjs}`, `tools/documentation/tests/document-policy.test.mjs` | Update collection policy, historical treatment and regression coverage. |
 | `docs/BACKLOG.md`, `docs/work/backlog/README.md`, `STRUCTURE.md`, `CLAUDE.md`, `AGENTS.md` | Point callers to Docket; identify retained shards as historical. |
 | `docs/items/<id>.md`, `docket.json`, `.gitignore`, `.gitattributes`, `docs/records/migrations/docket.json` | Migrated store, configuration and committed provenance. |
-| `C:/Users/dirty/.claude/hooks/structure/pre-push.template.sh` | Add the supported, opt-in Docket callback; do not append to generated hooks. |
-| `C:/Users/dirty/.claude/hooks/{STRUCTURE,GOTCHAS}.md` | Document callback installation, ordering and independent failure semantics. |
+| `~/.claude/hooks/structure/pre-push.template.sh` | Add the supported, opt-in Docket callback; do not append to generated hooks. |
+| `~/.claude/hooks/{STRUCTURE,GOTCHAS}.md` | Document callback installation, ordering and independent failure semantics. |
 
 The portal service already mixes several responsibilities. Add only a call to the extracted guard, not another policy implementation inside it.
 
@@ -128,7 +128,7 @@ The portal service already mixes several responsibilities. Add only a call to th
    - EvilEye’s existing chain stays icon guard → physical managed hook → LFS/Docket/structure checks. Its wrapper already replays stdin; do not replace it.
    - **Callers:** the managed template’s installer and hook-sync consume its new version; Claude’s separate `PreToolUse` structure gate remains unchanged.
 
-5. **M2a — EvilEye importer and byte-verified dry run.**
+5. **M2a — EvilEye importer and byte-verified dry run.** _(Historical: done for one repo; the importer was removed 2026-10-05, see ADR-19. New work uses `docket init` and `docs/MOVE-IN.md`.)_
    - Inventory the actual source tree. Inspection found 391 unique `bl-` markers and 271 register rows; these are a baseline, not hard-coded expected totals.
    - Freeze source hashes and persist the import plan. Keep existing `bl-` IDs verbatim; allocate missing identities through core allocation and retain them across retries.
    - Register priority and ordering win. Missing rows fall back to explicit shard priority and stable source order, with reported decisions. Wishlist becomes `idea/P3`.
@@ -148,7 +148,7 @@ The portal service already mixes several responsibilities. Add only a call to th
    - Start the two-week conflict observation period here.
    - **Callers:** portal startup/mutations, legacy migration script, documentation checker, baseline snapshot, ContentChecks’ existing checker invocation, and repo agent instructions.
 
-7. **M3 — Registry and common-shape importer.**
+7. **M3 — Registry and common-shape importer.** _(Superseded 2026-10-05: M3 is the registry, `docket init` and the move-in playbook; no importer.)_
    - Add `docket repo add/list/remove` and the per-machine registry. Registration canonicalizes paths, identifies linked worktrees and reports unavailable repositories without deleting registrations.
    - Resolve living docs from root/`docs/`, with explicit overrides for `website/docs/`, `_platform/docs/` and `hooks/`.
    - Implement priority-H2/checklist importing using the proven manifest/apply mechanics. Preserve nested checklists as parent content unless explicitly identified as separate items.

@@ -1,8 +1,8 @@
 # FEATURES
 
 Capability inventory. Status vocabulary: planned, in progress, built (in the checkout, not yet in an installed tarball),
-shipped. Shipped in 0.1.0 (2026-10-04): M0 to M1c. Shipped in 0.2.0 (2026-10-05): M2a and M2b, installed
-globally, promoted to the last-good gate, gating Docket's and EvilEye's pushes. Items and their statuses live
+shipped. Shipped in 0.1.0 (2026-10-04): M0 to M1c. 0.2.0 (2026-10-05): the one-off legacy import and cutover for
+the first adopter. 0.3.0 (2026-10-05): importers removed, `docket init` and the move-in playbook added. Items and their statuses live
 in `docs/items/`; this page does not duplicate them. Milestones are in `ROADMAP.md`.
 
 | Capability                                                             | Milestone | Status  |
@@ -16,12 +16,10 @@ in `docs/items/`; this page does not duplicate them. Milestones are in `ROADMAP.
 | `--repo` on every command, `--json` for agents                         | M1b       | shipped |
 | Tarball install, `docket` and `dk` aliases                             | M1b       | shipped |
 | Last-good pre-push gate composed with LFS and structure checks         | M1c       | shipped |
-| EvilEye importer: byte-verified dry run, manifest, `import verify`     | M2a       | shipped |
 | Agent snippet for CLAUDE.md / AGENTS.md (`src/integration/`)           | M2a       | shipped |
-| Resumable `import apply` with source-hash preconditions                | M2b       | shipped |
-| EvilEye cutover; legacy portal retired                                 | M2b       | shipped |
+| `docket init [--gate]`: idempotent repo setup, agent snippet           | M3        | shipped |
+| Move-in playbook for existing backlogs (`docs/MOVE-IN.md`)             | M3        | shipped |
 | Repo registry (`docket repo add/list/remove`)                          | M3        | planned |
-| Priority-checkbox importer for other repos                             | M3        | planned |
 | Local viewer/editor (`docket serve`): board, editor, relations         | M4        | planned |
 | Read-only rendering of the seven living docs                           | M4        | planned |
 | Derived "blocked" badge; worktree overlays                             | M4        | planned |

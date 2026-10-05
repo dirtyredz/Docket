@@ -1,7 +1,7 @@
 # Docket
 
 Windows 11 CLI (`docket` / `dk`) and local viewer over per-repo Markdown work items. Status: M0 to M2b
-shipped (CLI, core, gate, EvilEye import and cutover); M3+ is design only (`docs/PLAN.md`).
+shipped (CLI, core, gate, `init`; importers removed, ADR-19); M3+ is design only (`docs/PLAN.md`).
 
 ## Working here
 
@@ -9,13 +9,12 @@ shipped (CLI, core, gate, EvilEye import and cutover); M3+ is design only (`docs
   flows, `docs/DECISIONS.md` for why.
 - Stack: Node >= 22 (24 planned, ADR-13), plain ESM (`.mjs`), npm, `node:test`. No TypeScript.
 - Tests: `npm test` (everything), or `npm run test:<area>` for bootstrap, format, core, storage, cli,
-  coordination, importers, integration, packaging, layout. Integration and packaging do real pushes to temp bare
+  coordination, integration, packaging, layout. Integration and packaging do real pushes to temp bare
   remotes and need the harness template (`~/.claude/hooks/structure/pre-push.template.sh`).
-  `npm run test:evileye-gate` (with `DOCKET_EVILEYE_REPO` set) proves EvilEye's installed chain on a disposable clone.
 - `npm run build` packs `dist/docket-<v>.tgz`. Ship it: `npm install --global <tgz>`, then
   `docket gate promote <tgz>` (last-good gate) and `docket gate install --repo .`.
 - `npm run lint`, `npm run lint:fix`, `npm run format`, `npm run format:check`.
-- Dependency direction: CLI/viewer -> core -> storage; importers -> core. Keep code files under about
+- Dependency direction: CLI/viewer -> core -> storage; state, integration -> core. Keep code files under about
   800 lines and update STRUCTURE.md's Layout when adding a responsibility.
 - Tests ship with the change; a bug fix reproduces the bug in a test first.
 
@@ -23,6 +22,7 @@ shipped (CLI, core, gate, EvilEye import and cutover); M3+ is design only (`docs
 
 - Docket's own work lives in `docs/items/` (from M0). Item files follow `docs/research/ITEM-SPEC.md`
   exactly: 12 keys in fixed order, `dk-<8hex>` IDs (`bl-` stays valid).
+- Moving another repo's backlog in: `docket init`, then follow `docs/MOVE-IN.md` (no importer).
 - Never hand-write IDs or ranks; use `dk add` (the M0 seed items were the one exception). Update
   status with `dk set <id> --status ...`, claim with `dk claim`. Drop items, never delete them.
   Run `dk check` before pushing; the pre-push gate runs it on every pushed tip.

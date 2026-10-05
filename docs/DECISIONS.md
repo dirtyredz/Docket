@@ -1,36 +1,21 @@
 # DECISIONS
 
-ADRs, newest first. All dated 2026-10-04 (project inception); order below is by relevance, not time.
+ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADR-19 is 2026-10-05.
 Evidence paths are relative to `docs/research/`.
 
-## ADR-18: Apply trusts the filesystem, journals every step, publishes the marker last
+## ADR-19: Importers removed; init + agent move-in
 
-- **Context:** M2b installs 415 items into a repo with other uncommitted work; a crash, a drifted source or a
-  file someone else wrote must never yield a half-migrated store that looks finished.
-- **Decision:** All preconditions run before the first write (ready run, same repo, no other marker, frozen
-  source hashes, staged hashes, a fresh full verification, no differing target file). Items are created
-  create-only; an identical file counts as installed, so resume needs no journal replay. The journal
-  (`apply-journal.jsonl`, fsynced appends, torn last line ignored) is the audit trail. The provenance record
-  then the `docket.json` marker are written only after the whole store passes `check`; legacy writers retire
-  on that marker. A completed run is a no-op.
-- **Rejected:** a journal as the authority (diverges from disk after a manual fix); deleting installed items
-  on failure (destroys evidence; a rerun converges instead); a marker before validation.
-- **Evidence:** `tests/importers/apply.test.mjs`; `tests/integration/evileye-gate.test.mjs`.
+- **Context:** Docket must be project-agnostic. The EvilEye import was byte-verified because it ran once
+  against one real backlog; its cutover is done. Other repos have seven different legacy shapes.
+- **Decision:** Importer code (`src/importers/`, `docket import`) is deleted. New projects start with
+  `docket init`; an existing repo moves in once, through an agent following `docs/MOVE-IN.md` (`dk add`
+  and `dk set` per old entry, count check, owner review). `bl-` stays valid as a generic legacy-ID
+  prefix. The superseded import ADRs (17, 18) moved to `records/decisions/2026-10.md`.
+- **Rejected:** one importer per legacy shape (code to maintain for single-use runs); keeping the
+  EvilEye importer as an example (its provenance and journal machinery only served that run).
+- **Evidence:** owner ruling 2026-10-05.
 
-## ADR-17: Lossless import: whole entry text in the body, proven by inversion
-
-- **Context:** M2a must account for every legacy byte. Rewriting entries into cleaner prose (dropping
-  the bold lead, status words, group headings) would be lossy and hard to verify.
-- **Decision:** An item body is the entry's own text after recorded, reversible steps only (line
-  endings, list marker and indent, ID comment, relative links, an appended flags note). The H1 is a
-  derived title, so the body still starts with the original lead. Verification inverts each staged body
-  and rebuilds every source byte for byte. Non-entry prose is "retained" with a reason (it stays in the
-  kept shards and the recorded register hash), never silently dropped. Dates: `created` is the earliest
-  of the first-line date and the Git first record of the ID marker, else the import date; `since` is
-  `created` for todo, the stated completion date for done, else the import date. Register row order
-  wins; unindexed entries follow in source order; ranks are spread across each band (`spreadRanks`).
-- **Rejected:** a non-reversible rewrite checked only by counts; inferring relations or types from prose.
-- **Evidence:** `tests/importers/manifest.test.mjs`, `tests/importers/transform.test.mjs`.
+> ADRs 17 and 18 (lossless import, resumable apply) moved to `records/decisions/2026-10.md`.
 
 ## ADR-16: Grammar strictness applies to the frontmatter; the body is free Markdown
 

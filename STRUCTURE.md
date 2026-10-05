@@ -1,9 +1,9 @@
 # STRUCTURE
 
 Code-shape map for Docket: a Windows 11 CLI (`docket` / `dk`) and local viewer over per-repo Markdown
-items. Authority for layout: `docs/PLAN.md` section 2. Status: M0 to M2b built (strict core, CLI,
-storage, state/index, state/claims, last-good gate, `importers/common` with resumable apply,
-`importers/evileye`, the `import` command). Homes marked "(planned, M3+)" are declared but empty.
+items. Authority for layout: `docs/PLAN.md` section 2. Status: M0 to M3-init built (strict core, CLI,
+storage, state/index, state/claims, last-good gate, `docket init`). Importers were removed in 0.3.0
+(ADR-19). Homes marked "(planned, M3+)" are declared but empty.
 
 Last full review: 2026-10-05
 
@@ -14,8 +14,7 @@ src/
   bootstrap/            quarantined recovered validator (not shipped)
   cli/                  main, args, output          commands/  one adapter per command family
   core/                 errors.mjs                  format/ validation/ identity/ items/
-  importers/            common/ (shared mechanics)  evileye/  priority-checkbox/ (planned, M3+)
-  integration/          agent snippet               gate/  promote, smoke, install, launcher, pre-push
+  integration/          agent snippet, init         gate/  promote, smoke, install, launcher, pre-push
   repository/           checkout facts: context, config, snapshot, paths
   state/                claims/  index/             registry/ observability/ (planned, M3+)
   storage/              atomic write, lock, item store, revisions
@@ -29,14 +28,13 @@ docs/                   living docs, items/, records/, research/ (historical)
 
 ```
 CLI / viewer  -->  core  -->  repository, storage
-state, importers, integration  -->  core
+state, integration  -->  core
 ```
 
 - `core` has no terminal or HTTP knowledge. It calls `repository` and `storage`, never `state`: claims
   and the index reach core operations as arguments (`setItem`, `readItem`), so core stays free of the
   coordination stores.
 - `cli` and `viewer` are thin adapters over `core/items` operations; business rules never live in them.
-- `importers` read legacy files and write only through `core` (allocation, rank, serializer,
   validation); they use `repository` for Git facts and `storage` only to list existing target items.
 - `integration/gate` validates through core `checkStore`, never through `cli`.
 - `core/errors.mjs` is a leaf (no imports) that every layer may use.
@@ -57,19 +55,16 @@ state, importers, integration  -->  core
 - `src/state/registry/` — per-machine repo registry and document-location overrides (planned, M3+)
 - `src/state/observability/` — local merge-conflict recording and reporting (planned, M3+)
 - `src/cli/` — dispatch, argument handling, output contracts
-- `src/cli/commands/` — thin adapters per command family (items, validation, coordination, migration, gate; registry, viewer, conflicts planned)
-- `src/importers/common/` — shared source-map, manifest and resumable apply mechanics
-- `src/importers/evileye/` — legacy EvilEye register and shard conversion
-- `src/importers/priority-checkbox/` — second legacy shape, priority H2 / checklist (planned, M3+)
-- `src/integration/` — agent CLAUDE.md/AGENTS.md snippet
+- `src/cli/commands/` — thin adapters per command family (items, validation, coordination, init, gate; registry, viewer, conflicts planned)
+- `src/integration/` — agent CLAUDE.md/AGENTS.md snippet and `docket init` (`init.mjs`)
 - `src/integration/gate/` — gate promotion, smoke test, repo opt-in, stable launcher, tarball reader, pre-push validation
 - `src/viewer/server/` — server lifecycle, request safety, scoped API routes, worktree overlays (planned, M3+)
 - `src/viewer/ui/` — browser shell and UI modules: board, editor, relations (planned, M3+)
 - `src/viewer/documents/` — living-doc catalog and read-only Markdown rendering (planned, M3+)
 - `src/tooling/` — distributable build and layout/size checker
-- `tests/` — responsibility-matched suites: format, core, storage, cli, state, importers, integration, packaging
+- `tests/` — responsibility-matched suites: format, core, storage, cli, state, integration, packaging
 - `tests/helpers/` — disposable-repo and clock support
-- `tests/fixtures/` — bounded fixtures: evileye, hooks (priority-checkbox planned)
+- `tests/fixtures/` — bounded fixtures: hooks
 - `docs/` — living docs and research evidence
 - `docs/items/` — Docket's own work items (created in M0; flat, permanent paths)
 - `docs/records/` — migration evidence and conflict-review history
@@ -79,23 +74,22 @@ and is never edited or linted as one.
 
 ## Components
 
-| Component           | Responsibility                                                                            |
-| ------------------- | ----------------------------------------------------------------------------------------- |
-| `core/errors`       | `docketError`, the code table and exit kinds, `notFound`; the one error shape.            |
-| `core/format`       | The only code that reads or writes item frontmatter; body bytes pass through unchanged.   |
-| `core/validation`   | The nine ITEM-SPEC check groups; `checkStore` runs them over a checkout or a Git ref.     |
-| `core/identity`     | `dk-<8hex>` allocation with collision retry, LexoRank-style `[a-z]+` ranks, local dates.  |
-| `core/items`        | Mutations and queries; `transaction.mjs` is the one lock/validate/write path.             |
-| `storage`           | Revision check, temp-write/fsync/rename, per-worktree lock.                               |
-| `repository`        | Resolves checkout, `git rev-parse --git-common-dir`, reads a working tree or a Git ref.   |
-| `state/index`       | `.docket/index.json`, rebuilt from source hashes; `check` never trusts it.                |
-| `state/claims`      | `<git-common-dir>/docket-claims.json`, separate lock, expiry on read.                     |
-| `state/registry`    | `%LOCALAPPDATA%/Docket/registry.json`: aliases and paths, no items (planned).             |
-| `integration/gate`  | Promotes tested tarballs to `%LOCALAPPDATA%`; launcher runs `check --ref` per pushed tip. |
-| `tooling`           | `build` (npm pack + content check), `layout-check` (Layout homes, 800-line cap).          |
-| `viewer`            | Loopback HTTP; every edit calls the same core operations as the CLI (planned).            |
-| `importers/common`  | Spans, reversible transforms, staging, verification; apply, its journal and provenance.   |
-| `importers/evileye` | Register rows, shard segmentation, lead status, conversion; dry-run sequences the steps.  |
+| Component          | Responsibility                                                                            |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| `core/errors`      | `docketError`, the code table and exit kinds, `notFound`; the one error shape.            |
+| `core/format`      | The only code that reads or writes item frontmatter; body bytes pass through unchanged.   |
+| `core/validation`  | The nine ITEM-SPEC check groups; `checkStore` runs them over a checkout or a Git ref.     |
+| `core/identity`    | `dk-<8hex>` allocation with collision retry, LexoRank-style `[a-z]+` ranks, local dates.  |
+| `core/items`       | Mutations and queries; `transaction.mjs` is the one lock/validate/write path.             |
+| `storage`          | Revision check, temp-write/fsync/rename, per-worktree lock.                               |
+| `repository`       | Resolves checkout, `git rev-parse --git-common-dir`, reads a working tree or a Git ref.   |
+| `state/index`      | `.docket/index.json`, rebuilt from source hashes; `check` never trusts it.                |
+| `state/claims`     | `<git-common-dir>/docket-claims.json`, separate lock, expiry on read.                     |
+| `state/registry`   | `%LOCALAPPDATA%/Docket/registry.json`: aliases and paths, no items (planned).             |
+| `integration/init` | `docket init`: items dir, `docket.json`, ignore entry, agent snippet, optional gate.      |
+| `integration/gate` | Promotes tested tarballs to `%LOCALAPPDATA%`; launcher runs `check --ref` per pushed tip. |
+| `tooling`          | `build` (npm pack + content check), `layout-check` (Layout homes, 800-line cap).          |
+| `viewer`           | Loopback HTTP; every edit calls the same core operations as the CLI (planned).            |
 
 ## Size and placement rules
 
@@ -107,6 +101,6 @@ and is never edited or linted as one.
 
 - `core/items/link.mjs` may write two files (relates stored on the other side); the writes are each
   atomic but not one transaction.
-- Accepted backlog from the 2026-10-05 review is recorded as Docket items (`dk list`): split
-  `evileye/convert.mjs`, name the `apply.mjs` stages, move the import report projection out of the CLI,
-  one store-entries shape, unused schema constants, core enum validation, `tests/` grouping.
+- Accepted backlog from the 2026-10-05 review is recorded as Docket items (`dk list`): one store-entries
+  shape, unused schema constants, core enum validation, `tests/` grouping. The importer-related items were
+  dropped with the importers.

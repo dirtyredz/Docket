@@ -14,6 +14,6 @@ relates: []
 ---
 # Owner review of the EvilEye dry-run manifest
 
-Review the M2a dry-run manifest (C:/Users/dirty/projects/EvilEye/.docket/import/evileye-20261005-000159/manifest.json): priority mismatches, entries without register rows, status reviews, and the three struck-lead entries that need overrides (fill overrides.template.json, rerun with --overrides until ready is true). Also rule on the open questions in docs/BACKLOG.md "Deferred from M2a".
+Review the M2a dry-run manifest (<repo>/.docket/import/evileye-20261005-000159/manifest.json): priority mismatches, entries without register rows, status reviews, and the three struck-lead entries that need overrides (fill overrides.template.json, rerun with --overrides until ready is true). Also rule on the open questions in docs/BACKLOG.md "Deferred from M2a".
 
 Acceptance: a dry run with ready: true, approved by the owner; then M2b may apply it.

@@ -7,7 +7,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url)), A = path.join(HERE, '
 if (process.argv[2] === 'prep') {
   fs.rmSync(A, { recursive: true, force: true }); fs.mkdirSync(repo, { recursive: true });
   git(repo, 'init', '-q', '-b', 'main'); git(repo, 'config', 'user.email', 't@t'); git(repo, 'config', 'user.name', 't'); git(repo, 'config', 'core.autocrlf', 'false');
-  writeState(repo, 'items', seed()); fs.copyFileSync('C:/Users/dirty/.claude/research/bl/ITEM-SPEC.md', path.join(repo, 'ITEM-SPEC.md'));
+  writeState(repo, 'items', seed()); fs.copyFileSync('<harness>/research/bl/ITEM-SPEC.md', path.join(repo, 'ITEM-SPEC.md'));
   git(repo, 'add', '-A'); git(repo, 'commit', '-q', '-m', 'seed');
   for (const n of [1, 2]) git(repo, 'worktree', 'add', '-q', '-b', `agent-${n}`, path.join(A, `wt-${n}`), 'main');
   console.log('ready', A);
