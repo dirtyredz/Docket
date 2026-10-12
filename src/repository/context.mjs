@@ -1,7 +1,11 @@
-// Worktree and common-dir discovery. Everything that asks "which checkout is this?" goes through here.
+// Worktree and common-dir discovery, and the checkout context core operations take. Everything that asks
+// "which checkout is this?" goes through here: resolveRepo discovers the enclosing checkout (the CLI's
+// --repo), contextAtRoot accepts only an exact checkout root (headless consumers), contextFor builds the
+// context from facts a caller has already verified.
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { CODES, docketError } from "../core/errors.mjs";
+import { canonicalPath, sameKey } from "./canonical.mjs";
 import { ITEMS_DIR, toSlash } from "./paths.mjs";
 
 /** Run git and return stdout (utf8 string, or a Buffer when `encoding: "buffer"`). Throws with stderr. */
@@ -54,14 +58,46 @@ export function resolveRepo(start = ".") {
     });
   }
   const [root, gitDir, commonDir] = out.trim().split(/\r?\n/).map(toSlash);
+  return contextFor(root, commonDir, gitDir);
+}
+
+/**
+ * The checkout context core operations take, from facts the caller already holds: root and commonDir
+ * (absolute, forward-slash) and gitDir when known. No filesystem or Git access: the caller has already
+ * verified the checkout (contextAtRoot and the registered-checkout openers do).
+ */
+export function contextFor(root, commonDir, gitDir) {
   return {
     root,
-    gitDir,
+    ...(gitDir === undefined ? {} : { gitDir }),
     commonDir,
     itemsDir: `${root}/${ITEMS_DIR}`,
     docketDir: `${root}/.docket`,
     configPath: `${root}/docket.json`,
   };
+}
+
+/**
+ * The context of the checkout whose root is exactly `root`, with canonical paths. Never discovers an
+ * ancestor: a subdirectory of a checkout (or a plain folder inside one) is refused, as is a path that
+ * is not in a Git worktree. Throws DOCKET_NOT_A_REPO (details: {root, actual?}).
+ */
+export function contextAtRoot(root) {
+  let real;
+  try {
+    real = canonicalPath(root);
+  } catch {
+    throw docketError(CODES.NOT_A_REPO, `no such directory: ${root}`, { root: String(root) });
+  }
+  const found = resolveRepo(real);
+  const top = canonicalPath(found.root);
+  if (!sameKey(top, real)) {
+    throw docketError(CODES.NOT_A_REPO, `${real} is not a checkout root (root is ${top})`, {
+      root: real,
+      actual: top,
+    });
+  }
+  return contextFor(top, canonicalPath(found.commonDir), canonicalPath(found.gitDir));
 }
 
 /** Current branch name, or null when detached. */

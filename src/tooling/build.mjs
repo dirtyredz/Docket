@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Assemble the distributable: `npm pack` into dist/, then verify the tarball holds what the CLI and the
-// gate need and nothing quarantined (bootstrap, tooling, tests, items). Prints the tarball path.
+// Assemble the distributable: `npm pack` into dist/, then verify the tarball holds what the CLI, the gate
+// and headless library consumers need, and nothing quarantined (bootstrap, tooling, tests, items) or
+// removed (the 0.7.0 viewer and its rendering dependencies). Prints the tarball path.
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -10,6 +11,7 @@ import { readTarball } from "../integration/gate/tarball.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REQUIRED = [
   "package/package.json",
+  "package/README.md",
   "package/src/cli/main.mjs",
   "package/src/integration/gate/launcher.mjs",
   "package/src/integration/gate/pre-push.mjs",
@@ -18,39 +20,86 @@ const REQUIRED = [
   "package/src/cli/commands/init.mjs",
   "package/docs/MOVE-IN.md",
   "package/docs/AGENT-GUIDE.md",
+  "package/docs/LIBRARY.md",
   "package/src/cli/commands/guide.mjs",
   "package/src/integration/agent-snippet.mjs",
 ];
-// The viewer was removed in 0.7.0 (ADR-29): its dependencies must not come back with the package.
-const REMOVED_DEPENDENCIES = ["marked", "sanitize-html", "playwright"];
-// docs/MOVE-IN.md (move-in playbook) and docs/AGENT-GUIDE.md (`docket guide`) ship; every other doc
-// stays out. The removed viewer (src/viewer and its CLI command) must never ship again.
+// The viewer was removed in 0.7.0 (ADR-29): its dependencies must not come back with the package, and
+// the headless library renders nothing (Command Deck owns Markdown and sanitizing).
+export const REMOVED_DEPENDENCIES = ["marked", "sanitize-html", "playwright"];
+// docs/MOVE-IN.md (move-in playbook), docs/AGENT-GUIDE.md (`docket guide`) and docs/LIBRARY.md (the
+// library contract) ship; every other doc stays out. The removed viewer (src/viewer and its CLI command)
+// must never ship again.
 const FORBIDDEN =
-  /^package\/(src\/bootstrap|src\/tooling|src\/viewer\/|src\/cli\/commands\/viewer\.mjs$|tests|docs\/(?!(MOVE-IN|AGENT-GUIDE)\.md$))/;
+  /^package\/(src\/bootstrap|src\/tooling|src\/viewer\/|src\/cli\/commands\/viewer\.mjs$|tests|docs\/(?!(MOVE-IN|AGENT-GUIDE|LIBRARY)\.md$))/;
+// A library export names one shipped module (or package.json); no root entry, no patterns, nothing
+// quarantined or removed.
+const EXPORT_TARGET = /^\.\/(package\.json|src\/(?!bootstrap\/|tooling\/|viewer\/)[\w./-]+\.mjs)$/;
 
-const dist = path.join(ROOT, "dist");
-fs.mkdirSync(dist, { recursive: true });
-const pack = spawnSync("npm", ["pack", "--pack-destination", "dist", "--json"], {
-  cwd: ROOT,
-  encoding: "utf8",
-  shell: process.platform === "win32",
-});
-if (pack.status !== 0) {
-  console.error(pack.stderr);
-  process.exit(1);
+/**
+ * Problems with the packaged library contract: `pkg` is the PACKED package.json, `names` the tarball's
+ * entry names. The export map must exist, have no catch-all ("." or a "*" pattern) and name only shipped
+ * modules; no removed rendering dependency may be declared.
+ */
+export function libraryProblems(pkg, names) {
+  const problems = [];
+  const declared = { ...pkg.dependencies, ...pkg.devDependencies, ...pkg.optionalDependencies };
+  for (const d of REMOVED_DEPENDENCIES) {
+    if (declared[d]) problems.push(`removed dependency declared again: ${d}`);
+  }
+  const exports = pkg.exports;
+  if (!exports || typeof exports !== "object" || Array.isArray(exports)) {
+    return [...problems, "package.json has no subpath export map"];
+  }
+  for (const [subpath, target] of Object.entries(exports)) {
+    if (subpath === "." || !subpath.startsWith("./")) {
+      problems.push(`export ${subpath}: no catch-all or root entry`);
+    }
+    if (subpath.includes("*") || String(target).includes("*")) {
+      problems.push(`export ${subpath}: patterns are not allowed`);
+    }
+    if (typeof target !== "string" || !EXPORT_TARGET.test(target)) {
+      problems.push(`export ${subpath}: target must be one shipped module, got ${target}`);
+    } else if (!names.includes(`package/${target.slice(2)}`)) {
+      problems.push(`export ${subpath}: ${target} is not in the tarball`);
+    }
+  }
+  return problems;
 }
-const [{ filename }] = JSON.parse(pack.stdout);
-const tarball = path.join(dist, path.basename(filename));
-const names = readTarball(fs.readFileSync(tarball)).map((f) => f.name);
-const missing = REQUIRED.filter((r) => !names.includes(r));
-const leaked = names.filter((n) => FORBIDDEN.test(n));
-const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
-const declared = { ...pkg.dependencies, ...pkg.devDependencies, ...pkg.optionalDependencies };
-const revived = REMOVED_DEPENDENCIES.filter((d) => declared[d]);
-if (missing.length || leaked.length || revived.length) {
-  for (const m of missing) console.error(`missing from tarball: ${m}`);
-  for (const d of revived) console.error(`removed dependency declared again: ${d}`);
-  for (const l of leaked) console.error(`must not ship: ${l}`);
-  process.exit(1);
+
+/** Every problem with a tarball's entries (`entries`: readTarball output). */
+export function tarballProblems(entries) {
+  const names = entries.map((f) => f.name);
+  const problems = REQUIRED.filter((r) => !names.includes(r)).map(
+    (m) => `missing from tarball: ${m}`,
+  );
+  problems.push(...names.filter((n) => FORBIDDEN.test(n)).map((l) => `must not ship: ${l}`));
+  const packed = entries.find((f) => f.name === "package/package.json");
+  if (packed) problems.push(...libraryProblems(JSON.parse(packed.data.toString("utf8")), names));
+  return problems;
 }
-console.log(tarball);
+
+function main() {
+  const dist = path.join(ROOT, "dist");
+  fs.mkdirSync(dist, { recursive: true });
+  const pack = spawnSync("npm", ["pack", "--pack-destination", "dist", "--json"], {
+    cwd: ROOT,
+    encoding: "utf8",
+    shell: process.platform === "win32",
+  });
+  if (pack.status !== 0) {
+    console.error(pack.stderr);
+    return 1;
+  }
+  const [{ filename }] = JSON.parse(pack.stdout);
+  const tarball = path.join(dist, path.basename(filename));
+  const problems = tarballProblems(readTarball(fs.readFileSync(tarball)));
+  for (const p of problems) console.error(p);
+  if (problems.length) return 1;
+  console.log(tarball);
+  return 0;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  process.exitCode = main();
+}

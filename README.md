@@ -1,10 +1,10 @@
 # Docket
 
-Docket is a Windows 11 command-line tool for tracking work as Markdown
+Docket is a Windows 11 command-line tool and headless Node library for tracking work as Markdown
 files, one file per item, stored in the repository the work belongs to. Items branch and merge with the
 code, and every index or cache can be rebuilt from the files.
 
-**Status (0.7.0, built): CLI, gate, `docket init`, batch add, move-in playbook, repo registry, facts and notes, and the agent guide.** The item format is `docs/research/ITEM-SPEC.md`; the plan is
+**Status (0.8.0, built): CLI, gate, `docket init`, batch add, move-in playbook, repo registry, facts and notes, the agent guide, and the headless library contract.** The item format is `docs/research/ITEM-SPEC.md`; the plan is
 `docs/plans/PLAN.md`.
 
 ## Commands
@@ -38,10 +38,14 @@ docket gate promote <tarball>  /  docket gate install [--dry-run]  /  docket gat
 into both CLAUDE.md and AGENTS.md (re-running upgrades it in place; a customised section is reported for manual review;
 `--no-agent-snippet` skips both, for repos whose agent files are managed elsewhere). To move an existing backlog in, have an agent follow the `docs/MOVE-IN.md` playbook (shipped inside the installed package, under the `docket` package root).
 
-## UI
+## UI and library
 
-Command Deck owns the UI and reads Docket through `--json` output. The local viewer was removed in 0.7.0 (ADR-29):
-`docket serve` now exits with an error. Register repos with `docket repo scan C:/path/to/projects` (one line per repo and
+Command Deck owns the UI. The local viewer was removed in 0.7.0 (ADR-29): `docket serve` now exits with an error.
+Scripts read Docket through `--json` output; long-lived Node consumers (Command Deck's Docket worker) import the
+headless library instead: narrow subpath exports (`docket/items/detail`, `docket/items/link`,
+`docket/registry/source`, `docket/repository/registered-checkout`, ...) over the same core operations, with
+uncapped queries, verified checkout opening and relation revision maps. No root entry, no rendering. The full
+contract (exports, options, results, errors) is `docs/LIBRARY.md`, shipped in the package. Register repos with `docket repo scan C:/path/to/projects` (one line per repo and
 a totals line; `--verbose` lists checkout paths and skipped folders; build output such as `.next` or `dist` is never
 entered) or `docket repo add <path>`. The registry is `%LOCALAPPDATA%/Docket/registry.json` (`DOCKET_HOME` overrides).
 
@@ -65,7 +69,8 @@ docket gate promote dist/docket-<version>.tgz   # tested copy under %LOCALAPPDAT
 docket gate install --repo .                    # opt this clone's pre-push hook in
 ```
 
-Upgrade or release 0.7.0: `npm run build`, then `npm install --global C:/path/to/repo/dist/docket-0.7.0.tgz` (absolute path),
-`docket gate promote C:/path/to/repo/dist/docket-0.7.0.tgz`, and in each repo `docket init --dry-run` then `docket init` to
+Upgrade or release 0.8.0: `npm run build`, then `npm install --global C:/path/to/repo/dist/docket-0.8.0.tgz` (absolute path),
+`docket gate promote C:/path/to/repo/dist/docket-0.8.0.tgz`, and in each repo `docket init --dry-run` then `docket init` to
 upgrade the agent snippet. Check adopting repos for a prose `## Notes` section first (`dk check`). The first run after
-upgrading rebuilds the index cache.
+upgrading rebuilds the index cache. A library consumer instead vendors the tarball and installs it as a local dependency
+(`npm install ./vendor/docket/docket-0.8.0.tgz`); the package has no runtime dependencies.

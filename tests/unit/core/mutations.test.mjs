@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { after, describe, test } from "node:test";
 import { localDate } from "../../../src/core/identity/date.mjs";
 import { planAdd } from "../../../src/core/items/add.mjs";
@@ -468,5 +469,55 @@ describe("linkItem and withWritten (result shape)", () => {
       id: id(1),
       written: [],
     });
+  });
+});
+
+describe("multi-file relation writes (individually atomic, not one transaction)", () => {
+  test("a failure after the first write reports partial with the files already written", () => {
+    const { root, ctx } = setup({
+      [id(1)]: { fixes: [id(3)] },
+      [id(2)]: { rank: "b", relates: [id(1)] },
+      [id(3)]: { rank: "c", type: "bug" },
+    });
+    const beforeB = readItem(root, id(2));
+    let renames = 0;
+    const ops = {
+      rename: (from, to) => {
+        renames += 1;
+        if (renames === 2) throw Object.assign(new Error("disk gone"), { code: "EIO" });
+        fs.renameSync(from, to);
+      },
+      link: (from, to) => fs.linkSync(from, to),
+    };
+    // One edit that rewrites A (drop fixes) and B (drop the relates stored on B).
+    const change = { remove: true, fixes: [id(3)], relates: [id(2)] };
+    assert.throws(
+      () => mutateStore(ctx, (s) => planLink(s, id(1), change, {}), { ops }),
+      (err) =>
+        err.code === "EIO" &&
+        err.partial === true &&
+        err.written.length === 1 &&
+        err.written[0].id === id(1) &&
+        err.written[0].revision === readItemFile(ctx, id(1)).revision,
+    );
+    assert.deepEqual(fieldsOf(ctx, id(1)).fixes, []);
+    assert.equal(readItem(root, id(2)), beforeB, "the second file is untouched");
+  });
+
+  test("a failure on the first write is a plain failure", () => {
+    const { ctx } = setup({ [id(1)]: {}, [id(2)]: { rank: "b", relates: [id(1)] } });
+    const ops = {
+      rename: () => {
+        throw Object.assign(new Error("disk gone"), { code: "EIO" });
+      },
+      link: (from, to) => fs.linkSync(from, to),
+    };
+    assert.throws(
+      () =>
+        mutateStore(ctx, (s) => planLink(s, id(1), { remove: true, relates: [id(2)] }, {}), {
+          ops,
+        }),
+      (err) => err.code === "EIO" && err.partial === undefined && err.written === undefined,
+    );
   });
 });

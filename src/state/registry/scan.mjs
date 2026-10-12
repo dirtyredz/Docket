@@ -5,12 +5,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { canonicalPath, sameKey } from "../../repository/canonical.mjs";
 import { toSlash } from "../../repository/paths.mjs";
+import { inspectCheckout } from "../../repository/registered-checkout.mjs";
 import {
   aliasFrom,
   aliasTaken,
   createGroup,
   findRepoByCommonDir,
-  inspectCheckout,
   joinGroup,
 } from "./registration.mjs";
 

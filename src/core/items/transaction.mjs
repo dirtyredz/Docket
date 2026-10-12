@@ -61,9 +61,13 @@ export function withWritten({ value, written }, keys = ["revision", "noop"]) {
  * Run a planned mutation. plan({records, byId}) returns {writes, value}; each write is
  * {id, fields, rest, frontmatter?, expectedRevision} (expectedRevision null = must not exist yet;
  * frontmatter = the original frontmatter text to keep verbatim, checked against fields).
- * Returns {value, written: [{id, revision}]}.
+ * Returns {value, written: [{id, revision}]}. Writes run in plan order, each atomic; a plan that writes
+ * several files is not one transaction. When a later write fails after earlier ones succeeded, the
+ * failure is rethrown with `partial: true` and `written` (the files already replaced), so a caller can
+ * report the uncertain outcome instead of a clean failure. options: {lock, ops} (test seams: the lock
+ * settings, and the rename/link operations atomicWrite uses).
  */
-export function mutateStore(ctx, plan, { lock } = {}) {
+export function mutateStore(ctx, plan, { lock, ops } = {}) {
   return withLock(
     lockPathFor(ctx),
     () => {
@@ -91,12 +95,19 @@ export function mutateStore(ctx, plan, { lock } = {}) {
           { errors: introduced },
         );
       }
-      const written = outputs.map((o) => ({
-        id: o.id,
-        revision: writeItemFile(ctx, o.id, Buffer.from(o.text), {
-          expectedRevision: o.expectedRevision,
-        }),
-      }));
+      const written = [];
+      for (const o of outputs) {
+        try {
+          const revision = writeItemFile(ctx, o.id, Buffer.from(o.text), {
+            expectedRevision: o.expectedRevision,
+            ops,
+          });
+          written.push({ id: o.id, revision });
+        } catch (err) {
+          if (written.length) Object.assign(err, { partial: true, written: [...written] });
+          throw err;
+        }
+      }
       return { value, written };
     },
     lock,

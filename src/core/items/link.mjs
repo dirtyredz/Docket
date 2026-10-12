@@ -2,18 +2,23 @@
 // queries but stored once: adding A relates B when B already relates A is a no-op, and removing it
 // edits whichever file holds it.
 import { LIST_KEYS } from "../format/schema.mjs";
-import { assertRevision } from "./revisions.mjs";
+import { assertRevision, assertRevisions, selectedExpectation } from "./revisions.mjs";
 import { editableRecord, mutateStore, withWritten } from "./transaction.mjs";
 
 /**
  * Plan a link. change: {parent?, clearParent?, remove?, fixes?, blocked_by?, relates?} where the list
  * keys hold target IDs. Returns a transaction plan result; value.changes lists what actually changed.
- * options: {expect?: revision of `id` (checked even for a no-op)}. Reverse-stored relates holders are
- * written against the revision just read inside the lock.
+ * options: {expect?: revision of `id`, expectRevisions?: {id: revision}} (relationsView().revisions).
+ * The selected item is checked even for a no-op. With expectRevisions, it must hold the selected item
+ * (agreeing with `expect` when both are given) and every other item the edit actually rewrites (a
+ * reverse-stored relates removal); a missing entry is DOCKET_USAGE, a stale one DOCKET_CONFLICT, and all
+ * checks run before any write. Without it, reverse-stored holders are written against the revision just
+ * read inside the lock (the CLI behaviour).
  */
-export function planLink({ byId }, id, change, { expect } = {}) {
+export function planLink({ byId }, id, change, { expect, expectRevisions } = {}) {
   const rec = editableRecord(byId, id);
-  assertRevision(rec, expect);
+  const expected = selectedExpectation(id, expect, expectRevisions);
+  assertRevision(rec, expected);
   const own = {
     ...rec.fields,
     fixes: [...rec.fields.fixes],
@@ -60,10 +65,11 @@ export function planLink({ byId }, id, change, { expect } = {}) {
     }
   }
 
+  assertRevisions(byId, [...others.keys()], expectRevisions);
   const writes = [];
   const ownChanged = changes.some((c) => !c.storedOn);
   if (ownChanged)
-    writes.push({ id, fields: own, rest: rec.rest, expectedRevision: expect ?? rec.revision });
+    writes.push({ id, fields: own, rest: rec.rest, expectedRevision: expected ?? rec.revision });
   for (const [otherId, { rec: orec, fields }] of others) {
     writes.push({ id: otherId, fields, rest: orec.rest, expectedRevision: orec.revision });
   }
@@ -71,7 +77,9 @@ export function planLink({ byId }, id, change, { expect } = {}) {
 }
 
 /**
- * Apply a link (the operation behind `link`). change and options as planLink. Returns {id, changes, fields, written}: written lists every rewritten {id, revision}.
+ * Apply a link (the operation behind `link` and headless relation edits). change and options as
+ * planLink. Returns {id, changes, fields, written}: written lists every rewritten {id, revision}. The
+ * files are each written atomically, not as one transaction: see mutateStore for a partial write.
  */
 export function linkItem(ctx, id, change, options = {}) {
   return withWritten(

@@ -1,4 +1,4 @@
-// The full read model of one item (`show`): fields, derived blocked, reverse
+// The full read model of one item (`show`, a headless detail view): fields, derived blocked, reverse
 // relations, claim, facts body and discussion notes. The selected item is parsed from freshly read bytes,
 // so fields, title, body, notes, errors and revision always describe the same file; the caller's index records supply only the
 // surrounding items (for reverse relations and blocker statuses). Claims are a dependency
