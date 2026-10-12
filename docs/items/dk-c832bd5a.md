@@ -2,7 +2,7 @@
 id: dk-c832bd5a
 type: task
 created: 2026-10-12
-status: todo
+status: done
 since: 2026-10-12
 area: packaging
 priority: P1
