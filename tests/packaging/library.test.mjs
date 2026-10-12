@@ -15,7 +15,10 @@ import { appData, docketRepo } from "../helpers/registry.mjs";
 const win = process.platform === "win32";
 const npm = (args, cwd) => spawnSync("npm", args, { cwd, encoding: "utf8", shell: win });
 
-/** The supported names per subpath: the contract docs/LIBRARY.md documents. Other names are internal. */
+/**
+ * The supported names per subpath: the contract docs/LIBRARY.md documents. Other names are internal and
+ * unreachable: each subpath resolves to a facade in src/library/ that re-exports only these.
+ */
 const CONTRACT = {
   "docket/package.json": [],
   "docket/errors": ["CODES", "KIND_OF_CODE"],
@@ -244,7 +247,9 @@ test("an installed consumer reaches every documented name and nothing internal",
   assert.deepEqual(installed, ["docket"], "no sibling or rendering dependency is installed");
   const { names, refused } = run(PROBE, [JSON.stringify(CONTRACT)]);
   for (const [spec, wanted] of Object.entries(CONTRACT)) {
-    for (const name of wanted) assert.ok(names[spec].includes(name), `${spec} exports ${name}`);
+    // The exact namespace: no extra (unsupported) and no missing name. A JSON import is only `default`.
+    const expected = spec.endsWith(".json") ? ["default"] : [...wanted].sort();
+    assert.deepEqual([...names[spec]].sort(), expected, `${spec} exports exactly the contract`);
   }
   for (const [spec, code] of Object.entries(refused)) {
     assert.equal(code, "ERR_PACKAGE_PATH_NOT_EXPORTED", spec);

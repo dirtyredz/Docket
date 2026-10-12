@@ -43,9 +43,9 @@ integration/init  -->  repository, storage, integration/gate (install)
   and the index reach core operations as arguments (`setItem`, `readItem`), so core stays free of the
   coordination stores.
 - `cli` is a thin adapter over `core/items` operations; business rules never live in it. Command Deck (external)
-  reaches Docket through CLI JSON output and the headless library: `package.json` `exports` names the supported
-  modules (no root entry, no patterns; contract in `docs/LIBRARY.md`, ADR-30). An exported module is a public
-  contract: change its listed names only with a minor-version bump.
+  reaches Docket through CLI JSON output and the headless library: `package.json` `exports` names the `library/`
+  facades (no root entry, no patterns; contract in `docs/LIBRARY.md`, ADR-30). A facade re-exports only the
+  documented names, so implementation modules stay private; change a listed name only with a minor-version bump.
 - `integration/gate` validates through core `checkStore`, never through `cli`.
 - `core/errors.mjs` is a leaf (no imports) that every layer may use.
 - `src/bootstrap/` is quarantined historical code; production code never imports it.
@@ -61,6 +61,10 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `src/core/items/content/` — body replacement and note lifecycle (append, resolve): the content operations behind `set --body-file` and `note`
 - `src/storage/` — content revisions, atomic write, lock, item store
 - `src/repository/` — worktree and common-dir discovery and explicit-root contexts, `docket.json`, working-tree or Git-tree snapshot, path identity, canonical real paths, containment and the checkout guard, checkout identity and verified opening (`registered-checkout.mjs`)
+- `src/library/` — public facades for the headless library (ADR-30, `docs/LIBRARY.md`): one re-export-only module per `package.json` `exports` subpath, naming exactly the documented names (errors, schema, date, claims); no logic
+- `src/library/items/` — facades for `docket/items/*` (index, query, detail, relations, set, body, notes, link)
+- `src/library/repository/` — facades for `docket/repository/*` (context, canonical, containment, registered-checkout)
+- `src/library/registry/` — facades for `docket/registry/*` (paths, source)
 - `src/state/claims/` — common-dir advisory claims store
 - `src/state/index/` — rebuildable per-worktree JSON cache
 - `src/state/registry/` — per-machine repo registry: identity, registration, one-shot scan, the last-good source with forced refresh and strict id lookup (`source.mjs`), document-location overrides (stored, validated metadata only)
