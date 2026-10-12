@@ -1,7 +1,27 @@
 # DECISIONS
 
-ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-28 are 2026-10-05; ADR-29 is 2026-10-11.
+ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-28 are 2026-10-05; ADR-29 is 2026-10-11; ADR-30 is 2026-10-12.
 Evidence paths are relative to `docs/research/`.
+
+## ADR-30: Headless library contract for Command Deck (extends ADR-29)
+
+- **Context:** Command Deck's Docket pages need complete queries, fresh detail, conflict-safe relation edits and
+  verified registry/checkout scope. `dk --json` caps `list` at 500 and cannot express a relation revision map,
+  and a process per request is too slow for a long-lived UI worker.
+- **Decision:** 0.8.0 ships narrow subpath exports over the existing core operations (`docs/LIBRARY.md`; no root
+  entry, no patterns, only listed names supported). ADR-29's removed headless pieces return as library
+  capabilities, not as a viewer: `relationsView` and `linkItem`'s `expectRevisions` (the selected item plus the
+  reverse-stored holders an edit actually rewrites, checked under the store lock before any write), explicit-root
+  contexts (`contextAtRoot`, `openCheckoutAt`: no ancestor discovery), the containment guard, registered-checkout
+  opening with an identity-keyed verification cache, and a last-good registry source with forced refresh. Docket
+  still renders nothing.
+- **Rejected:** CLI JSON only (capped, no revision maps); a catch-all export (makes every internal a contract);
+  restoring a Markdown export (Command Deck sanitizes; Docket keeps no rendering dependency); worktree
+  enumeration (not needed: Command Deck addresses registered checkouts only).
+- **Consequences:** ADR-29 stands for the UI and its dependencies; the build still refuses viewer files and
+  `marked`, `sanitize-html`, `playwright`. A breaking change to a listed export bumps the 0.x minor.
+- **Evidence:** `tests/packaging/library.test.mjs` (installed-tarball imports, refused internals, end-to-end
+  flow), `tests/unit/repository/`, `tests/unit/core/relations-view.test.mjs`, `revisions.test.mjs`.
 
 ## ADR-29: Viewer and HTTP API removed; Command Deck owns the UI
 
@@ -15,7 +35,8 @@ Evidence paths are relative to `docs/research/`.
 - **Rejected:** deprecate-then-remove (keeps a redundant UI and API alive, with its security boundary, browser
   tests and Markdown dependencies, for no user).
 - **Consequences:** `marked`, `sanitize-html` and `playwright` are dropped. Viewer-only core is deleted: the
-  relations read model, revision maps on `link`, worktree enumeration and real-path containment checks.
+  relations read model, revision maps on `link`, worktree enumeration and real-path containment checks
+  (all but worktree enumeration returned in 0.8.0 as headless library capabilities, ADR-30).
   Registry document overrides (`repo add --doc`) stay as stored, validated metadata, avoiding a CLI break and a
   registry migration. Scalar revision checks (`--expect`) stay.
 - **Evidence:** owner decision 2026-10-11; `tests/packaging/cli.test.mjs` (serve error, no viewer files or deps).
@@ -130,19 +151,7 @@ Evidence paths are relative to `docs/research/`.
 - **Rejected:** whole-file rule (punishes ordinary Markdown); no file-wide line-ending rule.
 - **Evidence:** `tests/unit/core/conformance.test.mjs` pins this and every other prototype difference.
 
-## ADR-15: Gate opt-in is local git config, read by the managed template
-
-- **Context:** M1c needs a per-repo switch in a template shared by every gated repo, and un-opted repos
-  must behave exactly as before.
-- **Decision:** `docket gate install` writes `docket.gateLauncher` / `docket.gateNode` to the clone's
-  local git config (shared by its linked worktrees). The template branches on that key only; without it
-  the hook runs its old steps unchanged. The launcher contract (`<entry> --repo <root> --pre-push`,
-  refs on stdin) also carried the bootstrap checker, so the template change landed in M0, not M1c.
-- **Rejected:** a committed flag in `docket.json` (a fresh clone has no installed gate to run); appending
-  a call to installed hooks (hook-sync replaces managed hooks from the template); a Docket-owned
-  `core.hooksPath` (clobbers the first adopter's wrapper).
-- **Evidence:** `tests/integration/pre-push.test.mjs` "un-opted repos behave exactly as before" runs the
-  pre-change template from the harness repo's HEAD against the new one in six scenarios.
+> ADR-15 (gate opt-in in local git config) moved to `records/decisions/2026-10.md`.
 
 > ADRs 13 and 14 (Node 22, CLI output contract) moved to `records/decisions/2026-10.md`.
 

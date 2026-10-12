@@ -41,3 +41,5 @@ earns its own item. Everything else (other backlog shapes, cross-machine claims,
 **M6 - Facts and notes.** (built 2026-10-05, 0.6.0, unpushed) Body as facts plus untrusted Notes, `dk note`, `set --body-file`, managed agent snippet, `docket guide`. Release steps are in the README.
 
 **M7 - Viewer removed.** (built 2026-10-11, 0.7.0) `docket serve`, its HTTP API, `marked`, `sanitize-html` and Playwright removed; `tests/packaging/cli.test.mjs` covers the installed CLI.
+
+**M8 - Headless library.** (built 2026-10-12, 0.8.0) Narrow subpath exports for Command Deck's Docket worker (ADR-30, `docs/LIBRARY.md`): relation revision maps, exact-root and registered checkout opening, containment, last-good registry; `tests/packaging/library.test.mjs` covers the installed tarball.

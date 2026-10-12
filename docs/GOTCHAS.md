@@ -51,7 +51,7 @@ Non-obvious traps, from `plans/PLAN.md` sections 6 and 7, the merge test, and bu
 - **`git push` from GUI clients may lack `node` on PATH.** The gate records `docket.gateNode` (an
   absolute node path) at install; re-run `docket gate install` after moving Node.
 - **`list` is bounded at 500.** Tools that need every item page by priority, then status, and fail loudly if
-  a slice still truncates.
+  a slice still truncates. The library's `listItems` is uncapped (the cap is the CLI's).
 - **Spawn Docket as `node <main.mjs>`, not `docket.cmd`.** Node refuses to spawn `.cmd` files without a shell;
   adapters find `node_modules/docket/src/cli/main.mjs` beside the `docket` launcher on PATH, or `DOCKET_CLI`.
 - **`init` leaves an empty `docs/items/`.** Git does not track empty directories; the folder appears in the
@@ -91,3 +91,16 @@ Non-obvious traps, from `plans/PLAN.md` sections 6 and 7, the merge test, and bu
 - **Adopting repos: a pre-existing `## Notes` section becomes Notes.** Prose there fails check group 10. Look for it
   (`dk check`) before upgrading, and rename or fence it.
 - **Index v2 rebuilds on first run.** Older caches are discarded and rebuilt; nothing to migrate.
+- **Core revisions are optional; a UI's must not be.** `expect` and `expectRevisions` may be omitted (the CLI
+  relies on that) and then nothing is checked. A library consumer that edits on the owner's behalf must always
+  send them; Docket cannot tell a deliberate omission from a bug.
+- **A relation revision map covers holders, not targets.** `relationsView().revisions` holds the selected item and
+  the reverse-stored `relates` holders only; a removal from the other side rewrites the holder. Send the whole map:
+  a missing entry for a file the edit rewrites is `DOCKET_USAGE`, never a blind write.
+- **Pass the displayed detail to `relationsView`.** Called separately after `readItem`, it reads the file again and
+  can describe newer bytes than the screen shows; `{detail: data}` ties the map to what is on display.
+- **`inspectCheckout` climbs to the enclosing root; `openCheckoutAt` does not.** Registry `repo add` accepts a
+  subdirectory; a headless project scope must use `openCheckoutAt` (exact root) so a folder inside a checkout
+  never opens its parent's items.
+- **Registered-checkout reads are cached for 5 s.** Pass `{fresh: true}` before every mutation. The containment
+  guard still runs on every open.

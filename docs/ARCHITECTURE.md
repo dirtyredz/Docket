@@ -1,7 +1,7 @@
 # ARCHITECTURE
 
 How Docket works. Code map is in `../STRUCTURE.md`; reasons are in `DECISIONS.md`. Status: M0 to M3b
-and M6 implemented (CLI, core, storage, index, claims, gate, init, registry; 0.7.0). Authority: `plans/PLAN.md` and `research/ITEM-SPEC.md`. The viewer was removed in 0.7.0 (ADR-29).
+and M6 implemented (CLI, core, storage, index, claims, gate, init, registry, headless library; 0.8.0). Authority: `plans/PLAN.md` and `research/ITEM-SPEC.md`. The viewer was removed in 0.7.0 (ADR-29); the headless library contract is ADR-30.
 
 ## Truth and caches
 
@@ -42,7 +42,10 @@ Every mutation: take the per-worktree lock, load the item, apply the change in c
 candidate graph, serialize canonically, reparse the output, compare the expected revision, then
 temp-write, fsync, rename. Body bytes are untouched. A stale expected revision returns a structured
 conflict (CLI, exit 3). `add` never overwrites an existing destination and retries ID
-collisions. Only cooperating Docket writers lock; an external editor can still race between revision
+collisions. A relation edit may rewrite a second file (a `relates` edge stored on the other item); with a revision
+map (`expectRevisions`) the selected item and every other file it rewrites are checked before the first write.
+The files are written one by one, each atomically: a failure after the first write is rethrown with `partial` and
+`written`. Only cooperating Docket writers lock; an external editor can still race between revision
 check and rename (see GOTCHAS).
 
 The lock is `.docket/items.lock` (exclusive create, `{pid, at, token}`). A waiter breaks a lock only
@@ -113,7 +116,13 @@ through an agent following `MOVE-IN.md` with the ordinary `dk add` / `dk set` co
 ## External interfaces
 
 CLI with `--repo` and bounded `--json` (no MCP). **Command Deck is the UI** (ADR-29): a separate app outside
-this repo that talks to Docket through the CLI JSON output contract and core operations. Docket has no HTTP
+this repo that talks to Docket through the CLI JSON output contract and, from 0.8.0, the **headless library**
+(ADR-30, `docs/LIBRARY.md`): narrow `package.json` subpath exports over core operations, run in Command Deck's
+long-lived worker. Scope comes from two openers in `repository/registered-checkout.mjs`: `openCheckoutAt` (an
+exact checkout root, never an ancestor) and the registered-checkout opener (Git identity re-verified, cached
+for reads by repo id, checkout id, path and common dir; every mutation re-verifies). Both run the containment
+guard (no linked or escaping item storage). `state/registry/source.mjs` serves the last good registry with a
+visible error and supports a forced refresh. Docket renders nothing; Command Deck owns Markdown and sanitizing. Docket has no HTTP
 server; `docket serve` only reports its removal (exit 2). Git pre-push hook via the managed template's opt-in
 Docket callback. Repo-specific adapters (legacy-writer retirement, documentation checkers) live in the
 adopting repo, not here.
