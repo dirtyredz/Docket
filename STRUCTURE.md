@@ -12,14 +12,20 @@ Last full review: 2026-10-05
 ```
 src/
   bootstrap/            quarantined recovered validator (not shipped)
-  cli/                  main, args, output, report, help (overview + per-command), input        commands/  one adapter per command family (incl. guide)
-  core/                 errors.mjs                  format/ validation/ identity/ items/ (content/)
+  cli/                  main, args, output, report, help (overview + per-command), input
+    commands/           one adapter per command family (incl. guide)
+      items/            one adapter per item command
+  core/                 errors.mjs                  format/ validation/ identity/ items/
+    items/content/      body replacement and note lifecycle
   integration/          agent snippet (versioned), init         gate/  promote, smoke, install, launcher, pre-push
   repository/           checkout facts: context, config, snapshot, paths, canonical, containment, registered-checkout
   state/                claims/  index/  registry/
   storage/              atomic write, lock, item store, revisions
   tooling/              build, layout-check
-tests/                  unit/ (format core storage repository state cli)  integration/ packaging/  helpers/ fixtures/
+tests/
+  unit/                 format core storage repository state cli
+    state/registry/     registry suites (beside claims, index)
+  integration/ packaging/ helpers/ fixtures/
 docs/                   living docs, LIBRARY.md (shipped contract), items/, plans/ (frozen), records/, research/ (frozen)
 ```
 
@@ -51,7 +57,7 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `src/core/format/` — schema constants, strict parser, canonical serializer, round-trip guard and the content grammar (body/Notes boundaries, note header and ref rules)
 - `src/core/validation/` — item checks, relation graph integrity, warnings, check orchestration, `checkStore`
 - `src/core/identity/` — random ID allocation, fractional rank, local-date rules
-- `src/core/items/` — add, batch add, set (with claim release on completion), link and `linkItem` (with revision maps), query, detail, the relations view, revision preconditions and the shared mutation transaction with its `withWritten` result helper
+- `src/core/items/` — add, batch add, set (with claim release on completion), complete, link and `linkItem` (with revision maps), query, detail, the relations view, revision preconditions and the shared mutation transaction with its `withWritten` result helper
 - `src/core/items/content/` — body replacement and note lifecycle (append, resolve): the content operations behind `set --body-file` and `note`
 - `src/storage/` — content revisions, atomic write, lock, item store
 - `src/repository/` — worktree and common-dir discovery and explicit-root contexts, `docket.json`, working-tree or Git-tree snapshot, path identity, canonical real paths, containment and the checkout guard, checkout identity and verified opening (`registered-checkout.mjs`)

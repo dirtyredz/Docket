@@ -11,3 +11,6 @@ dist/
 # Codex job artifacts
 *.events.jsonl
 *.job.json
+
+# Claude Code worktrees
+.claude/worktrees/

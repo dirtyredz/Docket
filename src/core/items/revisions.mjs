@@ -3,6 +3,8 @@
 // They run inside the mutation lock, on the records just read, before anything is planned, so a stale
 // caller is refused even when its change would be a no-op, and a multi-file relation edit is refused
 // before its first write.
+// Split: revision preconditions live here; record-editability checks (`editableRecord`,
+// `editableContent`) live in transaction.mjs.
 import { CODES, docketError } from "../errors.mjs";
 
 const conflict = (id, expected, actual) =>
