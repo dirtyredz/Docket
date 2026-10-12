@@ -18,6 +18,7 @@ src/
   core/                 errors.mjs                  format/ validation/ identity/ items/
     items/content/      body replacement and note lifecycle
   integration/          agent snippet (versioned), init         gate/  promote, smoke, install, launcher, pre-push
+  library/              public re-export facades, one per exports subpath (items/ repository/ registry/)
   repository/           checkout facts: context, config, snapshot, paths, canonical, containment, registered-checkout
   state/                claims/  index/  registry/
   storage/              atomic write, lock, item store, revisions
@@ -35,6 +36,7 @@ docs/                   living docs, LIBRARY.md (shipped contract), items/, plan
 CLI  -->  core  -->  repository, storage
 CLI  -->  state (index, claims, registry), repository
 state, integration  -->  core
+library  -->  core, state, repository (re-export only)
 state/registry  -->  repository (registered-checkout: identity and availability)
 integration/init  -->  repository, storage, integration/gate (install)
 ```
@@ -97,6 +99,7 @@ the raw runs behind it (frozen historical evidence). It is not a code home and i
 | `core/validation`  | The ten ITEM-SPEC check groups; `checkStore` runs them over a checkout or a Git ref.                                                    |
 | `core/identity`    | `dk-<8hex>` allocation with collision retry, LexoRank-style `[a-z]+` ranks, local dates.                                                |
 | `core/items`       | Mutations (incl. `batch` add, `content/` body and notes), queries and the relations view; `transaction.mjs` is the one lock/write path. |
+| `library`          | Re-export-only facades behind the `package.json` `exports` map; name exactly the `docs/LIBRARY.md` names, no logic.                     |
 | `storage`          | Revision check, temp-write/fsync/rename, per-worktree lock.                                                                             |
 | `repository`       | Checkout, Git common dir, tree or ref reads; canonical real paths, containment; exact-root and registered openers.                      |
 | `state/index`      | `.docket/index.json` (v2, open-note count only), rebuilt from source hashes; `check` never trusts it.                                   |

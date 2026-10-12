@@ -16,35 +16,29 @@ const win = process.platform === "win32";
 const npm = (args, cwd) => spawnSync("npm", args, { cwd, encoding: "utf8", shell: win });
 
 /**
- * The supported names per subpath: the contract docs/LIBRARY.md documents. Other names are internal and
- * unreachable: each subpath resolves to a facade in src/library/ that re-exports only these.
+ * The supported names per subpath, parsed from the `## Exports` table in docs/LIBRARY.md (the single
+ * source); each subpath resolves to a src/library/ facade that must re-export exactly these. Per row: drop
+ * parenthetical prose, then take each backticked bare identifier (result shapes like `{a, b}` do not match)
+ * with its call signature stripped. `docket/package.json` (a JSON import, `version` only) is explicit.
  */
-const CONTRACT = {
-  "docket/package.json": [],
-  "docket/errors": ["CODES", "KIND_OF_CODE"],
-  "docket/schema": ["ENUMS", "ID_RE", "RELATION_KEYS", "CLOSED_STATUSES"],
-  "docket/date": ["localDate"],
-  "docket/items/index": ["loadIndex"],
-  "docket/items/query": ["listItems", "compareItems", "countBy", "COUNT_FIELDS"],
-  "docket/items/detail": ["readItem"],
-  "docket/items/relations": ["relationsView"],
-  "docket/items/set": ["setItem"],
-  "docket/items/body": ["replaceBody"],
-  "docket/items/notes": ["addNote", "resolveNote"],
-  "docket/items/link": ["linkItem"],
-  "docket/claims": ["readClaims", "releaseItem"],
-  "docket/repository/context": ["contextFor", "contextAtRoot"],
-  "docket/repository/canonical": ["canonicalPath", "pathKey", "sameKey"],
-  "docket/repository/containment": ["assertSafeCheckout"],
-  "docket/repository/registered-checkout": [
-    "inspectCheckout",
-    "unavailableReason",
-    "openCheckoutAt",
-    "createCheckoutOpener",
-  ],
-  "docket/registry/paths": ["registryPath"],
-  "docket/registry/source": ["createRegistrySource", "findCheckout"],
-};
+function parseContract(markdown) {
+  const section = markdown.split(/^## Exports\s*$/m)[1]?.split(/^## /m)[0];
+  assert.ok(section, "docs/LIBRARY.md has an `## Exports` section");
+  const contract = { "docket/package.json": [] };
+  for (const line of section.split("\n")) {
+    const cells = line.split("|").map((c) => c.trim());
+    const spec = /^`(docket\/[^`]+)`$/.exec(cells[1] ?? "")?.[1];
+    if (!spec || spec === "docket/package.json") continue;
+    const left = (cells[2] ?? "").replace(/\s\([^)]*\)/g, "");
+    const names = [...left.matchAll(/`([A-Za-z_$][\w$]*)(?:\([^`]*\))?`/g)].map((m) => m[1]);
+    assert.ok(names.length > 0, `LIBRARY.md Exports row for ${spec} yields no names`);
+    contract[spec] = names;
+  }
+  assert.ok(Object.keys(contract).length > 1, "LIBRARY.md Exports table parsed no subpaths");
+  return contract;
+}
+
+const CONTRACT = parseContract(fs.readFileSync(path.join(ROOT, "docs", "LIBRARY.md"), "utf8"));
 
 // Run inside the consumer directory, so bare `docket/...` specifiers resolve from its node_modules.
 const PROBE = `
@@ -206,12 +200,11 @@ test("the tarball passes the build's checks: export map, contract doc, no viewer
   assert.deepEqual(Object.keys(pkg.dependencies ?? {}), [], "the library has no runtime deps");
 });
 
-test("the documented contract names every export", () => {
+test("the contract table documents the package.json row and parses real names", () => {
   const doc = fs.readFileSync(path.join(ROOT, "docs", "LIBRARY.md"), "utf8");
-  for (const [spec, names] of Object.entries(CONTRACT)) {
-    assert.ok(doc.includes(`\`${spec}\``), `LIBRARY.md documents ${spec}`);
-    for (const name of names) assert.ok(doc.includes(name), `LIBRARY.md documents ${name}`);
-  }
+  assert.ok(doc.includes("`docket/package.json`"), "LIBRARY.md documents docket/package.json");
+  assert.deepEqual(CONTRACT["docket/claims"], ["readClaims", "releaseItem"]);
+  assert.deepEqual(CONTRACT["docket/date"], ["localDate"]);
 });
 
 test("build checks catch a catch-all, a pattern, a bad target and a revived dependency", () => {

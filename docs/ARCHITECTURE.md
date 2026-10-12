@@ -117,7 +117,7 @@ through an agent following `MOVE-IN.md` with the ordinary `dk add` / `dk set` co
 
 CLI with `--repo` and bounded `--json` (no MCP). **Command Deck is the UI** (ADR-29): a separate app outside
 this repo that talks to Docket through the CLI JSON output contract and, from 0.8.0, the **headless library**
-(ADR-30, `docs/LIBRARY.md`): narrow `package.json` subpath exports over core operations, run in Command Deck's
+(ADR-30, `docs/LIBRARY.md`): narrow `package.json` subpath exports, each a re-export-only facade in `src/library/` over core operations, run in Command Deck's
 long-lived worker. Scope comes from two openers in `repository/registered-checkout.mjs`: `openCheckoutAt` (an
 exact checkout root, never an ancestor) and the registered-checkout opener (Git identity re-verified, cached
 for reads by repo id, checkout id, path and common dir; every mutation re-verifies). Both run the containment

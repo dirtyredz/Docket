@@ -14,8 +14,8 @@ Evidence paths are relative to `docs/research/`.
   reverse-stored holders an edit actually rewrites, checked under the store lock before any write), explicit-root
   contexts (`contextAtRoot`, `openCheckoutAt`: no ancestor discovery), the containment guard, registered-checkout
   opening with an identity-keyed verification cache, and a last-good registry source with forced refresh. Docket
-  still renders nothing.
-- **Rejected:** CLI JSON only (capped, no revision maps); a catch-all export (makes every internal a contract);
+  still renders nothing. Exports target re-export-only facades in `src/library/`, never implementation modules.
+- **Rejected:** CLI JSON only (capped, no revision maps); exports mapped at implementation modules (other names stay reachable); a catch-all export (makes every internal a contract);
   restoring a Markdown export (Command Deck sanitizes; Docket keeps no rendering dependency); worktree
   enumeration (not needed: Command Deck addresses registered checkouts only).
 - **Consequences:** ADR-29 stands for the UI and its dependencies; the build still refuses viewer files and
