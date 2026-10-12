@@ -2,8 +2,8 @@
 id: dk-45bf8a5a
 type: task
 created: 2026-10-05
-status: todo
-since: 2026-10-05
+status: dropped
+since: 2026-10-11
 area: structure
 priority: P2
 rank: zzzzzw

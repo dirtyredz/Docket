@@ -180,3 +180,59 @@ describe("global flags", () => {
     assert.equal(runCli(["check", "--ref", "HEAD", "--repo", r.root]).status, 1);
   });
 });
+
+describe("retired serve (0.7.0, ADR-29)", () => {
+  const MESSAGE = "docket serve was removed in 0.7.0 — use Command Deck for the UI.";
+  const outside = () => fs.mkdtempSync(path.join(os.tmpdir(), "docket no repo "));
+
+  test("human: empty stdout, the removal message on stderr, exit 2", () => {
+    for (const args of [
+      ["serve"],
+      ["serve", "--port", "8080"],
+      ["serve", "--help"],
+      ["serve", "-h"],
+      ["help", "serve"],
+    ]) {
+      const out = runCli(args);
+      assert.equal(out.status, 2, args.join(" "));
+      assert.equal(out.stdout, "", args.join(" "));
+      assert.equal(out.stderr, `docket serve: ${MESSAGE}\n`, args.join(" "));
+    }
+  });
+
+  test("json: one failure envelope with DOCKET_USAGE and empty stderr", () => {
+    for (const args of [
+      ["serve", "--json"],
+      ["serve", "--port", "0", "--json"],
+    ]) {
+      const out = runCli(args);
+      assert.equal(out.status, 2);
+      assert.equal(out.stderr, "");
+      assert.equal(out.stdout.trimEnd().split("\n").length, 1);
+      assert.deepEqual(out.json, {
+        ok: false,
+        command: "serve",
+        error: { code: "DOCKET_USAGE", message: MESSAGE },
+      });
+    }
+  });
+
+  test("needs no repository and starts nothing", () => {
+    const dir = outside();
+    try {
+      const out = runCli(["serve", "--json"], { cwd: dir, env: { DOCKET_HOME: dir } });
+      assert.equal(out.status, 2);
+      assert.equal(out.json.error.message, MESSAGE);
+      assert.deepEqual(fs.readdirSync(dir), [], "no registry or state written");
+      assert.doesNotMatch(out.stdout + out.stderr, /http:|at .*\.mjs/);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("other unknown commands keep the generic usage error", () => {
+    const out = runCli(["frobnicate", "--json"]);
+    assert.equal(out.status, 2);
+    assert.match(out.json.error.message, /unknown command "frobnicate"/);
+  });
+});

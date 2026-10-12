@@ -76,13 +76,8 @@ Non-obvious traps, from `plans/PLAN.md` sections 6 and 7, the merge test, and bu
 - **`--dry-run` still reads the gate.** `init --gate --dry-run` and `gate install --dry-run` fail if no gate is
   promoted or the hook template is missing, exactly as the real run would.
 - **Unavailable registrations are listed, never pruned.** `repo remove` is the only way out.
-- **Duplicate doc locations** (repo root and `docs/`): root wins unless a `--doc` override says otherwise; both reported.
-- **Viewer writes go to the selected checkout only.** Switching checkouts changes the edit target; the overview counts the preferred checkout.
-- **Claims shown in the viewer are advisory and per clone.**
-- **The external-editor race applies to viewer and content saves too.** The revision check narrows it, does not close it.
-- **A 409 keeps the browser draft; drafts live only in the open tab.** Reload or close prompts and loses them.
-- **Viewer Markdown deps are lazy.** A gate-promoted copy has no `node_modules`; never import `src/viewer/server` from the gate or CLI paths.
-- **`docket serve` writes each checkout's `.docket/index.json` cache**, as `dk list` does.
+- **Document overrides are metadata only.** `repo add --doc NAME=rel.md` is stored and validated, shown by `repo list`; Docket renders nothing from it and promises no precedence.
+- **The external-editor race applies to CLI content saves too** (`set --body-file`, `note`). The revision check narrows it, does not close it.
 - **Reserved Notes lines.** Outside fenced code, a column-zero `## Notes` line starts the Notes section, a body line
   shaped like a note header (`### <ref> · open|resolved · owner|agent`) is an error, and inside Notes any `#`/`##`
   heading is. Fence or escape literal examples.
@@ -96,5 +91,3 @@ Non-obvious traps, from `plans/PLAN.md` sections 6 and 7, the merge test, and bu
 - **Adopting repos: a pre-existing `## Notes` section becomes Notes.** Prose there fails check group 10. Look for it
   (`dk check`) before upgrading, and rename or fence it.
 - **Index v2 rebuilds on first run.** Older caches are discarded and rebuilt; nothing to migrate.
-- **Playwright e2e** uses Playwright's Chromium if installed, else system Edge/Chrome (the Chromium download failed on this
-  machine on 2026-10-05); the test skips only if no browser starts.

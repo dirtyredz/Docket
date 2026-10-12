@@ -16,9 +16,13 @@ import { note } from "./commands/items/notes.mjs";
 import { set } from "./commands/items/set.mjs";
 import { show } from "./commands/items/show.mjs";
 import { repo } from "./commands/registry.mjs";
-import { serve } from "./commands/viewer.mjs";
 import { init } from "./commands/init.mjs";
 import * as validation from "./commands/validation.mjs";
+
+// Commands that no longer exist but get a specific explanation instead of "unknown command".
+const RETIRED = {
+  serve: "docket serve was removed in 0.7.0 — use Command Deck for the UI.",
+};
 
 const COMMANDS = {
   check: validation.check,
@@ -33,7 +37,6 @@ const COMMANDS = {
   release: coordination.release,
   gate: gate.gate,
   repo,
-  serve,
   init,
   guide,
 };
@@ -45,6 +48,10 @@ export function packageVersion() {
 
 export async function runCli(argv, io) {
   const [command, ...rest] = argv;
+  const retired = command === "help" ? rest[0] : command;
+  if (retired && Object.hasOwn(RETIRED, retired)) {
+    return emitError(io, retired, usageError(RETIRED[retired]), rest.includes("--json"));
+  }
   if (command === "--version" || command === "-v") {
     io.stdout.write(`${packageVersion()}\n`);
     return EXIT.ok;

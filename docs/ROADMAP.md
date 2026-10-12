@@ -33,15 +33,11 @@ preferred checkout, document overrides.
 
 **M3b - Scan.** (done 2026-10-05) `docket repo scan <dir> [--dry-run]`: one-shot, additive discovery.
 
-**M4a - Read-only overview.** (done 2026-10-05) `docket serve`: loopback boundary, scoped catalog, overview counts, title search.
-
-**M4b - Browsing.** (done 2026-10-05) Per-checkout board, item detail, relations, worktree hints, read-only living docs.
-
-**M4c - Editing.** (done 2026-10-05) Title, status, priority and relation edits with revision checks, conflict drafts.
-
-**M4d - Hardening.** (done 2026-10-05) Browser end-to-end tests, security and accessibility pass, docs, 0.5.0 (built, unpushed).
+**M4a to M4d - Local viewer (historical; removed in 0.7.0, ADR-29).** (done 2026-10-05) Overview, browsing, editing and browser end-to-end hardening, all deleted with `docket serve`; Command Deck is the UI.
 
 **M5 - Evidence review.** `docket conflicts record/list`; after two weeks decide whether a merge driver
 earns its own item. Everything else (other backlog shapes, cross-machine claims, MCP) stays deferred.
 
-**M6 - Facts and notes.** (built 2026-10-05, 0.6.0, unpushed) Body as facts plus untrusted Notes, `dk note`, `set --body-file`, viewer facts and notes panels, managed agent snippet, `docket guide`. Release steps are in the README.
+**M6 - Facts and notes.** (built 2026-10-05, 0.6.0, unpushed) Body as facts plus untrusted Notes, `dk note`, `set --body-file`, managed agent snippet, `docket guide`. Release steps are in the README.
+
+**M7 - Viewer removed.** (built 2026-10-11, 0.7.0) `docket serve`, its HTTP API, `marked`, `sanitize-html` and Playwright removed; `tests/packaging/cli.test.mjs` covers the installed CLI.

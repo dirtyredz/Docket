@@ -1,7 +1,7 @@
 # ARCHITECTURE
 
-How Docket works. Code map is in `../STRUCTURE.md`; reasons are in `DECISIONS.md`. Status: M0 to M4d
-implemented (CLI, core, storage, index, claims, gate, init, registry, viewer; 0.6.0 built, unpushed). Authority: `plans/PLAN.md`, `plans/PLAN-VIEWER.md` and `research/ITEM-SPEC.md`.
+How Docket works. Code map is in `../STRUCTURE.md`; reasons are in `DECISIONS.md`. Status: M0 to M3b
+and M6 implemented (CLI, core, storage, index, claims, gate, init, registry; 0.7.0). Authority: `plans/PLAN.md` and `research/ITEM-SPEC.md`. The viewer was removed in 0.7.0 (ADR-29).
 
 ## Truth and caches
 
@@ -41,7 +41,7 @@ caches rebuild on first run.
 Every mutation: take the per-worktree lock, load the item, apply the change in core, validate the
 candidate graph, serialize canonically, reparse the output, compare the expected revision, then
 temp-write, fsync, rename. Body bytes are untouched. A stale expected revision returns a structured
-conflict (CLI) or HTTP 409 (viewer). `add` never overwrites an existing destination and retries ID
+conflict (CLI, exit 3). `add` never overwrites an existing destination and retries ID
 collisions. Only cooperating Docket writers lock; an external editor can still race between revision
 check and rename (see GOTCHAS).
 
@@ -76,6 +76,7 @@ own lock, atomically. It holds no items, counts or claims.
 - **Scan.** `repo scan <dir>` is one-shot and additive: it walks for Git checkout roots holding `docket.json`
   (nested repos and `.claude/worktrees/` included), reports skipped links and junctions without following
   them, keeps existing aliases and overrides, and never initialises, watches or prunes.
+- **Document overrides** (`repo add --doc NAME=rel.md`) are stored and validated metadata shown by `repo list`; Docket renders nothing from them.
 - **Unavailable** checkouts are listed with a reason, never deleted; `repo remove` is the only exit.
 
 ## Last-good gate
@@ -98,30 +99,6 @@ versions shared that contract. A missing launcher fails closed. Version director
 `<package version>-<tarball sha256 prefix>` so a promotion never overwrites an installed version.
 Promotion, smoke test, and repo opt-in are separate modules under `integration/gate/`.
 
-## Viewer
-
-`docket serve` binds `127.0.0.1` only, prints the URL, and runs in the foreground.
-
-- **Targeting.** Overview and title search read one preferred checkout per group (counted once). Other
-  checkouts load on demand. Edits need an explicitly selected checkout, addressed by registry ids only (never
-  client paths), re-verified against Git on every mutation. Other worktrees' claims and branch work are
-  advisory hints, never written.
-- **Catalog.** Transient summaries built from each checkout's `.docket/index.json`, loaded progressively
-  (preferred checkouts first, yielding between repos); coverage and unavailable repos are reported. Nothing
-  persisted.
-- **Request security.** Exact loopback Host and port; a present Origin must be the server's own; Sec-Fetch-Site
-  cross-site refused. Mutations also need a per-process CSRF token, a JSON body and the Origin. CSP, nosniff,
-  `X-Frame-Options: DENY`, no CORS, known static assets only, bodies capped at 64 KB. Item storage is checked
-  for links and containment before core touches it.
-- **Revision flow.** Detail returns the item's revision plus the revisions of relation holders. Save and relation
-  actions send them back; core asserts them inside the lock (ADR-24). A 409 keeps the browser draft.
-- **Body and notes.** `POST …/items/:id/body {expected, body}`, `…/notes {expected, text}` and
-  `…/notes/:ref/resolve {expected}` call core content operations (`replaceBody`, `addNote`, `resolveNote`), as scalar saves call `setItem` and relation edits `linkItem`; the relations panel reads core `relationsView`. Every mutating route runs through `mutateScoped` (fresh checkout open, operation, catalog invalidation). The item editor has a facts panel
-  (rendered, or Markdown source with Save/Discard) and a plain-text notes panel labelled untrusted. Drafts are
-  kept per repo, checkout, item and kind, survive a 409 and are reconciled explicitly, never merged
-  silently (one shared save controller, `ui/views/item/conflict-save.mjs`). Overview and board show open-note counts and a discussion filter.
-- **Documents** (not item bodies, ADR-27) are read-only: per-repo override, then repo root, then `docs/`; Markdown is sanitized (ADR-23).
-
 ## Init and move-in
 
 `docket init` (`integration/init.mjs`, adapter `cli/commands/init.mjs`) makes the current worktree a Docket
@@ -135,6 +112,8 @@ through an agent following `MOVE-IN.md` with the ordinary `dk add` / `dk set` co
 
 ## External interfaces
 
-CLI with `--repo` and bounded `--json` (no MCP). Git pre-push hook via the managed template's opt-in
+CLI with `--repo` and bounded `--json` (no MCP). **Command Deck is the UI** (ADR-29): a separate app outside
+this repo that talks to Docket through the CLI JSON output contract and core operations. Docket has no HTTP
+server; `docket serve` only reports its removal (exit 2). Git pre-push hook via the managed template's opt-in
 Docket callback. Repo-specific adapters (legacy-writer retirement, documentation checkers) live in the
 adopting repo, not here.

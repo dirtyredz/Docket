@@ -1,4 +1,4 @@
-// Read-side operations shared by CLI and viewer: filtering, deterministic ordering, derived "blocked".
+// Read-side operations behind the CLI: filtering, deterministic ordering, derived "blocked".
 import { CODES, docketError } from "../errors.mjs";
 import { CLOSED_STATUSES, ENUMS } from "../format/schema.mjs";
 

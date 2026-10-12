@@ -1,7 +1,24 @@
 # DECISIONS
 
-ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-28 are 2026-10-05.
+ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-28 are 2026-10-05; ADR-29 is 2026-10-11.
 Evidence paths are relative to `docs/research/`.
+
+## ADR-29: Viewer and HTTP API removed; Command Deck owns the UI
+
+- **Context:** The 0.5/0.6 viewer (`docket serve`) was a second UI with its own loopback HTTP API, security
+  boundary, browser tests and Markdown dependencies. Command Deck, a separate app, is now the UI.
+- **Decision:** The viewer and its API are removed outright in 0.7.0 (owner decision 2026-10-11). Command Deck
+  consumes Docket through CLI JSON output and core operations. `docket serve` stays only as a permanent
+  removal diagnostic: exit 2, `DOCKET_USAGE`, "docket serve was removed in 0.7.0 — use Command Deck for the UI."
+  Supersedes ADR-23 and ADR-25 entirely, and the viewer portions of ADR-22, ADR-24 and ADR-27 (their registry,
+  content and revision decisions still apply). ADR-23 and ADR-25 moved to `records/decisions/2026-10.md`.
+- **Rejected:** deprecate-then-remove (keeps a redundant UI and API alive, with its security boundary, browser
+  tests and Markdown dependencies, for no user).
+- **Consequences:** `marked`, `sanitize-html` and `playwright` are dropped. Viewer-only core is deleted: the
+  relations read model, revision maps on `link`, worktree enumeration and real-path containment checks.
+  Registry document overrides (`repo add --doc`) stay as stored, validated metadata, avoiding a CLI break and a
+  registry migration. Scalar revision checks (`--expect`) stay.
+- **Evidence:** owner decision 2026-10-11; `tests/packaging/cli.test.mjs` (serve error, no viewer files or deps).
 
 ## ADR-28: Managed, versioned agent snippet and a tool-neutral guide
 
@@ -19,7 +36,7 @@ Evidence paths are relative to `docs/research/`.
   versions apart); an agent-specific guide (Docket serves any agent).
 - **Evidence:** `tests/integration` init and snippet cases; owner ruling 2026-10-05.
 
-## ADR-27: Independent content mutations; body writes are allowed
+## ADR-27: Independent content mutations; body writes are allowed (viewer portions superseded by ADR-29)
 
 - **Context:** Facts and notes change for different reasons and by different people; one whole-file save
   would let one overwrite the other.
@@ -45,18 +62,7 @@ Evidence paths are relative to `docs/research/`.
   body (no trust boundary); editable or deletable notes (history).
 - **Evidence:** `research/ITEM-SPEC.md` amendment 2026-10-05; `tests/unit/format/content.test.mjs`.
 
-## ADR-25: Documents and item bodies are read-only in the viewer (Superseded in part by ADR-27)
-
-- **Context:** The viewer could edit more than the CLI exposes, and Markdown editing needs merge, draft
-  and sanitization rules the format does not give.
-- **Decision:** No document-write or body-write endpoint exists. Living docs render read-only (a per-repo
-  override wins, then the repo root, then `docs/`). Only title, status, priority and relations are
-  editable, all through the core operations the CLI uses.
-- **Rejected:** a Markdown body editor (re-opens body-byte guarantees); document editing (any write path
-  to arbitrary repo files).
-- **Evidence:** owner ruling 2026-10-05 (`plans/PLAN-VIEWER.md` section 7); `tests/unit/viewer/` route tests.
-
-## ADR-24: Relation actions are single-edge and revision-checked inside the lock
+## ADR-24: Relation actions are single-edge and revision-checked inside the lock (viewer portions superseded by ADR-29)
 
 - **Context:** A form that saved scalars and relations together could overwrite a concurrent edit, and
   `link` can write a second file (a relation stored on the other side).
@@ -68,19 +74,7 @@ Evidence paths are relative to `docs/research/`.
   auto-retry (silently overwrites).
 - **Evidence:** `core/items/revisions.mjs`; `tests/unit/core` and `tests/unit/viewer` conflict cases.
 
-## ADR-23: Native-module viewer, lazy sanitized Markdown
-
-- **Context:** The viewer ships in the same tarball the pre-push gate promotes, so UI dependencies must
-  not reach the checker.
-- **Decision:** Server on `node:http`, UI as native ES modules; no framework, bundler or build step.
-  Markdown uses `marked` then `sanitize-html` with a strict allowlist (no scripts, styles, forms, event
-  handlers or remote images). Both are imported dynamically inside `docket serve` only, so the CLI and
-  the gate never load them.
-- **Rejected:** a framework or bundler (a build in the gate path); client-side rendering of raw Markdown;
-  a denylist sanitizer.
-- **Evidence:** `tests/unit/viewer/` sanitization cases; packaging test imports the gate without them.
-
-## ADR-22: One logical repo per Git common dir; the overview counts the preferred checkout
+## ADR-22: One logical repo per Git common dir; the overview counts the preferred checkout (viewer portions superseded by ADR-29)
 
 - **Context:** Linked worktrees of one clone repeat the same items. Counting each would inflate totals,
   and falling back to another branch would show wrong work.

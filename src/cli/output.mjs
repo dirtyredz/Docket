@@ -27,14 +27,12 @@ export function exitCodeFor(err) {
 }
 
 /**
- * Write a command result. result: {data, text?: string, warnings?: [], exitCode?: number, emitted?}.
- * `emitted`: the command already wrote its output (serve prints its startup envelope while running).
+ * Write a command result. result: {data, text?: string, warnings?: [], exitCode?: number}.
  * Returns the exit code.
  */
 export function emitResult(io, command, result, json) {
   const warnings = result.warnings ?? [];
   const exitCode = result.exitCode ?? EXIT.ok;
-  if (result.emitted) return exitCode;
   if (json) {
     const ok = exitCode === EXIT.ok;
     io.stdout.write(JSON.stringify({ ok, command, data: result.data, warnings }) + "\n");

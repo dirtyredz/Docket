@@ -3,7 +3,7 @@ import { after, describe, test } from "node:test";
 import { localDate } from "../../../src/core/identity/date.mjs";
 import { planAdd } from "../../../src/core/items/add.mjs";
 import { planAddBatch } from "../../../src/core/items/batch.mjs";
-import { planLink } from "../../../src/core/items/link.mjs";
+import { linkItem, planLink } from "../../../src/core/items/link.mjs";
 import {
   compareItems,
   isBlocked,
@@ -11,10 +11,11 @@ import {
   reverseRelations,
 } from "../../../src/core/items/query.mjs";
 import { planSet } from "../../../src/core/items/set.mjs";
-import { mutateStore } from "../../../src/core/items/transaction.mjs";
+import { mutateStore, withWritten } from "../../../src/core/items/transaction.mjs";
 import { parseEntries } from "../../../src/core/validation/check.mjs";
 import { resolveRepo } from "../../../src/repository/context.mjs";
 import { workingSnapshot } from "../../../src/repository/snapshot.mjs";
+import { readItemFile } from "../../../src/storage/item-store.mjs";
 import { localTime, scriptedRandom } from "../../helpers/clock.mjs";
 import { itemText, makeRepo, readItem } from "../../helpers/repository.mjs";
 
@@ -434,5 +435,38 @@ describe("Notes survive other mutations", () => {
     assert.equal(suffix(after), suffix(before));
     link(ctx, id(1), { relates: [id(2)], remove: true });
     assert.equal(suffix(readItem(root, id(1))), suffix(before));
+  });
+});
+
+describe("linkItem and withWritten (result shape)", () => {
+  test("linkItem returns the changes and every written revision", () => {
+    const { ctx } = setup({ [id(1)]: {}, [id(2)]: { rank: "b", relates: [id(1)] } });
+    const out = linkItem(
+      ctx,
+      id(1),
+      { relates: [id(2)], remove: true },
+      { expect: readItemFile(ctx, id(1)).revision },
+    );
+    assert.deepEqual(out.changes, [
+      { op: "remove", key: "relates", target: id(2), storedOn: id(2) },
+    ]);
+    assert.deepEqual(out.written, [{ id: id(2), revision: readItemFile(ctx, id(2)).revision }]);
+    assert.equal("noop" in out, false);
+    assert.deepEqual(fieldsOf(ctx, id(2)).relates, []);
+  });
+
+  test("withWritten derives revision and noop, or exactly the keys asked for", () => {
+    const value = { id: id(1), revision: "kept" };
+    assert.deepEqual(withWritten({ value, written: [] }), {
+      id: id(1),
+      revision: "kept",
+      noop: true,
+    });
+    const written = [{ id: id(1), revision: "new" }];
+    assert.deepEqual(withWritten({ value, written }), { id: id(1), revision: "new", noop: false });
+    assert.deepEqual(withWritten({ value: { id: id(1) }, written: [] }, ["written"]), {
+      id: id(1),
+      written: [],
+    });
   });
 });

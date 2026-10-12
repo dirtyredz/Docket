@@ -6,7 +6,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readTarball } from "../integration/gate/tarball.mjs";
-import { ASSETS } from "../viewer/server/static.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const REQUIRED = [
@@ -21,16 +20,13 @@ const REQUIRED = [
   "package/docs/AGENT-GUIDE.md",
   "package/src/cli/commands/guide.mjs",
   "package/src/integration/agent-snippet.mjs",
-  "package/src/cli/commands/viewer.mjs",
-  "package/src/viewer/server/main.mjs",
-  "package/src/viewer/documents/render.mjs",
-  ...ASSETS.map((a) => `package/src/viewer/ui/${a}`),
 ];
-// The viewer's Markdown dependencies must be declared so `npm install <tgz>` brings them.
-const RUNTIME_DEPENDENCIES = ["marked", "sanitize-html"];
-// docs/MOVE-IN.md (move-in playbook) and docs/AGENT-GUIDE.md (`docket guide`) ship; every other doc stays out.
+// The viewer was removed in 0.7.0 (ADR-29): its dependencies must not come back with the package.
+const REMOVED_DEPENDENCIES = ["marked", "sanitize-html", "playwright"];
+// docs/MOVE-IN.md (move-in playbook) and docs/AGENT-GUIDE.md (`docket guide`) ship; every other doc
+// stays out. The removed viewer (src/viewer and its CLI command) must never ship again.
 const FORBIDDEN =
-  /^package\/(src\/bootstrap|src\/tooling|tests|docs\/(?!(MOVE-IN|AGENT-GUIDE)\.md$))/;
+  /^package\/(src\/bootstrap|src\/tooling|src\/viewer\/|src\/cli\/commands\/viewer\.mjs$|tests|docs\/(?!(MOVE-IN|AGENT-GUIDE)\.md$))/;
 
 const dist = path.join(ROOT, "dist");
 fs.mkdirSync(dist, { recursive: true });
@@ -49,10 +45,11 @@ const names = readTarball(fs.readFileSync(tarball)).map((f) => f.name);
 const missing = REQUIRED.filter((r) => !names.includes(r));
 const leaked = names.filter((n) => FORBIDDEN.test(n));
 const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
-const undeclared = RUNTIME_DEPENDENCIES.filter((d) => !pkg.dependencies?.[d]);
-if (missing.length || leaked.length || undeclared.length) {
+const declared = { ...pkg.dependencies, ...pkg.devDependencies, ...pkg.optionalDependencies };
+const revived = REMOVED_DEPENDENCIES.filter((d) => declared[d]);
+if (missing.length || leaked.length || revived.length) {
   for (const m of missing) console.error(`missing from tarball: ${m}`);
-  for (const d of undeclared) console.error(`runtime dependency not declared: ${d}`);
+  for (const d of revived) console.error(`removed dependency declared again: ${d}`);
   for (const l of leaked) console.error(`must not ship: ${l}`);
   process.exit(1);
 }

@@ -1,7 +1,7 @@
 // Registry document, version 1. Machine metadata only: no items, counts, claims or search index.
 //   {version: 1, repos: [{id, alias, commonDir, preferred, checkouts: [{id, path}], docs: {NAME: rel}}]}
-// id: "r-<8hex>", checkout id: "c-<8hex>" (generated, stable; the viewer addresses repos by these, never
-// by paths). commonDir: canonical Git common directory (the group identity). preferred: a checkout id.
+// id: "r-<8hex>", checkout id: "c-<8hex>" (generated, stable; a UI can address repos by these instead
+// of by paths). commonDir: canonical Git common directory (the group identity). preferred: a checkout id.
 // docs: relative overrides for the seven living documents.
 import { CODES, docketError } from "../../core/errors.mjs";
 import { relativeInside } from "../../repository/containment.mjs";

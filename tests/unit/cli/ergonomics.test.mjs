@@ -235,6 +235,12 @@ describe("repo help", () => {
   test("the overview lists repo", () => {
     assert.match(runCli(["--help"]).stdout, /^\s+repo\s+/m);
   });
+
+  test("the overview no longer advertises serve (removed in 0.7.0)", () => {
+    const help = runCli(["--help"]).stdout;
+    assert.doesNotMatch(help, /^\s+serve\s+/m);
+    assert.doesNotMatch(help, /viewer/);
+  });
 });
 
 describe("notes: counting, stdin and failure envelopes (0.6.0)", () => {

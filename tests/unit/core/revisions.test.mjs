@@ -1,5 +1,5 @@
 // Revision preconditions are asserted inside the mutation lock before planning, for changes and
-// no-ops alike, and (when supplied) for every reverse-stored relation holder a link edit rewrites.
+// no-ops alike.
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { localDate } from "../../../src/core/identity/date.mjs";
@@ -56,48 +56,9 @@ test("a stale expected revision fails a no-op link", () => {
   });
 });
 
-test("a changed reverse-stored relation holder fails before any write", () => {
+test("a current expected revision removes the reverse-stored relation", () => {
   const { r, ctx } = setup();
-  const expected = { [A]: rev(ctx, A), [B]: rev(ctx, B) };
-  r.write(B, itemText({ id: B, rank: "b", relates: [A] }, { title: "B edited elsewhere" }));
-  const beforeA = readItem(r.root, A);
-  assert.throws(
-    () =>
-      link(
-        ctx,
-        A,
-        { relates: [B], remove: true },
-        { expect: expected[A], expectRevisions: expected },
-      ),
-    { code: "DOCKET_CONFLICT" },
-  );
-  assert.equal(readItem(r.root, A), beforeA);
-  assert.match(readItem(r.root, B), /relates: \[dk-0000a001\]/);
-});
-
-test("a missing holder revision is a request error when revisions are supplied", () => {
-  const { ctx } = setup();
-  assert.throws(
-    () =>
-      link(
-        ctx,
-        A,
-        { relates: [B], remove: true },
-        { expect: rev(ctx, A), expectRevisions: { [A]: rev(ctx, A) } },
-      ),
-    { code: "DOCKET_USAGE" },
-  );
-});
-
-test("current holder revisions remove the reverse-stored relation", () => {
-  const { r, ctx } = setup();
-  const expected = { [A]: rev(ctx, A), [B]: rev(ctx, B) };
-  const { value } = link(
-    ctx,
-    A,
-    { relates: [B], remove: true },
-    { expect: expected[A], expectRevisions: expected },
-  );
+  const { value } = link(ctx, A, { relates: [B], remove: true }, { expect: rev(ctx, A) });
   assert.deepEqual(value.changes, [{ op: "remove", key: "relates", target: B, storedOn: B }]);
   assert.match(readItem(r.root, B), /relates: \[\]/);
 });

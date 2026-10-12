@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { after, before, describe, test } from "node:test";
 import { installRepo } from "../../src/integration/gate/install.mjs";
 import { readActive } from "../../src/integration/gate/paths.mjs";
@@ -136,18 +135,13 @@ describe("last-good gate", () => {
 });
 
 describe("last-good gate: promoted copy without dependencies", () => {
-  test("CLI commands run, and the viewer's dependencies load only lazily", () => {
+  test("CLI commands run without node_modules; serve reports its removal", () => {
     const active = promoteTarball(tarball, { gateRoot });
     const src = path.join(gateRoot, readActive(gateRoot).dir ?? active.dir, "src");
     assert.ok(!fs.existsSync(path.join(src, "..", "node_modules")), "no node_modules in the copy");
     const cli = path.join(src, "cli", "main.mjs");
     const node = (...args) => spawnSync(process.execPath, args, { encoding: "utf8" });
-    for (const args of [
-      ["--version"],
-      ["repo", "--help"],
-      ["serve", "--help"],
-      ["note", "--help"],
-    ]) {
+    for (const args of [["--version"], ["repo", "--help"], ["note", "--help"]]) {
       const r = node(cli, ...args);
       assert.equal(r.status, 0, `${args.join(" ")}: ${r.stderr}`);
     }
@@ -162,9 +156,8 @@ describe("last-good gate: promoted copy without dependencies", () => {
     } finally {
       r.cleanup();
     }
-    const viewer = pathToFileURL(path.join(src, "viewer", "server", "main.mjs")).href;
-    const imp = node("-e", `import(${JSON.stringify(viewer)})`);
-    assert.notEqual(imp.status, 0, "the viewer needs marked and sanitize-html");
-    assert.match(imp.stderr, /marked|sanitize-html|ERR_MODULE_NOT_FOUND/);
+    const serve = node(cli, "serve");
+    assert.equal(serve.status, 2, serve.stderr);
+    assert.match(serve.stderr, /removed in 0\.7\.0/);
   });
 });

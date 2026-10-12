@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { after, describe, test } from "node:test";
+import { CODES } from "../../../../src/core/errors.mjs";
 import { pathKey } from "../../../../src/repository/canonical.mjs";
+import { relativeInside } from "../../../../src/repository/containment.mjs";
+import { parseDocOverrides } from "../../../../src/state/registry/registration.mjs";
 import { git, makeRepo, runCli, tempDir } from "../../../helpers/repository.mjs";
 
 const cleanups = [];
@@ -265,5 +268,53 @@ describe("--doc overrides", () => {
       assert.equal(out.json.error.code, "DOCKET_USAGE", spec);
     }
     assert.equal(fs.existsSync(r.registryFile), false);
+  });
+});
+
+// The override boundary: document paths stay relative and inside the checkout, also when encoded.
+describe("document path containment", () => {
+  const ESCAPES = [
+    "",
+    "/abs",
+    "C:/x",
+    "C:x",
+    "\\\\server\\share",
+    "a\\b",
+    "../a",
+    "a/../b",
+    "a//b",
+    "./a",
+    "%2e%2e/a",
+    "a%2f..%2fb",
+    "a\0b",
+    "%00",
+    "%zz",
+    null,
+    undefined,
+  ];
+
+  test("relativeInside accepts plain relative paths", () => {
+    assert.equal(relativeInside("docs/a.md"), "docs/a.md");
+    assert.equal(relativeInside("a b/ü.md"), "a b/ü.md");
+  });
+
+  test("relativeInside rejects absolute, drive, UNC, traversal, encoded, NUL and malformed paths", () => {
+    for (const p of ESCAPES) {
+      assert.throws(() => relativeInside(p), { code: CODES.USAGE }, JSON.stringify(p));
+    }
+  });
+
+  test("parseDocOverrides applies the same boundary to Markdown overrides", () => {
+    assert.deepEqual(parseDocOverrides(["gotchas=docs/a b/ü.md", "ROADMAP="]), {
+      GOTCHAS: "docs/a b/ü.md",
+      ROADMAP: "",
+    });
+    for (const p of ESCAPES.filter((x) => typeof x === "string" && x !== "")) {
+      assert.throws(
+        () => parseDocOverrides([`GOTCHAS=${p}.md`]),
+        { code: CODES.USAGE },
+        JSON.stringify(p),
+      );
+    }
   });
 });

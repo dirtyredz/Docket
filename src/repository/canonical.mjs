@@ -10,15 +10,6 @@ export function canonicalPath(p) {
   return toSlash(fs.realpathSync.native(path.resolve(p)));
 }
 
-/** Canonical path, or null when the path does not exist or cannot be resolved. */
-export function tryCanonicalPath(p) {
-  try {
-    return canonicalPath(p);
-  } catch {
-    return null;
-  }
-}
-
 /** Comparison key for an absolute path: forward slashes, no trailing slash, lower-cased on Windows. */
 export function pathKey(p) {
   const s = toSlash(path.resolve(p)).replace(/\/+$/, "");

@@ -17,8 +17,8 @@ item list, statuses or ranks; see `ROADMAP.md` for milestones.
 | Last-good and schema upgrades?     | Gate separate from dev checkout; promote schema support before committing items that need it.                   |
 | Structure-gate integration scope?  | Small opt-in Docket callback in the managed template; structure pause/opt-out never disables Docket validation. |
 | Importers?                         | None. `docket init` plus an agent move-in playbook (ADR-19, owner ruling 2026-10-05).                           |
-| Global viewer semantics?           | Registry and aggregation global; indexes per checkout; claims per clone.                                        |
-| Documentation migration?           | Living prose docs stay intact and read-only in the viewer.                                                      |
+| Global registry semantics?         | Registry and aggregation global; indexes per checkout; claims per clone.                                        |
+| Documentation migration?           | Living prose docs stay intact (the viewer was removed, ADR-29).                                                 |
 
 ## Deferred from M0 to M1c (2026-10-04)
 

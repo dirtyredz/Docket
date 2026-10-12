@@ -1,4 +1,4 @@
-// `set` as the CLI and viewer run it: plan and write the change, then, when it completes the item,
+// `set` as the CLI runs it: plan and write the change, then, when it completes the item,
 // release the item's claim. Claims are a dependency (`claims.releaseItem`), not an import, so core
 // stays free of the coordination store. A cleanup failure is a warning, never a failed write.
 import { planSet } from "./set.mjs";

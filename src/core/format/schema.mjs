@@ -16,7 +16,6 @@ export const KEYS = Object.freeze([
 ]);
 
 export const LIST_KEYS = Object.freeze(["fixes", "blocked_by", "relates"]);
-export const RELATION_KEYS = Object.freeze(["parent", ...LIST_KEYS]);
 export const DATE_KEYS = Object.freeze(["created", "since"]);
 /** Keys that must carry a value (the rest may be empty: `key:`). */
 export const REQUIRED_KEYS = Object.freeze([

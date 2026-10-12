@@ -2,17 +2,16 @@
 // queries but stored once: adding A relates B when B already relates A is a no-op, and removing it
 // edits whichever file holds it.
 import { LIST_KEYS } from "../format/schema.mjs";
-import { assertRevision, assertRevisions } from "./revisions.mjs";
+import { assertRevision } from "./revisions.mjs";
 import { editableRecord, mutateStore, withWritten } from "./transaction.mjs";
 
 /**
  * Plan a link. change: {parent?, clearParent?, remove?, fixes?, blocked_by?, relates?} where the list
  * keys hold target IDs. Returns a transaction plan result; value.changes lists what actually changed.
- * options: {expect?: revision of `id` (checked even for a no-op), expectRevisions?: {id: revision}}.
- * With expectRevisions, every other item the edit rewrites (reverse-stored relates) must be listed and
- * current; all checks run before any write.
+ * options: {expect?: revision of `id` (checked even for a no-op)}. Reverse-stored relates holders are
+ * written against the revision just read inside the lock.
  */
-export function planLink({ byId }, id, change, { expect, expectRevisions } = {}) {
+export function planLink({ byId }, id, change, { expect } = {}) {
   const rec = editableRecord(byId, id);
   assertRevision(rec, expect);
   const own = {
@@ -61,7 +60,6 @@ export function planLink({ byId }, id, change, { expect, expectRevisions } = {})
     }
   }
 
-  assertRevisions(byId, [...others.keys()], expectRevisions);
   const writes = [];
   const ownChanged = changes.some((c) => !c.storedOn);
   if (ownChanged)
@@ -73,8 +71,7 @@ export function planLink({ byId }, id, change, { expect, expectRevisions } = {})
 }
 
 /**
- * Apply a link (the operation behind `link` and the viewer's relation edits). change and options as
- * planLink. Returns {id, changes, fields, written}: written lists every rewritten {id, revision}.
+ * Apply a link (the operation behind `link`). change and options as planLink. Returns {id, changes, fields, written}: written lists every rewritten {id, revision}.
  */
 export function linkItem(ctx, id, change, options = {}) {
   return withWritten(
