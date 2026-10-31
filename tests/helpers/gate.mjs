@@ -9,8 +9,23 @@ import { promoteDirectory } from "../../src/integration/gate/promote.mjs";
 import { smokeGate } from "../../src/integration/gate/smoke.mjs";
 import { ROOT, git } from "./repository.mjs";
 
+/**
+ * The managed hook template: the harness copy, or DOCKET_HOOK_TEMPLATE. CI points that at the vendored
+ * snapshot `tests/fixtures/hooks/pre-push.template.sh` (ADR-31) and sets DOCKET_REQUIRE_HOOK_TEMPLATE=1,
+ * so a missing template fails the gate suites instead of skipping them.
+ */
 export const TEMPLATE = defaultTemplatePath();
+export const VENDORED_TEMPLATE = path.join(
+  ROOT,
+  "tests",
+  "fixtures",
+  "hooks",
+  "pre-push.template.sh",
+);
 export const templateAvailable = () => fs.existsSync(TEMPLATE);
+if (process.env.DOCKET_REQUIRE_HOOK_TEMPLATE === "1" && !templateAvailable()) {
+  throw new Error(`DOCKET_REQUIRE_HOOK_TEMPLATE=1 but no hook template at ${TEMPLATE}`);
+}
 
 /**
  * The managed template exactly as it was before the Docket callback (harness commit HEAD on

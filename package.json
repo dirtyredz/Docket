@@ -46,7 +46,7 @@
     "README.md"
   ],
   "scripts": {
-    "test": "npm run test:bootstrap && npm run test:format && npm run test:core && npm run test:storage && npm run test:repository && npm run test:cli && npm run test:coordination && npm run test:registry && npm run test:integration && npm run test:packaging && npm run test:layout",
+    "test": "npm run test:bootstrap && npm run test:format && npm run test:core && npm run test:storage && npm run test:repository && npm run test:cli && npm run test:coordination && npm run test:registry && npm run test:integration && npm run test:packaging && npm run test:scripts && npm run test:layout",
     "test:bootstrap": "node src/bootstrap/check.mjs --repo .",
     "test:format": "node --test \"tests/unit/format/*.test.mjs\"",
     "test:core": "node --test \"tests/unit/core/*.test.mjs\"",
@@ -57,6 +57,7 @@
     "test:registry": "node --test \"tests/unit/state/registry/*.test.mjs\"",
     "test:integration": "node --test \"tests/integration/*.test.mjs\"",
     "test:packaging": "node --test \"tests/packaging/*.test.mjs\"",
+    "test:scripts": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/release-scripts.test.ps1",
     "test:layout": "node src/tooling/layout-check.mjs",
     "build": "node src/tooling/build.mjs",
     "lint": "oxlint .",

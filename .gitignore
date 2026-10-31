@@ -14,3 +14,6 @@ dist/
 
 # Claude Code worktrees
 .claude/worktrees/
+
+# Owner-run logs, downloaded releases, scratch
+.tmp/

@@ -4,9 +4,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { after, before, describe, test } from "node:test";
-import { installRepo } from "../../src/integration/gate/install.mjs";
+import { defaultTemplatePath, installRepo } from "../../src/integration/gate/install.mjs";
 import {
   TEMPLATE,
+  VENDORED_TEMPLATE,
   addRemote,
   baselineTemplate,
   fakeLfs,
@@ -259,3 +260,17 @@ describe(
     }
   },
 );
+
+// CI has no harness, so it runs these suites against a vendored snapshot (ADR-31). The snapshot must stay a
+// managed template with the Docket callback. Drift from the local harness copy is reported, not failed: the
+// harness changes outside this repo; refresh the fixture when the change matters to the gate.
+test("the vendored CI hook template is managed and carries the Docket callback", (t) => {
+  const text = fs.readFileSync(VENDORED_TEMPLATE, "utf8");
+  assert.match(text, /structure-gate: managed hook/);
+  assert.match(text, /docket\.gateLauncher/);
+  assert.doesNotMatch(text, /\r/);
+  const harness = defaultTemplatePath({});
+  if (fs.existsSync(harness) && fs.readFileSync(harness, "utf8") !== text) {
+    t.diagnostic(`vendored template differs from ${harness}; refresh tests/fixtures/hooks/`);
+  }
+});

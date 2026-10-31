@@ -107,3 +107,13 @@ configPath}`; only `resolveRepo`/`contextAtRoot` add `gitDir`, and nothing in co
   never opens its parent's items.
 - **Registered-checkout reads are cached for 5 s.** Pass `{fresh: true}` before every mutation. The containment
   guard still runs on every open.
+- **CI runs the gate suites on a vendored hook template.** `tests/fixtures/hooks/pre-push.template.sh` is a
+  snapshot of the harness template (ADR-31); the pre-push suite prints a diagnostic when the local harness copy
+  differs. Copy the harness file over it when a template change matters to the Docket callback.
+- **Hosted Windows runners check out with `core.autocrlf=true`.** CI sets it to `false` before checkout; item
+  files are validated byte-exact and the tests build their own repos.
+- **In Windows PowerShell 5.1 strict mode, call `npm.cmd`, not `npm`.** The `npm.ps1` shim reads
+  `$MyInvocation.Statement`, which 5.1 lacks. `Find-Tool` (type Application) already returns `npm.cmd`.
+  PowerShell names are case-insensitive: a helper function called `Git` shadows `git.exe` and recurses.
+- **`install.ps1` without `-Tag` installs the latest PUBLISHED release.** The release workflow only drafts;
+  install a draft by its tag.
