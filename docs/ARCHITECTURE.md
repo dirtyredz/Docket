@@ -102,6 +102,17 @@ versions shared that contract. A missing launcher fails closed. Version director
 `<package version>-<tarball sha256 prefix>` so a promotion never overwrites an installed version.
 Promotion, smoke test, and repo opt-in are separate modules under `integration/gate/`.
 
+## CI and release
+
+GitHub Actions on hosted `windows-latest` (ADR-31). `ci.yml` (push and PR to `main`, and called by
+`release.yml`): `npm ci`, lint, `format:check`, `npm test`, `dk check`, `npm run build`, tarball as the
+`docket-tgz` artifact. The gate suites read `DOCKET_HOOK_TEMPLATE` = the vendored
+`tests/fixtures/hooks/pre-push.template.sh`; `DOCKET_REQUIRE_HOOK_TEMPLATE=1` turns a missing template into a
+failure. A `v*` tag runs `release.yml`: tag equals `v<package.json version>` and is on `main` -> the CI
+workflow -> its tarball plus `docket-<v>.tgz.sha256` into a draft release (re-runs refresh a draft, never a
+published release). Owner side: `scripts/release/cut.ps1` (bump, commit, tag, confirmed push) and
+`install.ps1` (gh download, checksum, `npm install --global`, `gate promote`, `gate install`).
+
 ## Init and move-in
 
 `docket init` (`integration/init.mjs`, adapter `cli/commands/init.mjs`) makes the current worktree a Docket

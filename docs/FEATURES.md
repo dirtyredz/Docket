@@ -43,6 +43,8 @@ in `docs/items/`; this page does not duplicate them. Milestones are in `ROADMAP.
 | 0.8.0: headless library: narrow subpath exports, `docs/LIBRARY.md` contract (ADR-30)         | M8        | built   |
 | 0.8.0: `relationsView` and `linkItem` revision maps (selected item + reverse-stored holders) | M8        | built   |
 | 0.8.0: exact-root and registered checkout opening, containment guard, last-good registry     | M8        | built   |
+| CI on hosted Windows (full gate, tarball artifact); `v*` tag -> draft release + SHA-256      | -         | built   |
+| Owner scripts: `scripts/release/cut.ps1` (bump, tag, confirmed push), `install.ps1`          | -         | built   |
 | Conflict recording and report (`docket conflicts`)                                           | M5        | planned |
 
 Not planned in this scope: MCP server, cross-machine claims, status event history, merge driver,

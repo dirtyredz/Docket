@@ -1,0 +1,100 @@
+# Docket CI: the full gate on every push and pull request to main (ADR-31).
+#
+# Docket is Windows-first, so the gate runs on a GitHub-hosted Windows runner (never ANU: a
+# self-hosted runner needs the owner's approval first). One job, in order:
+#
+#   npm ci -> lint -> format:check -> npm test (every suite, integration and packaging
+#   included) -> dk check -> npm run build -> upload dist/docket-<version>.tgz
+#
+# The integration and packaging suites install the managed pre-push hook from the harness
+# template (~/.claude/hooks/structure/pre-push.template.sh), which a runner does not have. CI
+# points DOCKET_HOOK_TEMPLATE at the vendored snapshot tests/fixtures/hooks/pre-push.template.sh
+# and sets DOCKET_REQUIRE_HOOK_TEMPLATE=1, so a missing template FAILS those suites instead of
+# skipping them.
+#
+# release.yml calls this workflow (workflow_call) as its gate, so a release is verified by the
+# same steps. Docs pushes are not skipped: dk check validates docs/items/ and three docs ship.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call: {}
+  workflow_dispatch: {}
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Matches the development machine (docs/GOTCHAS.md "Node 22 here, not 24"; ADR-13).
+  NODE_VERSION: "22.20.0"
+
+jobs:
+  gate:
+    if: github.repository == 'dirtyredz/Docket'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      DOCKET_HOOK_TEMPLATE: ${{ github.workspace }}\tests\fixtures\hooks\pre-push.template.sh
+      DOCKET_REQUIRE_HOOK_TEMPLATE: "1"
+    steps:
+      # Hosted Windows images default to core.autocrlf=true. Item files are validated byte-exact
+      # and the tests create their own repositories, so keep LF everywhere, as on the dev machine.
+      - name: Keep line endings as committed
+        run: git config --global core.autocrlf false
+
+      - name: Check out the commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies (lockfile)
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Test (every suite, integration and packaging included)
+        run: npm test
+
+      - name: Validate Docket's own items (dk check)
+        run: node src/cli/main.mjs check
+
+      - name: Build the tarball
+        id: build
+        run: |
+          npm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $version = node -p "require('./package.json').version"
+          $tgz = "dist/docket-$version.tgz"
+          if (-not (Test-Path -LiteralPath $tgz)) { throw "build did not produce $tgz" }
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Upload the tarball
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: docket-tgz
+          path: dist/docket-${{ steps.build.outputs.version }}.tgz
+          if-no-files-found: error
+          retention-days: 14

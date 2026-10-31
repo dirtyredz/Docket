@@ -60,17 +60,36 @@ finds items with open notes. `docket guide` prints the full tool-neutral agent g
 
 Requires Node 22 or newer. Use an ABSOLUTE tarball path with `npm install --global`: a relative one is read as a GitHub spec.
 
+### Ship it (release pipeline, ADR-31)
+
+CI (`.github/workflows/ci.yml`) runs the full gate on GitHub-hosted Windows for every push and pull request to `main`
+and uploads the built tarball. A release is a `v*` tag; the owner-run scripts below work from any directory, take
+`-DryRun`, log to `.tmp/owner-runs/` and end with an `OK`/`FAILED` line.
+
+```
+# 1. Bump, commit and tag (checks main, clean tree, fast gate). Pushes only after you type the tag.
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\path\to\docket\scripts\release\cut.ps1 -Version 0.8.1 -Push
+# 2. release.yml re-runs the gate and creates a DRAFT release: docket-0.8.1.tgz + docket-0.8.1.tgz.sha256.
+#    Review it on GitHub and publish it.
+# 3. Download, verify the SHA-256, npm install --global, docket gate promote, docket gate install --repo <this clone>
+powershell -NoProfile -ExecutionPolicy Bypass -File C:\path\to\docket\scripts\release\install.ps1 -Tag v0.8.1
+```
+
+`install.ps1` without `-Tag` takes the latest published release; `-TarballPath` installs a local tarball (its
+`.sha256` beside it); `-GateRepo` opts other repos into the gate.
+
+### Local build (no release)
+
 ```
 npm ci
-npm test                                        # includes test:registry
+npm test                                        # every suite, including test:scripts
 npm run build                                   # dist/docket-<version>.tgz
 npm install --global C:/path/to/repo/dist/docket-<version>.tgz
 docket gate promote dist/docket-<version>.tgz   # tested copy under %LOCALAPPDATA%Docketgate
 docket gate install --repo .                    # opt this clone's pre-push hook in
 ```
 
-Upgrade or release 0.8.0: `npm run build`, then `npm install --global C:/path/to/repo/dist/docket-0.8.0.tgz` (absolute path),
-`docket gate promote C:/path/to/repo/dist/docket-0.8.0.tgz`, and in each repo `docket init --dry-run` then `docket init` to
+After upgrading, in each repo run `docket init --dry-run` then `docket init` to
 upgrade the agent snippet. Check adopting repos for a prose `## Notes` section first (`dk check`). The first run after
 upgrading rebuilds the index cache. A library consumer instead vendors the tarball and installs it as a local dependency
 (`npm install ./vendor/docket/docket-0.8.0.tgz`); the package has no runtime dependencies.

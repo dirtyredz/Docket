@@ -10,10 +10,15 @@ gate, `docket init`, the move-in playbook, the repo registry, facts and notes an
   flows, `docs/DECISIONS.md` for why.
 - Stack: Node >= 22 (24 planned, ADR-13), plain ESM (`.mjs`), npm, `node:test`. No TypeScript.
 - Tests: `npm test` (everything), or `npm run test:<area>` (unit areas live under `tests/unit/`) for bootstrap, format, core, storage, cli,
-  coordination (tests/unit/state), registry (tests/unit/state/registry), integration, packaging, layout (bootstrap and layout are scripts, not test folders). Integration and packaging do real pushes to temp bare
-  remotes and need the harness template (`~/.claude/hooks/structure/pre-push.template.sh`).
-- `npm run build` packs `dist/docket-<v>.tgz`. Ship it: `npm install --global <tgz>`, (ABSOLUTE tarball path: a relative one is misread as a GitHub spec), then
-  `docket gate promote <tgz>` (last-good gate) and `docket gate install --repo .`.
+  coordination (tests/unit/state), registry (tests/unit/state/registry), integration, packaging, scripts, layout (bootstrap and layout are scripts, not test folders). Integration and packaging do real pushes to temp bare
+  remotes and need the harness template (`~/.claude/hooks/structure/pre-push.template.sh`; CI uses the vendored
+  `tests/fixtures/hooks/` copy via `DOCKET_HOOK_TEMPLATE`, ADR-31). `test:scripts` runs the release scripts' test.
+- `npm run build` packs `dist/docket-<v>.tgz`. Ship it through the pipeline (ADR-31, README "Ship it"):
+  `scripts/release/cut.ps1 -Version x.y.z` (bump, commit, tag; push only with `-Push` plus a typed confirmation), the
+  `v*` tag drafts a GitHub Release with the tgz and its SHA-256, the owner publishes it, then
+  `scripts/release/install.ps1 -Tag vx.y.z` (verify, `npm install --global` ABSOLUTE path, `docket gate promote`,
+  `docket gate install`). Agents run these scripts themselves with `-DryRun` first; never push a tag unasked.
+- CI: `.github/workflows/ci.yml` (hosted Windows, full gate) on push and PR to `main`; not the ANU runner.
 - `npm run lint`, `npm run lint:fix`, `npm run format`, `npm run format:check`.
 - Dependency direction: CLI -> core -> storage; state, integration -> core. Keep code files under about
   800 lines and update STRUCTURE.md's Layout when adding a responsibility.

@@ -1,7 +1,32 @@
 # DECISIONS
 
-ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-28 are 2026-10-05; ADR-29 is 2026-10-11; ADR-30 is 2026-10-12.
+ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-28 are 2026-10-05; ADR-29 is 2026-10-11; ADR-30 is 2026-10-12; ADR-31 is 2026-10-31.
 Evidence paths are relative to `docs/research/`.
+
+## ADR-31: CI and draft releases on GitHub-hosted Windows; the hook template is vendored for CI
+
+- **Context:** Shipping was a local `npm run build` plus three manual commands, and nothing ran the gate off the
+  owner's machine. The integration and packaging suites need the harness hook template
+  (`~/.claude/hooks/structure/pre-push.template.sh`), which a runner does not have; without it they skip.
+- **Decision:** `.github/workflows/ci.yml` runs on push and pull request to `main` on GitHub-hosted
+  `windows-latest` (Docket is Windows-first): `npm ci`, lint, `format:check`, the full `npm test`, `dk check`,
+  `npm run build`, tarball uploaded. CI sets `DOCKET_HOOK_TEMPLATE` to a vendored snapshot,
+  `tests/fixtures/hooks/pre-push.template.sh` (harness `3c682ce`), and `DOCKET_REQUIRE_HOOK_TEMPLATE=1`, so a
+  missing template fails instead of skipping. `release.yml` runs on a `v*` tag: the tag must equal
+  `v<package.json version>` and be on `main`, the CI workflow runs again as the gate, and its verified tarball
+  goes into a DRAFT release with a `sha256sum` file. Owner steps are `scripts/release/cut.ps1` (bump, commit,
+  tag; pushes only with `-Push` and a typed confirmation) and `install.ps1` (download with `gh`, verify the
+  checksum, `npm install --global`, `docket gate promote`, `docket gate install`), on the owner-run template.
+- **Rejected:** fetching the template from the private harness repo (a secret on a public repo, and CI would
+  follow harness HEAD); an inline stub template (tests would stop exercising the real hook); the ANU
+  self-hosted runner (needs owner approval; a public repo's PRs must not reach it); Linux CI like command-deck
+  (Windows paths, locks and `.cmd` shims are what break); publishing from CI (the owner reviews the draft); a
+  version allocated by CI (Docket's version is a library-contract decision, ADR-30).
+- **Consequences:** The snapshot drifts from the harness; the pre-push suite reports drift as a diagnostic, and
+  the fixture is refreshed by copying the harness file. Published releases are immutable: a re-run refreshes
+  a draft's assets only.
+- **Evidence:** `scripts/release/release-scripts.test.ps1` (`npm run test:scripts`: real cut and push against a
+  local bare remote, sandboxed real install); `tests/integration/pre-push.test.mjs` (vendored template).
 
 ## ADR-30: Headless library contract for Command Deck (extends ADR-29)
 
@@ -106,28 +131,6 @@ Evidence paths are relative to `docs/research/`.
 - **Rejected:** counting every worktree; automatic failover to any available checkout; one entry per path.
 - **Evidence:** owner ruling 2026-10-05; `tests/unit/state/registry/` grouping cases.
 
-## ADR-21: Batch entries may set historical dates
-
-- **Context:** Moved-in items lost their real dates (everything read as created today), and agents were
-  tempted to hand-edit item files to fix it.
-- **Decision:** `add --batch` entries may carry `created` and/or `since` (ISO dates): real calendar dates,
-  not in the future, `since >= created`; one given fills the other, none keeps today. IDs and ranks stay
-  tool-assigned. Single-item `add` has no such flags; `set status` still stamps today.
-- **Rejected:** hand-edited dates (re-opens hand-written files); date flags on single `add`.
-- **Evidence:** second real move-in batch, 2026-10-05.
-
-## ADR-20: Batch add is the move-in path; every write command can report before it writes
-
-- **Context:** The first real move-in (6 items) needed one process per item, hand-rolled body files and
-  guesswork about what `init` and `gate install` changed.
-- **Decision:** `dk add --batch <file|->` takes a JSON array, validates every entry (enums, one-line
-  title, string fields, no unknown keys) before writing, then goes through the normal transaction, so IDs
-  and ranks stay tool-assigned. `init` and `gate install` report created/updated/unchanged per file,
-  git config key and hook, and take `--dry-run`. Help is per command, built from the schema enums.
-- **Rejected:** letting batch entries carry IDs, ranks or relations (re-opens hand-written identity);
-  a separate importer (ADR-19).
-- **Evidence:** first move-in report, 2026-10-05.
-
 ## ADR-19: Importers removed; init + agent move-in
 
 - **Context:** Docket must be project-agnostic. The first adopter import was byte-verified because it ran once
@@ -140,19 +143,5 @@ Evidence paths are relative to `docs/research/`.
   the first adopter importer as an example (its provenance and journal machinery only served that run).
 - **Evidence:** owner ruling 2026-10-05.
 
-> ADRs 17 and 18 (lossless import, resumable apply) moved to `records/decisions/2026-10.md`.
-
-## ADR-16: Grammar strictness applies to the frontmatter; the body is free Markdown
-
-- **Context:** ITEM-SPEC forbids tabs and trailing spaces in the strict YAML subset; the prototype
-  applied that to the whole file, which rejects code blocks and Markdown hard line breaks in bodies.
-- **Decision:** BOM, invalid UTF-8 and CR are rejected file-wide; tabs and trailing spaces only inside
-  the frontmatter. Body bytes are never rewritten.
-- **Rejected:** whole-file rule (punishes ordinary Markdown); no file-wide line-ending rule.
-- **Evidence:** `tests/unit/core/conformance.test.mjs` pins this and every other prototype difference.
-
-> ADR-15 (gate opt-in in local git config) moved to `records/decisions/2026-10.md`.
-
-> ADRs 13 and 14 (Node 22, CLI output contract) moved to `records/decisions/2026-10.md`.
-
-> ADRs 07-12 moved to `records/decisions/2026-10.md`.
+> Moved verbatim to `records/decisions/2026-10.md`: ADRs 20-21 (batch move-in, historical dates), 17-18
+> (import, apply), 16 (frontmatter-only strictness), 15 (gate opt-in), 13-14 (Node 22, output contract), 01-12.
