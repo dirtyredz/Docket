@@ -71,7 +71,7 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `src/state/index/` — rebuildable per-worktree JSON cache
 - `src/state/registry/` — per-machine repo registry: identity, registration, one-shot scan, the last-good source with forced refresh and strict id lookup (`source.mjs`), document-location overrides (stored, validated metadata only; one `assertDocName`). The `repo list` view (`describeRegistry`) is the CLI adapter's
 - `src/cli/` — dispatch, argument handling, output contracts, shared report vocabulary, help, shared file/stdin input, `docket guide`
-- `src/cli/commands/` — thin adapters per command family (items, validation, coordination, init, gate, registry; conflicts planned)
+- `src/cli/commands/` — thin adapters per command family (items, validation, coordination, init, gate, registry; `conflicts` arrives with M5, dk-7f473623)
 - `src/cli/commands/items/` — one adapter per item command (add, set, link, list, show, index, notes) plus shared item-flag options
 - `src/integration/` — the managed, versioned agent snippet (`agent-snippet.mjs`, text in `agent-snippet.md`; markers, exact-legacy migration, manual review) and `docket init` (`init.mjs`)
 - `src/integration/gate/` — gate promotion, smoke test, repo opt-in, stable launcher, tarball reader, pre-push validation
@@ -83,9 +83,9 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `tests/fixtures/` — bounded fixtures: hooks
 - `docs/` — living docs, research evidence and the shipped guides (`MOVE-IN.md`, `AGENT-GUIDE.md`, `LIBRARY.md`)
 - `docs/items/` — Docket's own work items (created in M0; flat, permanent paths)
-- `docs/records/` — migration evidence and conflict-review history
+- `docs/records/` — migration evidence, archived decisions (`decisions/`) and the M5 conflict-observation log (`conflicts/`, not viewer-era)
 - `docs/research/` — frozen evidence: item spec, surveys, merge-test results (never reformatted or linted as code)
-- `docs/plans/` — frozen build plans (`PLAN.md`, `PLAN-VIEWER.md` (historical), `PLAN-NOTES.md`)
+- `docs/plans/` — frozen build plans (`PLAN.md`, `PLAN-VIEWER.md` (historical), `PLAN-NOTES.md`); planner run artifacts (`*.events.jsonl`, `*.job.json`) are git-ignored
 
 `docs/research/MERGE-TEST-RESULTS.md` is the canonical merge-test result; `docs/research/merge-test/` holds
 the raw runs behind it (frozen historical evidence). It is not a code home and is never edited or linted as one.
@@ -121,6 +121,8 @@ the raw runs behind it (frozen historical evidence). It is not a code home and i
   atomic but not one transaction. A failure after the first write is reported (`partial`, `written`), not undone.
 - `src/core/items/` holds 11 entries (one over the ten-entry guide) since `relations-view.mjs` returned; a
   `relations/` grouping (link + view) is the natural split if it grows again.
-- Accepted backlog from the 2026-10-05 reviews is recorded as Docket items (`dk list`, area structure): one
-  store-entries shape, unused schema constants, core enum validation, registry/content-format splits. The importer-related items were
-  dropped with the importers.
+- The 2026-10-05 to 0.8.0 review backlog was closed on 2026-10-31 (store-entry shape, schema constants, core
+  enum validation, content parse/edit split, registry and checkout seams, build export targets). Still open,
+  trigger-gated: dk-66030b88 (group mutations under `core/items/mutations/`), dk-21dff1e1 (dry-run plan/apply
+  on a third caller), dk-b08251c8 (split containment and registered-checkout when they next grow).
+- `Last full review` above predates 0.7.0 and 0.8.0; a baseline review (`/gate review-all`) refreshes it.

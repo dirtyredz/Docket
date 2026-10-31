@@ -69,7 +69,7 @@ Evidence paths are relative to `docs/research/`.
   body restriction.
 - **Rejected:** one combined save (hides which part conflicted); resolve copying text into the body
   (invents facts); body editing without `--expect` (silent overwrite).
-- **Evidence:** `tests/unit/core`, `tests/unit/viewer` and `tests/e2e` content cases.
+- **Evidence:** `tests/unit/core`, `tests/unit/viewer` and `tests/e2e` content cases (the viewer and e2e suites were removed in 0.7.0).
 
 ## ADR-26: Facts and discussion are separate: item body versus Notes
 
@@ -93,7 +93,7 @@ Evidence paths are relative to `docs/research/`.
   never retried automatically and keeps the browser draft. The CLI's `--expect` shares the same checks.
 - **Rejected:** one combined save (hides which edge conflicted); asserting outside the lock (race);
   auto-retry (silently overwrites).
-- **Evidence:** `core/items/revisions.mjs`; `tests/unit/core` and `tests/unit/viewer` conflict cases.
+- **Evidence:** `core/items/revisions.mjs`; `tests/unit/core` and `tests/unit/viewer` conflict cases (the viewer suite was removed in 0.7.0).
 
 ## ADR-22: One logical repo per Git common dir; the overview counts the preferred checkout (viewer portions superseded by ADR-29)
 
