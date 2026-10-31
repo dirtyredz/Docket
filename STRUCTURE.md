@@ -58,20 +58,20 @@ integration/init  -->  repository, storage, integration/gate (install)
 
 - `src/bootstrap/` — recovered merge-test validator and a bootstrap adapter (quarantined; not shipped)
 - `src/core/` — the shared error type (`errors.mjs`)
-- `src/core/format/` — schema constants and `assertEnum`, strict parser, canonical serializer, round-trip guard, the content grammar and read model (`content.mjs`: body/Notes boundaries, note header and ref rules) and the content edits with the title rule (`content-edit.mjs`)
+- `src/core/format/` — schema constants and `assertEnum`, strict parser, canonical serializer, round-trip guard, content grammar and read model (`content.mjs`) and content edits with the title rule (`content-edit.mjs`)
 - `src/core/validation/` — item checks, relation graph integrity, warnings, check orchestration, `checkStore`
 - `src/core/identity/` — random ID allocation, fractional rank, local-date rules
-- `src/core/items/` — add, batch add, set (with claim release on completion), complete, link and `linkItem` (with revision maps), query, detail, the relations view, revision preconditions and the shared mutation transaction with its `withWritten` result helper
-- `src/core/items/content/` — body replacement and note lifecycle (append, resolve): the content operations behind `set --body-file` and `note`, and their shared preserved-prefix write and post-edit check (`write.mjs`)
+- `src/core/items/` — add, batch add, set (releases claims on completion), complete, link and `linkItem`, query, detail, the relations view, revision preconditions and the shared mutation transaction (`withWritten`)
+- `src/core/items/content/` — body replacement and note lifecycle (append, resolve), with their shared preserved-prefix write and post-edit check (`write.mjs`)
 - `src/storage/` — content revisions, atomic write, lock, item store and the one store-entry shape (`storeEntry`) every snapshot and parse takes
-- `src/repository/` — worktree and common-dir discovery and explicit-root contexts (one canonicalisation, `checkoutFacts`), `docket.json`, working-tree or Git-tree snapshot, path identity, canonical real paths, containment and the checkout guard (`relativeInside` and `assertSafeCheckout` exported; its parts private), checkout identity and verified opening (`registered-checkout.mjs`; both openers return one context shape, no `gitDir`)
+- `src/repository/` — checkout contexts (one canonicalisation, `checkoutFacts`), `docket.json`, working-tree or Git-tree snapshot, path identity, canonical paths, containment and the checkout guard, verified opening (`registered-checkout.mjs`; both openers return one context shape)
 - `src/library/` — public facades for the headless library (ADR-30, `docs/LIBRARY.md`): one re-export-only module per `package.json` `exports` subpath, naming exactly the documented names (errors, schema, date, claims); no logic
 - `src/library/items/` — facades for `docket/items/*` (index, query, detail, relations, set, body, notes, link)
 - `src/library/repository/` — facades for `docket/repository/*` (context, canonical, containment, registered-checkout)
 - `src/library/registry/` — facades for `docket/registry/*` (paths, source)
 - `src/state/claims/` — common-dir advisory claims store
 - `src/state/index/` — rebuildable per-worktree JSON cache
-- `src/state/registry/` — per-machine repo registry: identity, registration, one-shot scan, the last-good source with forced refresh and strict id lookup (`source.mjs`), document-location overrides (stored, validated metadata only; one `assertDocName`). The `repo list` view (`describeRegistry`) is the CLI adapter's
+- `src/state/registry/` — per-machine repo registry: identity, registration, scan, the last-good source with strict id lookup (`source.mjs`), document-location overrides (metadata only). The `repo list` view is the CLI adapter's
 - `src/cli/` — dispatch, argument handling, output contracts, shared report vocabulary, help, shared file/stdin input, `docket guide`
 - `src/cli/commands/` — thin adapters per command family (items, validation, coordination, init, gate, registry; `conflicts` arrives with M5, dk-7f473623)
 - `src/cli/commands/items/` — one adapter per item command (add, set, link, list, show, index, notes) plus shared item-flag options
@@ -82,8 +82,8 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `tests/unit/` — unit suites, one folder per area: format, core, storage, repository, state (claims, index; `registry/` beside them), cli
 - `tests/integration/`, `tests/packaging/` — real-push suites and installed-tarball acceptance: CLI (`cli.test.mjs`) and library exports (`library.test.mjs`)
 - `tests/helpers/` — disposable-repo, registry/checkout, clock and gate support
-- `tests/fixtures/` — bounded fixtures: hooks (the pre-Docket baseline template and the vendored CI snapshot of the harness template, ADR-31)
-- `scripts/release/` — owner-run release scripts (ADR-31): `cut.ps1` (bump, commit, tag, confirmed push), `install.ps1` (gh download, SHA-256, global install, gate promote and install), shared `docket-release.ps1`, `owner-run.ps1` (verbatim template copy, owner-run 1.0.0 from ~/.claude/templates/scripts) and `release-scripts.test.ps1` (`npm run test:scripts`)
+- `tests/fixtures/` — bounded fixtures: hooks (baseline template and the vendored CI snapshot of the harness template, ADR-31)
+- `scripts/release/` — owner-run release scripts (ADR-31): `cut.ps1`, `install.ps1`, shared `docket-release.ps1`, `owner-run.ps1` (verbatim harness template copy) and `release-scripts.test.ps1` (`npm run test:scripts`)
 - `.github/workflows/` — `ci.yml` (push and PR to main, also the release gate) and `release.yml` (`v*` tag to a draft release); no other workflows
 - `docs/` — living docs, research evidence and the shipped guides (`MOVE-IN.md`, `AGENT-GUIDE.md`, `LIBRARY.md`)
 - `docs/items/` — Docket's own work items (created in M0; flat, permanent paths)
@@ -103,15 +103,10 @@ the raw runs behind it (frozen historical evidence). It is not a code home and i
 | `core/validation`  | The ten ITEM-SPEC check groups; `checkStore` runs them over a checkout or a Git ref.                                                    |
 | `core/identity`    | `dk-<8hex>` allocation with collision retry, LexoRank-style `[a-z]+` ranks, local dates.                                                |
 | `core/items`       | Mutations (incl. `batch` add, `content/` body and notes), queries and the relations view; `transaction.mjs` is the one lock/write path. |
-| `library`          | Re-export-only facades behind the `package.json` `exports` map; name exactly the `docs/LIBRARY.md` names, no logic.                     |
-| `storage`          | Revision check, temp-write/fsync/rename, per-worktree lock.                                                                             |
-| `repository`       | Checkout, Git common dir, tree or ref reads; canonical real paths, containment; exact-root and registered openers.                      |
 | `state/index`      | `.docket/index.json` (v2, open-note count only), rebuilt from source hashes; `check` never trusts it.                                   |
-| `state/claims`     | `<git-common-dir>/docket-claims.json`, separate lock, expiry on read.                                                                   |
 | `state/registry`   | `registry.json`: ids, aliases, checkout groups by Git common dir, preferred checkout, doc overrides; last-good source.                  |
 | `integration/init` | `docket init`: items dir, `docket.json`, ignore entry, agent snippet, optional gate.                                                    |
 | `integration/gate` | Promotes tested tarballs to `%LOCALAPPDATA%`; launcher runs `check --ref` per pushed tip.                                               |
-| `tooling`          | `build` (npm pack + content and export-map check), `layout-check` (Layout homes, 800-line cap).                                         |
 
 ## Size and placement rules
 
