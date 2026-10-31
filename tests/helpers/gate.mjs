@@ -2,12 +2,11 @@
 // remotes, and Git's own sh for running hook scripts directly.
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { defaultTemplatePath } from "../../src/integration/gate/install.mjs";
 import { promoteDirectory } from "../../src/integration/gate/promote.mjs";
 import { smokeGate } from "../../src/integration/gate/smoke.mjs";
-import { ROOT, git } from "./repository.mjs";
+import { ROOT, git, tempDir } from "./repository.mjs";
 
 /**
  * The managed hook template: the harness copy, or DOCKET_HOOK_TEMPLATE. CI points that at the vendored
@@ -53,7 +52,7 @@ export function gitSh() {
 
 /** Promote the current checkout's src/ as a gate version into gateRoot (test-only shortcut). */
 export function promoteCheckout(gateRoot, version = "test-checkout") {
-  const staged = fs.mkdtempSync(path.join(os.tmpdir(), "docket-stage-"));
+  const { dir: staged, cleanup } = tempDir("docket-stage-");
   try {
     fs.cpSync(path.join(ROOT, "src"), path.join(staged, "src"), { recursive: true });
     fs.copyFileSync(path.join(ROOT, "package.json"), path.join(staged, "package.json"));
@@ -65,7 +64,7 @@ export function promoteCheckout(gateRoot, version = "test-checkout") {
       smoke: smokeGate,
     });
   } finally {
-    fs.rmSync(staged, { recursive: true, force: true });
+    cleanup();
   }
 }
 
@@ -87,13 +86,29 @@ export function fakeLfs(dir) {
   return { bin, log: path.join(dir, "lfs.log") };
 }
 
+/** Env with `bin` first on PATH, then the unwrapped git's dir so `git lfs` inside a hook finds `bin`. */
 export function withPath(bin, env = {}) {
-  return { ...process.env, ...env, PATH: `${bin}${path.delimiter}${process.env.PATH}` };
+  const git = pushGit();
+  const dirs = [bin, ...(path.isAbsolute(git) ? [path.dirname(git)] : []), process.env.PATH];
+  return { ...process.env, ...env, PATH: dirs.join(path.delimiter) };
+}
+
+/**
+ * The git executable to push with. On Windows, `git` on PATH is usually Git for Windows' cmd\git.exe
+ * wrapper, which prepends its own mingw64\bin to the child PATH, so a real git-lfs bundled there beats
+ * the fakeLfs stub placed first on PATH. mingw64\bin\git.exe leaves PATH alone, keeping the stub in
+ * charge whatever Git or git-lfs the machine ships.
+ */
+export function pushGit() {
+  if (process.platform !== "win32") return "git";
+  const exec = execFileSync("git", ["--exec-path"], { encoding: "utf8" }).trim();
+  const plain = path.normalize(path.join(exec, "..", "..", "bin", "git.exe"));
+  return fs.existsSync(plain) ? plain : "git";
 }
 
 /** `git push` with the hook active. Returns {status, stderr}. */
 export function push(root, args, env = process.env) {
-  const r = spawnSync("git", ["push", ...args], { cwd: root, env, encoding: "utf8" });
+  const r = spawnSync(pushGit(), ["push", ...args], { cwd: root, env, encoding: "utf8" });
   return { status: r.status, stderr: r.stderr + r.stdout };
 }
 

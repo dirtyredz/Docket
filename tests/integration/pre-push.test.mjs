@@ -139,6 +139,10 @@ describe("composed pre-push gate", { skip }, () => {
     const env = withPath(lfs.bin, { LFS_LOG: lfs.log });
     let out = push(r.root, ["origin", "main"], env);
     assert.equal(out.status, 0, out.stderr);
+    assert.ok(
+      out.stderr.includes("fake-lfs pre-push"),
+      "the stub git-lfs must be the one that ran",
+    );
     assert.ok(out.stderr.indexOf("fake-lfs pre-push") < out.stderr.indexOf("docket check"));
     assert.match(
       fs.readFileSync(lfs.log, "utf8"),

@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { after, describe, test } from "node:test";
 import { CODES } from "../../../../src/core/errors.mjs";
-import { pathKey } from "../../../../src/repository/canonical.mjs";
+import { canonicalPath, pathKey } from "../../../../src/repository/canonical.mjs";
 import { relativeInside } from "../../../../src/repository/containment.mjs";
 import { parseDocOverrides } from "../../../../src/state/registry/registration.mjs";
 import { assertDocName, checkDocPath } from "../../../../src/state/registry/schema.mjs";
@@ -29,7 +29,7 @@ function setup(opts) {
 const worktree = (r, name = "wt1") => {
   const wt = path.join(r.dir, name);
   git(r.root, "worktree", "add", "-q", "-b", name, wt);
-  return fs.realpathSync.native(wt).replaceAll("\\", "/");
+  return canonicalPath(wt);
 };
 
 describe("add", () => {

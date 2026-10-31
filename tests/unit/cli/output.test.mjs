@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { after, describe, test } from "node:test";
-import { git, itemText, makeRepo, ROOT, runCli } from "../../helpers/repository.mjs";
+import { git, itemText, makeRepo, ROOT, runCli, tempDir } from "../../helpers/repository.mjs";
 
 const A = "dk-aaaaaaaa";
 const B = "dk-bbbbbbbb";
@@ -162,13 +162,13 @@ describe("global flags", () => {
   });
 
   test("--repo that is not a git repo exits 2 with DOCKET_NOT_A_REPO", () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "docket plain "));
+    const { dir, cleanup } = tempDir("docket plain ");
     try {
       const out = runCli(["list", "--json", "--repo", dir]);
       assert.equal(out.status, 2);
       assert.equal(out.json.error.code, "DOCKET_NOT_A_REPO");
     } finally {
-      fs.rmSync(dir, { recursive: true, force: true });
+      cleanup();
     }
   });
 
@@ -183,7 +183,6 @@ describe("global flags", () => {
 
 describe("retired serve (0.7.0, ADR-29)", () => {
   const MESSAGE = "docket serve was removed in 0.7.0 — use Command Deck for the UI.";
-  const outside = () => fs.mkdtempSync(path.join(os.tmpdir(), "docket no repo "));
 
   test("human: empty stdout, the removal message on stderr, exit 2", () => {
     for (const args of [
@@ -218,7 +217,7 @@ describe("retired serve (0.7.0, ADR-29)", () => {
   });
 
   test("needs no repository and starts nothing", () => {
-    const dir = outside();
+    const { dir, cleanup } = tempDir("docket no repo ");
     try {
       const out = runCli(["serve", "--json"], { cwd: dir, env: { DOCKET_HOME: dir } });
       assert.equal(out.status, 2);
@@ -226,7 +225,7 @@ describe("retired serve (0.7.0, ADR-29)", () => {
       assert.deepEqual(fs.readdirSync(dir), [], "no registry or state written");
       assert.doesNotMatch(out.stdout + out.stderr, /http:|at .*\.mjs/);
     } finally {
-      fs.rmSync(dir, { recursive: true, force: true });
+      cleanup();
     }
   });
 
