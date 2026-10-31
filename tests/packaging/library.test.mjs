@@ -207,7 +207,7 @@ test("the contract table documents the package.json row and parses real names", 
   assert.deepEqual(CONTRACT["docket/date"], ["localDate"]);
 });
 
-test("build checks catch a catch-all, a pattern, a bad target and a revived dependency", () => {
+test("build checks catch a catch-all, a pattern, a non-facade target and a revived dependency", () => {
   const pkgEntry = (pkg) => [
     { name: "package/package.json", data: Buffer.from(JSON.stringify(pkg)) },
     ...entries.filter((e) => e.name !== "package/package.json"),
@@ -218,7 +218,17 @@ test("build checks catch a catch-all, a pattern, a bad target and a revived depe
     [{ ...real, exports: { ...real.exports, "./*": "./src/*.mjs" } }, /patterns/],
     [{ ...real, exports: { ...real.exports, "./x": "./src/tooling/build.mjs" } }, /shipped/],
     [{ ...real, exports: { ...real.exports, "./v": "./src/viewer/server/main.mjs" } }, /shipped/],
-    [{ ...real, exports: { ...real.exports, "./y": "./src/core/nope.mjs" } }, /not in the tarball/],
+    [
+      { ...real, exports: { ...real.exports, "./y": "./src/library/nope.mjs" } },
+      /not in the tarball/,
+    ],
+    // A direct implementation mapping is refused even though the module ships (dk-5ffe6319).
+    [{ ...real, exports: { ...real.exports, "./errors": "./src/core/errors.mjs" } }, /facade/],
+    [{ ...real, exports: { ...real.exports, "./r": "./src/repository/context.mjs" } }, /facade/],
+    [
+      { ...real, exports: { ...real.exports, "./u": "./src/library/../core/errors.mjs" } },
+      /facade/,
+    ],
     [{ ...real, dependencies: { marked: "1" } }, /removed dependency declared again: marked/],
     [{ ...real, devDependencies: { playwright: "1" } }, /removed dependency.*playwright/],
     [{ ...real, exports: undefined }, /no subpath export map/],

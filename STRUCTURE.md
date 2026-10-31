@@ -75,7 +75,7 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `src/cli/commands/items/` — one adapter per item command (add, set, link, list, show, index, notes) plus shared item-flag options
 - `src/integration/` — the managed, versioned agent snippet (`agent-snippet.mjs`, text in `agent-snippet.md`; markers, exact-legacy migration, manual review) and `docket init` (`init.mjs`)
 - `src/integration/gate/` — gate promotion, smoke test, repo opt-in, stable launcher, tarball reader, pre-push validation
-- `src/tooling/` — distributable build (tarball contents, export map, removed-dependency guard) and layout/size checker
+- `src/tooling/` — distributable build (tarball contents, export map whose targets must be `src/library/` facades, removed-dependency guard) and layout/size checker
 - `tests/` — suite folders only; unit suites live under `tests/unit/`
 - `tests/unit/` — unit suites, one folder per area: format, core, storage, repository, state (claims, index; `registry/` beside them), cli
 - `tests/integration/`, `tests/packaging/` — real-push suites and installed-tarball acceptance: CLI (`cli.test.mjs`) and library exports (`library.test.mjs`)

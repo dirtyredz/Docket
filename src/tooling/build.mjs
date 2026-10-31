@@ -32,14 +32,14 @@ export const REMOVED_DEPENDENCIES = ["marked", "sanitize-html", "playwright"];
 // must never ship again.
 const FORBIDDEN =
   /^package\/(src\/bootstrap|src\/tooling|src\/viewer\/|src\/cli\/commands\/viewer\.mjs$|tests|docs\/(?!(MOVE-IN|AGENT-GUIDE|LIBRARY)\.md$))/;
-// A library export names one shipped module (or package.json); no root entry, no patterns, nothing
-// quarantined or removed.
-const EXPORT_TARGET = /^\.\/(package\.json|src\/(?!bootstrap\/|tooling\/|viewer\/)[\w./-]+\.mjs)$/;
+// A library export names one src/library/ facade (or package.json): never an implementation module in
+// core, state, repository or anywhere else (ADR-30), no root entry, no patterns, no `..` segments.
+const EXPORT_TARGET = /^\.\/(package\.json|src\/library\/(?:[\w-]+\/)*[\w-]+\.mjs)$/;
 
 /**
  * Problems with the packaged library contract: `pkg` is the PACKED package.json, `names` the tarball's
  * entry names. The export map must exist, have no catch-all ("." or a "*" pattern) and name only shipped
- * modules; no removed rendering dependency may be declared.
+ * src/library/ facades (or package.json); no removed rendering dependency may be declared.
  */
 export function libraryProblems(pkg, names) {
   const problems = [];
@@ -59,7 +59,9 @@ export function libraryProblems(pkg, names) {
       problems.push(`export ${subpath}: patterns are not allowed`);
     }
     if (typeof target !== "string" || !EXPORT_TARGET.test(target)) {
-      problems.push(`export ${subpath}: target must be one shipped module, got ${target}`);
+      problems.push(
+        `export ${subpath}: target must be one shipped src/library/ facade, got ${target}`,
+      );
     } else if (!names.includes(`package/${target.slice(2)}`)) {
       problems.push(`export ${subpath}: ${target} is not in the tarball`);
     }
