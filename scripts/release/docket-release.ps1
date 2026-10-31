@@ -7,7 +7,10 @@
   Docket-specific: required tools, captured native output, the package version, and the SHA-256 check
   that matches the release workflow's `sha256sum` file format.
 
-  Functions: Get-RequiredTool, Invoke-Capture, Get-PackageVersion, Test-ReleaseVersion, Test-TarballChecksum.
+  Functions: Get-RequiredTool, Invoke-Capture, Get-PackageVersion, Test-ReleaseVersion, Get-Sha256Hex, Test-TarballChecksum.
+
+  The built-in file-hash cmdlet is deliberately not used: in Windows PowerShell 5.1 it is a script function in the Utility .psm1,
+  which fails to load when the parent shell is pwsh 7 (its PSModulePath leaks in). .NET works from any shell.
 #>
 
 # The path of a tool on PATH, or end the run with exit 1 (a missing prerequisite).
@@ -47,6 +50,16 @@ function Test-ReleaseVersion([string]$Value) {
   return $Value -match '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$'
 }
 
+# Lowercase hex SHA-256 of a file via .NET (see the header note).
+function Get-Sha256Hex([string]$Path) {
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $stream = [System.IO.File]::OpenRead((Resolve-Path -LiteralPath $Path).ProviderPath)
+    try { return ([System.BitConverter]::ToString($sha.ComputeHash($stream)) -replace '-', '').ToLowerInvariant() }
+    finally { $stream.Dispose() }
+  } finally { $sha.Dispose() }
+}
+
 # Verifies $Tarball against its "<hex>  <name>" checksum file (sha256sum format, optional '*' binary marker).
 # Returns $null when it matches, otherwise the reason.
 function Test-TarballChecksum([string]$Tarball, [string]$ChecksumFile) {
@@ -59,7 +72,7 @@ function Test-TarballChecksum([string]$Tarball, [string]$ChecksumFile) {
   $named = $Matches[2].Trim()
   $leaf = Split-Path -Leaf $Tarball
   if ($named -ne $leaf) { return "checksum file names '$named', not '$leaf'" }
-  $actual = (Get-FileHash -LiteralPath $Tarball -Algorithm SHA256).Hash.ToLowerInvariant()
+  $actual = Get-Sha256Hex $Tarball
   if ($actual -ne $expected) { return "SHA-256 mismatch for ${leaf}: expected $expected, got $actual" }
   Write-Log "SHA-256 verified: $actual  $leaf"
   return $null

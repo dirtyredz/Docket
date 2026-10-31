@@ -25,6 +25,7 @@ $shell = (Get-Process -Id $PID).Path
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $work = Join-Path ([System.IO.Path]::GetTempPath()) ("docket-release-test-{0}" -f [guid]::NewGuid().ToString('N').Substring(0, 8))
 $script:failures = 0
+. (Join-Path $PSScriptRoot 'docket-release.ps1')
 
 function Invoke-Git([string]$Dir, [string[]]$GitArgs) {
   $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
@@ -74,7 +75,7 @@ function Invoke-Case([string]$Title, [string]$Script, [string[]]$Arguments, [int
 }
 
 function Write-Checksum([string]$Tarball, [string]$Hash) {
-  if (-not $Hash) { $Hash = (Get-FileHash -LiteralPath $Tarball -Algorithm SHA256).Hash.ToLowerInvariant() }
+  if (-not $Hash) { $Hash = Get-Sha256Hex $Tarball }
   [System.IO.File]::WriteAllText("$Tarball.sha256", "$Hash  $(Split-Path -Leaf $Tarball)`n")
 }
 
@@ -156,6 +157,15 @@ try {
   Invoke-Case 'install -DryRun -Tag (no gh call) plans the download' 'install.ps1' @('-Tag', 'v0.8.4', '-DryRun') 0
   Invoke-Case 'install refuses a tag that does not match the tarball' 'install.ps1' @('-TarballPath', $tgz, '-Tag', 'v0.9.0', '-DryRun') 2
   Invoke-Case 'install refuses a malformed tag' 'install.ps1' @('-Tag', '0.8.4', '-DryRun') 1
+  # pwsh 7 parents leak their PSModulePath into 5.1 children; the checksum path must not depend on Utility .psm1 functions.
+  $pwshMods = @{ PSModulePath = ((Join-Path $work 'pwsh7Modules') + ';' + $env:PSModulePath) }
+  Invoke-Case 'install -DryRun verifies the checksum under a pwsh-7-style PSModulePath' 'install.ps1' @('-TarballPath', $tgz, '-DryRun') 0 -Env $pwshMods -Check {
+    param($out) Assert (@($out | Where-Object { $_ -match 'SHA-256 verified' }).Count -eq 1) 'checksum not verified'
+  }
+  $offenders = @(Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.ps1' | Where-Object { $_.Name -ne 'release-scripts.test.ps1' } |
+    Select-String -Pattern '(Get-FileHash|New-TemporaryFile|Format-Hex|Import-PowerShellDataFile)' | ForEach-Object { "$($_.Filename):$($_.LineNumber)" })
+  if ($offenders.Count) { $script:failures++; Write-Host "FAIL: pwsh-7-fragile Utility function used: $($offenders -join ', ')" -ForegroundColor Red }
+  else { Write-Host 'PASS: no 5.1 Utility script functions in the release scripts' -ForegroundColor Green }
   Write-Checksum $tgz ('0' * 64)
   Invoke-Case 'install refuses a checksum mismatch' 'install.ps1' @('-TarballPath', $tgz, '-DryRun') 2 {
     param($out) Assert (@($out | Where-Object { $_ -match 'SHA-256 mismatch' }).Count -ge 1) 'no mismatch reason'
