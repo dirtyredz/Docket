@@ -112,6 +112,10 @@ configPath}`; only `resolveRepo`/`contextAtRoot` add `gitDir`, and nothing in co
   differs. Copy the harness file over it when a template change matters to the Docket callback.
 - **Hosted Windows runners check out with `core.autocrlf=true`.** CI sets it to `false` before checkout; item
   files are validated byte-exact and the tests build their own repos.
+- **Hosted runners have an 8.3 short `%TEMP%` (`RUNNER~1`); Docket reports canonical paths.** Test fixtures
+  come from `tempDir()` (realpath) and compare with `canonicalPath`, never raw `os.tmpdir()`.
+- **Git for Windows' `cmd\git.exe` prepends its `mingw64\bin` to the child PATH**, so its bundled git-lfs
+  shadows the `fakeLfs` stub. Gate tests push with `pushGit()` (the unwrapped `mingw64\bin\git.exe`).
 - **In Windows PowerShell 5.1 strict mode, call `npm.cmd`, not `npm`.** The `npm.ps1` shim reads
   `$MyInvocation.Statement`, which 5.1 lacks. `Find-Tool` (type Application) already returns `npm.cmd`.
   PowerShell names are case-insensitive: a helper function called `Git` shadows `git.exe` and recurses.
