@@ -16,6 +16,7 @@ import {
   runHook,
   templateAvailable,
   withPath,
+  describeLfsResolution,
 } from "../helpers/gate.mjs";
 import { git, itemText, makeRepo, tempDir } from "../helpers/repository.mjs";
 
@@ -141,7 +142,7 @@ describe("composed pre-push gate", { skip }, () => {
     assert.equal(out.status, 0, out.stderr);
     assert.ok(
       out.stderr.includes("fake-lfs pre-push"),
-      "the stub git-lfs must be the one that ran",
+      `the stub git-lfs must be the one that ran\n${describeLfsResolution(env)}\n${out.stderr}`,
     );
     assert.ok(out.stderr.indexOf("fake-lfs pre-push") < out.stderr.indexOf("docket check"));
     assert.match(

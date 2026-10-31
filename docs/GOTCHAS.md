@@ -116,6 +116,10 @@ configPath}`; only `resolveRepo`/`contextAtRoot` add `gitDir`, and nothing in co
   come from `tempDir()` (realpath) and compare with `canonicalPath`, never raw `os.tmpdir()`.
 - **Git for Windows' `cmd\git.exe` prepends its `mingw64\bin` to the child PATH**, so its bundled git-lfs
   shadows the `fakeLfs` stub. Gate tests push with `pushGit()` (the unwrapped `mingw64\bin\git.exe`).
+- **`git lfs` resolves `git-lfs` from git's exec-path before PATH**, and git prepends the exec-path to a hook's
+  PATH, so a git-lfs in `libexec/git-core` beats any stub on PATH (reproduced locally with a copied
+  `git-lfs.exe` in `GIT_EXEC_PATH`). `withPath()` therefore sets `GIT_EXEC_PATH` to the stub dir; a failing
+  assertion prints `describeLfsResolution()` (exec-path, `command -v git-lfs`, PATH).
 - **In Windows PowerShell 5.1 strict mode, call `npm.cmd`, not `npm`.** The `npm.ps1` shim reads
   `$MyInvocation.Statement`, which 5.1 lacks. `Find-Tool` (type Application) already returns `npm.cmd`.
   PowerShell names are case-insensitive: a helper function called `Git` shadows `git.exe` and recurses.

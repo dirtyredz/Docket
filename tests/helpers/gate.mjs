@@ -38,12 +38,28 @@ export function baselineTemplate() {
   return fs.readFileSync(file, "utf8");
 }
 
+let execPathMemo;
+/**
+ * The install's own `git --exec-path` (as git prints it), resolved once. GIT_EXEC_PATH is dropped from the
+ * probe so a test override never changes which install the layout is read from.
+ */
+export function gitExecPath() {
+  if (execPathMemo === undefined) {
+    const probeEnv = { ...process.env };
+    delete probeEnv.GIT_EXEC_PATH;
+    execPathMemo = execFileSync("git", ["--exec-path"], {
+      encoding: "utf8",
+      env: probeEnv,
+    }).trim();
+  }
+  return execPathMemo;
+}
+
 /** Git for Windows' sh (what git uses to run hooks); plain `sh` elsewhere. */
 export function gitSh() {
   if (process.platform !== "win32") return "sh";
-  const exec = execFileSync("git", ["--exec-path"], { encoding: "utf8" }).trim();
   return path.join(
-    exec.replace(/[\\/]mingw64[\\/]libexec[\\/]git-core$/i, ""),
+    gitExecPath().replace(/[\\/]mingw64[\\/]libexec[\\/]git-core$/i, ""),
     "usr",
     "bin",
     "sh.exe",
@@ -86,24 +102,52 @@ export function fakeLfs(dir) {
   return { bin, log: path.join(dir, "lfs.log") };
 }
 
-/** Env with `bin` first on PATH, then the unwrapped git's dir so `git lfs` inside a hook finds `bin`. */
-export function withPath(bin, env = {}) {
+/**
+ * Env that makes `bin` (holding the fakeLfs stub) the git-lfs a hook runs, on any Git layout. `git lfs`
+ * resolves the dashed `git-lfs` from git's exec-path BEFORE PATH, and a Git for Windows image may ship a
+ * real git-lfs there, so PATH alone cannot win. GIT_EXEC_PATH=bin puts the stub first in both places; the
+ * real exec-path and git directory follow on PATH so the hook still finds git-receive-pack, sh and friends.
+ */
+export function withPath(bin, extra = {}) {
   const git = pushGit();
-  const dirs = [bin, ...(path.isAbsolute(git) ? [path.dirname(git)] : []), process.env.PATH];
-  return { ...process.env, ...env, PATH: dirs.join(path.delimiter) };
+  const dirs = [
+    bin,
+    gitExecPath(),
+    ...(path.isAbsolute(git) ? [path.dirname(git)] : []),
+    process.env.PATH,
+  ];
+  return { ...process.env, ...extra, GIT_EXEC_PATH: bin, PATH: dirs.join(path.delimiter) };
 }
 
+let pushGitMemo;
 /**
  * The git executable to push with. On Windows, `git` on PATH is usually Git for Windows' cmd\git.exe
  * wrapper, which prepends its own mingw64\bin to the child PATH, so a real git-lfs bundled there beats
- * the fakeLfs stub placed first on PATH. mingw64\bin\git.exe leaves PATH alone, keeping the stub in
- * charge whatever Git or git-lfs the machine ships.
+ * the fakeLfs stub placed first on PATH. mingw64\bin\git.exe leaves PATH alone. Falls back to plain `git`
+ * with a stderr warning when that file is missing (a different layout), since the stub may then lose.
  */
 export function pushGit() {
   if (process.platform !== "win32") return "git";
-  const exec = execFileSync("git", ["--exec-path"], { encoding: "utf8" }).trim();
-  const plain = path.normalize(path.join(exec, "..", "..", "bin", "git.exe"));
-  return fs.existsSync(plain) ? plain : "git";
+  if (pushGitMemo === undefined) {
+    const plain = path.normalize(path.join(gitExecPath(), "..", "..", "bin", "git.exe"));
+    if (fs.existsSync(plain)) pushGitMemo = plain;
+    else {
+      process.stderr.write(`gate helper: no unwrapped git at ${plain}; pushing with PATH git\n`);
+      pushGitMemo = "git";
+    }
+  }
+  return pushGitMemo;
+}
+
+/**
+ * What a hook sees under the stub setup, for failure messages: the effective exec-path, the git-lfs that
+ * `command -v` picks, and the PATH it gets, probed with git's own sh.
+ */
+export function describeLfsResolution(hookEnv) {
+  const script =
+    'echo "exec-path=$(git --exec-path)"; echo "command -v git-lfs=$(command -v git-lfs)"; echo "PATH=$PATH"';
+  const probe = spawnSync(gitSh(), ["-c", script], { env: hookEnv, encoding: "utf8" });
+  return `${probe.stdout}${probe.stderr}push git=${pushGit()} GIT_EXEC_PATH=${hookEnv.GIT_EXEC_PATH}`;
 }
 
 /** `git push` with the hook active. Returns {status, stderr}. */
