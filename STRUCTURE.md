@@ -61,15 +61,15 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `src/core/identity/` — random ID allocation, fractional rank, local-date rules
 - `src/core/items/` — add, batch add, set (with claim release on completion), complete, link and `linkItem` (with revision maps), query, detail, the relations view, revision preconditions and the shared mutation transaction with its `withWritten` result helper
 - `src/core/items/content/` — body replacement and note lifecycle (append, resolve): the content operations behind `set --body-file` and `note`, and their shared preserved-prefix write and post-edit check (`write.mjs`)
-- `src/storage/` — content revisions, atomic write, lock, item store
-- `src/repository/` — worktree and common-dir discovery and explicit-root contexts, `docket.json`, working-tree or Git-tree snapshot, path identity, canonical real paths, containment and the checkout guard, checkout identity and verified opening (`registered-checkout.mjs`)
+- `src/storage/` — content revisions, atomic write, lock, item store and the one store-entry shape (`storeEntry`) every snapshot and parse takes
+- `src/repository/` — worktree and common-dir discovery and explicit-root contexts (one canonicalisation, `checkoutFacts`), `docket.json`, working-tree or Git-tree snapshot, path identity, canonical real paths, containment and the checkout guard (`relativeInside` and `assertSafeCheckout` exported; its parts private), checkout identity and verified opening (`registered-checkout.mjs`; both openers return one context shape, no `gitDir`)
 - `src/library/` — public facades for the headless library (ADR-30, `docs/LIBRARY.md`): one re-export-only module per `package.json` `exports` subpath, naming exactly the documented names (errors, schema, date, claims); no logic
 - `src/library/items/` — facades for `docket/items/*` (index, query, detail, relations, set, body, notes, link)
 - `src/library/repository/` — facades for `docket/repository/*` (context, canonical, containment, registered-checkout)
 - `src/library/registry/` — facades for `docket/registry/*` (paths, source)
 - `src/state/claims/` — common-dir advisory claims store
 - `src/state/index/` — rebuildable per-worktree JSON cache
-- `src/state/registry/` — per-machine repo registry: identity, registration, one-shot scan, the last-good source with forced refresh and strict id lookup (`source.mjs`), document-location overrides (stored, validated metadata only)
+- `src/state/registry/` — per-machine repo registry: identity, registration, one-shot scan, the last-good source with forced refresh and strict id lookup (`source.mjs`), document-location overrides (stored, validated metadata only; one `assertDocName`). The `repo list` view (`describeRegistry`) is the CLI adapter's
 - `src/cli/` — dispatch, argument handling, output contracts, shared report vocabulary, help, shared file/stdin input, `docket guide`
 - `src/cli/commands/` — thin adapters per command family (items, validation, coordination, init, gate, registry; conflicts planned)
 - `src/cli/commands/items/` — one adapter per item command (add, set, link, list, show, index, notes) plus shared item-flag options

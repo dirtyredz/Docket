@@ -2,8 +2,8 @@
 id: dk-ecef6190
 type: task
 created: 2026-10-12
-status: todo
-since: 2026-10-12
+status: done
+since: 2026-10-31
 area: repository
 priority: P3
 rank: z

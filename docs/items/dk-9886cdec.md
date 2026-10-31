@@ -2,8 +2,8 @@
 id: dk-9886cdec
 type: task
 created: 2026-10-12
-status: todo
-since: 2026-10-12
+status: done
+since: 2026-10-31
 area: repository
 priority: P2
 rank: zzzzzz

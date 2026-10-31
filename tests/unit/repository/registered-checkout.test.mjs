@@ -137,6 +137,15 @@ test("the registered opener returns the core context for an available checkout",
   });
 });
 
+test("both openers return one context shape (no gitDir)", (t) => {
+  const { repo, checkout } = registered(t);
+  const registeredCtx = createCheckoutOpener()(repo, checkout);
+  const exact = openCheckoutAt(checkout.path);
+  assert.deepEqual(Object.keys(exact).sort(), Object.keys(registeredCtx).sort());
+  assert.equal("gitDir" in exact, false);
+  assert.ok(sameKey(exact.root, registeredCtx.root));
+});
+
 test("the opener refuses a deleted checkout with the reason, even inside the window", (t) => {
   const { r, repo, checkout } = registered(t);
   const open = createCheckoutOpener();

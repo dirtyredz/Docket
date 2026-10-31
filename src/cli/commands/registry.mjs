@@ -1,9 +1,8 @@
 // `docket repo add|list|remove|scan`: thin adapter over state/registry. The registry is per machine
 // (registryPath: DOCKET_HOME or %LOCALAPPDATA%/Docket); nothing here touches a repo's files.
-import { inspectCheckout } from "../../repository/registered-checkout.mjs";
+import { inspectCheckout, unavailableReason } from "../../repository/registered-checkout.mjs";
 import { registryPath } from "../../state/registry/paths.mjs";
 import {
-  describeRegistry,
   parseDocOverrides,
   registerCheckout,
   unregister,
@@ -38,6 +37,26 @@ function add(argv, io) {
     data: { change, repo, checkout },
     text: `${repo.alias}: ${change} (${checkout.path}${repo.preferred === checkout.id ? ", preferred" : ""})`,
   };
+}
+
+/** The `repo list` view: every checkout with availability and the reason when unavailable. */
+function describeRegistry(registry) {
+  return registry.repos.map((repo) => ({
+    id: repo.id,
+    alias: repo.alias,
+    commonDir: repo.commonDir,
+    docs: repo.docs,
+    checkouts: repo.checkouts.map((c) => {
+      const reason = unavailableReason(repo, c);
+      return {
+        id: c.id,
+        path: c.path,
+        preferred: c.id === repo.preferred,
+        available: reason === null,
+        ...(reason ? { reason } : {}),
+      };
+    }),
+  }));
 }
 
 function list(argv, io) {

@@ -1,18 +1,12 @@
-// The checkout guard and its parts: lexical containment, real-path containment through links, link
-// detection (junctions on Windows), and assertSafeCheckout over docket.json, .docket, the items directory
-// and every item entry.
+// The checkout guard, exercised only through its public entry point: assertSafeCheckout over docket.json,
+// .docket, the items directory and every item entry (lexical and real-path containment through links,
+// link detection including junctions on Windows), plus relativeInside for registry paths.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { CODES } from "../../../src/core/errors.mjs";
-import {
-  assertRealWithin,
-  assertSafeCheckout,
-  isLink,
-  lexicallyWithin,
-  relativeInside,
-} from "../../../src/repository/containment.mjs";
+import { assertSafeCheckout, relativeInside } from "../../../src/repository/containment.mjs";
 import { contextAtRoot } from "../../../src/repository/context.mjs";
 import { itemText, tempDir } from "../../helpers/repository.mjs";
 import { docketRepo, linkDir, linkFile } from "../../helpers/registry.mjs";
@@ -36,11 +30,20 @@ test("relativeInside keeps its registry behaviour (lexical, percent-decoded)", (
   }
 });
 
-test("lexicallyWithin compares by path key", () => {
-  assert.ok(lexicallyWithin("/a/b", "/a/b"));
-  assert.ok(lexicallyWithin("/a/b", "/a/b/c"));
-  assert.ok(!lexicallyWithin("/a/b", "/a/bc"));
-  assert.ok(!lexicallyWithin("/a/b", "/a"));
+test("only the two guards are exported; the parts stay private", async () => {
+  const mod = await import("../../../src/repository/containment.mjs");
+  assert.deepEqual(Object.keys(mod).sort(), ["assertSafeCheckout", "relativeInside"]);
+});
+
+test("a linked docs/ into a sibling that shares the root's name prefix is refused", (t) => {
+  const { r, ctx } = setup(t);
+  const sibling = `${r.root}x`;
+  fs.mkdirSync(path.join(sibling, "docs", "items"), { recursive: true });
+  t.after(() => fs.rmSync(sibling, { recursive: true, force: true }));
+  fs.rmSync(path.join(r.root, "docs"), { recursive: true });
+  if (!linkDir(path.join(sibling, "docs"), path.join(r.root, "docs")))
+    return t.skip("cannot create links");
+  assert.throws(() => assertSafeCheckout(ctx), { code: CODES.USAGE, message: /escapes/ });
 });
 
 test("a clean checkout passes; missing .docket and items directory are fine", (t) => {
@@ -56,7 +59,7 @@ test("a junctioned items directory is refused", (t) => {
   fs.rmSync(path.join(r.root, "docs", "items"), { recursive: true });
   if (!linkDir(path.join(outside, "items"), path.join(r.root, "docs", "items")))
     return t.skip("cannot create links");
-  assert.ok(isLink(ctx.itemsDir));
+  assert.ok(fs.lstatSync(ctx.itemsDir).isSymbolicLink());
   assert.throws(() => assertSafeCheckout(ctx), { code: CODES.USAGE, message: /link/ });
 });
 
@@ -66,9 +69,9 @@ test("a linked parent (docs/) that escapes the checkout is refused by real path"
   fs.rmSync(path.join(r.root, "docs"), { recursive: true });
   if (!linkDir(path.join(outside, "docs"), path.join(r.root, "docs")))
     return t.skip("cannot create links");
-  assert.equal(isLink(ctx.itemsDir), false, "the items dir itself is a real directory");
+  const itemsIsLink = fs.lstatSync(ctx.itemsDir).isSymbolicLink();
+  assert.equal(itemsIsLink, false, "the items dir itself is a real directory");
   assert.throws(() => assertSafeCheckout(ctx), { code: CODES.USAGE, message: /escapes/ });
-  assert.throws(() => assertRealWithin(ctx.root, ctx.itemsDir), { code: CODES.USAGE });
 });
 
 test("a linked .docket directory is refused", (t) => {

@@ -37,8 +37,9 @@ scans, locks, Git subprocesses): call them off any latency-sensitive thread.
 
 ## Checkouts and scope
 
-Every item operation takes a checkout context `ctx` (`{root, commonDir, itemsDir, docketDir, configPath}`,
-plus `gitDir` when known). Never build one from an unverified path; use one of the two openers.
+Every item operation takes a checkout context `ctx` (`{root, commonDir, itemsDir, docketDir, configPath}`).
+Both openers return exactly that shape; `contextAtRoot` and `contextFor(..., gitDir)` add an optional `gitDir`
+that no operation reads. Never build one from an unverified path; use one of the two openers.
 
 - **A known folder (not registered):** `openCheckoutAt(root)` accepts only an exact Git checkout root (no
   ancestor discovery: a subdirectory is `DOCKET_NOT_A_REPO`) with a supported `docket.json`, runs the

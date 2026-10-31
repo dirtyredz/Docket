@@ -81,6 +81,7 @@ own lock, atomically. It holds no items, counts or claims.
   (nested repos and `.claude/worktrees/` included), reports skipped links and junctions without following
   them, keeps existing aliases and overrides, and never initialises, watches or prunes.
 - **Document overrides** (`repo add --doc NAME=rel.md`) are stored and validated metadata shown by `repo list`; Docket renders nothing from them.
+  Their only reader outside the CLI is Command Deck, through the library (`docket/registry/source`, `repo.docs`).
 - **Unavailable** checkouts are listed with a reason, never deleted; `repo remove` is the only exit.
 
 ## Last-good gate
@@ -121,8 +122,9 @@ this repo that talks to Docket through the CLI JSON output contract and, from 0.
 (ADR-30, `docs/LIBRARY.md`): narrow `package.json` subpath exports, each a re-export-only facade in `src/library/` over core operations, run in Command Deck's
 long-lived worker. Scope comes from two openers in `repository/registered-checkout.mjs`: `openCheckoutAt` (an
 exact checkout root, never an ancestor) and the registered-checkout opener (Git identity re-verified, cached
-for reads by repo id, checkout id, path and common dir; every mutation re-verifies). Both run the containment
-guard (no linked or escaping item storage). `state/registry/source.mjs` serves the last good registry with a
+for reads by repo id, checkout id, path and common dir; every mutation re-verifies). Both return one context
+shape (no `gitDir`; `context.mjs` `checkoutFacts` is the one canonicalisation behind them and `inspectCheckout`)
+and run the containment guard (no linked or escaping item storage). `state/registry/source.mjs` serves the last good registry with a
 visible error and supports a forced refresh. Docket renders nothing; Command Deck owns Markdown and sanitizing. Docket has no HTTP
 server; `docket serve` only reports its removal (exit 2). Git pre-push hook via the managed template's opt-in
 Docket callback. Repo-specific adapters (legacy-writer retirement, documentation checkers) live in the

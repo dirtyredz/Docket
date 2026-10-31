@@ -1,7 +1,8 @@
 // Contained-path checks. relativeInside: a relative path supplied by a user or a registry stays inside its
 // root lexically (no absolute, drive, UNC or `..` escape, also after percent-decoding). The checkout
-// guards: before a headless consumer hands a checkout to the item operations (which follow links), its
-// item storage must be real paths inside the checkout, never links or junctions.
+// guard (assertSafeCheckout): before a headless consumer hands a checkout to the item operations (which
+// follow links), its item storage must be real paths inside the checkout, never links or junctions.
+// Only those two are exported; the guard's parts stay private and are tested through it.
 import fs from "node:fs";
 import path from "node:path";
 import { CODES, docketError } from "../core/errors.mjs";
@@ -34,7 +35,7 @@ export function relativeInside(rel, what = "path") {
 }
 
 /** True when the absolute `target` is `root` or below it (by path key; no fs access). */
-export function lexicallyWithin(root, target) {
+function lexicallyWithin(root, target) {
   const r = pathKey(root);
   const t = pathKey(target);
   return t === r || t.startsWith(`${r}/`);
@@ -42,21 +43,21 @@ export function lexicallyWithin(root, target) {
 
 /**
  * Throw DOCKET_USAGE unless the existing `target` resolves (through every link) to a location inside
- * `root`'s real path. Missing targets are allowed (nothing to escape through) unless `mustExist`.
+ * `root`'s real path. Missing targets are allowed (nothing to escape through).
  */
-export function assertRealWithin(root, target, { what = "path", mustExist = false } = {}) {
+function assertRealWithin(root, target, what) {
   let real;
   try {
     real = canonicalPath(target);
   } catch (err) {
-    if (err.code === "ENOENT" && !mustExist) return;
+    if (err.code === "ENOENT") return;
     throw err;
   }
   if (!lexicallyWithin(canonicalPath(root), real)) throw escape(what, target);
 }
 
 /** True when the path is a symbolic link or (on Windows) a junction. Missing paths are not links. */
-export function isLink(p) {
+function isLink(p) {
   try {
     return fs.lstatSync(p).isSymbolicLink();
   } catch {
@@ -73,7 +74,7 @@ export function isLink(p) {
 export function assertSafeCheckout(ctx) {
   for (const p of [ctx.configPath, ctx.docketDir, ctx.itemsDir]) {
     if (isLink(p)) throw escape("link", p);
-    assertRealWithin(ctx.root, p, { what: p });
+    assertRealWithin(ctx.root, p, p);
   }
   let entries = [];
   try {

@@ -24,11 +24,17 @@ export const emptyRegistry = () => ({ version: REGISTRY_VERSION, repos: [] });
 
 const invalid = (message) => docketError(CODES.INVALID, `registry: ${message}`);
 
-/** Validate a document override path (relative, contained, Markdown). Returns it or throws USAGE. */
-export function checkDocPath(name, rel) {
+/** Return `name` when it is one of DOC_NAMES; otherwise throw DOCKET_USAGE naming the choices. */
+export function assertDocName(name) {
   if (!DOC_NAMES.includes(name)) {
     throw docketError(CODES.USAGE, `unknown document ${name} (one of ${DOC_NAMES.join(", ")})`);
   }
+  return name;
+}
+
+/** Validate a document override path (relative, contained, Markdown). Returns it or throws USAGE. */
+export function checkDocPath(name, rel) {
+  assertDocName(name);
   relativeInside(rel, `document ${name}`);
   if (!/\.md$/i.test(rel)) throw docketError(CODES.USAGE, `document ${name} must be a .md file`);
   return rel;

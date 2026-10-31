@@ -2,13 +2,12 @@
 // repo; independent clones stay separate), unique case-insensitive aliases, the preferred checkout and
 // document overrides. Pure functions over a registry document: persistence is store.mjs, long-lived
 // reads and id lookup are source.mjs, checkout identity and availability are
-// repository/registered-checkout.mjs.
+// repository/registered-checkout.mjs, and the `repo list` view is the CLI adapter's.
 import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { CODES, docketError } from "../../core/errors.mjs";
 import { canonicalPath, pathKey, sameKey } from "../../repository/canonical.mjs";
-import { unavailableReason } from "../../repository/registered-checkout.mjs";
-import { ALIAS_RE, checkDocPath, DOC_NAMES } from "./schema.mjs";
+import { ALIAS_RE, assertDocName, checkDocPath } from "./schema.mjs";
 
 const usage = (message, details) => docketError(CODES.USAGE, message, details);
 
@@ -54,11 +53,8 @@ export function parseDocOverrides(list) {
   for (const spec of list) {
     const eq = spec.indexOf("=");
     if (eq < 1) throw usage(`--doc must be NAME=relative/path.md, got "${spec}"`);
-    const name = spec.slice(0, eq).toUpperCase();
+    const name = assertDocName(spec.slice(0, eq).toUpperCase());
     const rel = spec.slice(eq + 1);
-    if (!DOC_NAMES.includes(name)) {
-      throw usage(`unknown document ${name} (one of ${DOC_NAMES.join(", ")})`);
-    }
     docs[name] = rel === "" ? "" : checkDocPath(name, rel);
   }
   return docs;
@@ -176,24 +172,4 @@ export function unregister(registry, alias, { checkout: checkoutPath } = {}) {
     preferred = repo.checkouts[0];
   }
   return { removed: "checkout", repo, checkout, preferred };
-}
-
-/** Registry view for `repo list`: every checkout with availability and the reason when unavailable. */
-export function describeRegistry(registry) {
-  return registry.repos.map((repo) => ({
-    id: repo.id,
-    alias: repo.alias,
-    commonDir: repo.commonDir,
-    docs: repo.docs,
-    checkouts: repo.checkouts.map((c) => {
-      const reason = unavailableReason(repo, c);
-      return {
-        id: c.id,
-        path: c.path,
-        preferred: c.id === repo.preferred,
-        available: reason === null,
-        ...(reason ? { reason } : {}),
-      };
-    }),
-  }));
 }

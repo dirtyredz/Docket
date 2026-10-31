@@ -7,6 +7,7 @@ import { CODES } from "../../../../src/core/errors.mjs";
 import { pathKey } from "../../../../src/repository/canonical.mjs";
 import { relativeInside } from "../../../../src/repository/containment.mjs";
 import { parseDocOverrides } from "../../../../src/state/registry/registration.mjs";
+import { assertDocName, checkDocPath } from "../../../../src/state/registry/schema.mjs";
 import { git, makeRepo, runCli, tempDir } from "../../../helpers/repository.mjs";
 
 const cleanups = [];
@@ -316,5 +317,13 @@ describe("document path containment", () => {
         JSON.stringify(p),
       );
     }
+  });
+
+  test("an unknown document name is refused by one check, for --doc and stored overrides alike", () => {
+    const same = { code: CODES.USAGE, message: /^unknown document NOPE \(one of STRUCTURE, / };
+    assert.throws(() => assertDocName("NOPE"), same);
+    assert.throws(() => parseDocOverrides(["nope=docs/x.md"]), same);
+    assert.throws(() => checkDocPath("NOPE", "docs/x.md"), same);
+    assert.equal(assertDocName("GOTCHAS"), "GOTCHAS");
   });
 });

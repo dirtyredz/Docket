@@ -2,8 +2,8 @@
 id: dk-c8a1b81d
 type: task
 created: 2026-10-11
-status: todo
-since: 2026-10-11
+status: done
+since: 2026-10-31
 area: core
 priority: P3
 rank: y

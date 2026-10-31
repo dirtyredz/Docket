@@ -5,10 +5,10 @@
 // ({id, commonDir} and {id, path}); reading and writing the registry is state/registry's job.
 import fs from "node:fs";
 import { CODES, docketError } from "../core/errors.mjs";
-import { canonicalPath, sameKey } from "./canonical.mjs";
+import { sameKey } from "./canonical.mjs";
 import { parseConfig, readConfigBytes } from "./config.mjs";
 import { assertSafeCheckout } from "./containment.mjs";
-import { contextAtRoot, contextFor, resolveRepo } from "./context.mjs";
+import { checkoutFacts, contextAtRoot, contextFor } from "./context.mjs";
 
 /** How long a read may reuse a registered checkout's verification. */
 export const VERIFY_TTL_MS = 5000;
@@ -32,17 +32,9 @@ function assertSupportedConfig(root) {
  * root uses openCheckoutAt. Throws DOCKET_NOT_A_REPO / DOCKET_USAGE.
  */
 export function inspectCheckout(p) {
-  let real;
-  try {
-    real = canonicalPath(p);
-  } catch {
-    throw docketError(CODES.NOT_A_REPO, `no such directory: ${p}`);
-  }
-  const ctx = resolveRepo(real);
-  const root = canonicalPath(ctx.root);
-  const commonDir = canonicalPath(ctx.commonDir);
+  const { root, commonDir, gitDir } = checkoutFacts(p);
   assertSupportedConfig(root);
-  return { root, commonDir, main: sameKey(canonicalPath(ctx.gitDir), commonDir) };
+  return { root, commonDir, main: sameKey(gitDir, commonDir) };
 }
 
 /** Why a registered checkout cannot be used right now, or null when it is available. */
@@ -62,13 +54,15 @@ export function unavailableReason(repo, checkout) {
 /**
  * Open the checkout whose root is exactly `root` (an unregistered path, such as a Command Deck project
  * folder): no ancestor discovery, a supported docket.json, and the containment guard. Never initializes
- * or registers anything. Returns the context ({root, gitDir, commonDir, itemsDir, docketDir,
- * configPath}, canonical). Throws DOCKET_NOT_A_REPO (not exactly a checkout root) or DOCKET_USAGE (no or
- * unsupported docket.json, linked or escaping item storage).
+ * or registers anything. Returns the headless context ({root, commonDir, itemsDir, docketDir,
+ * configPath}, canonical; the same shape createCheckoutOpener returns, no gitDir). Throws
+ * DOCKET_NOT_A_REPO (not exactly a checkout root) or DOCKET_USAGE (no or unsupported docket.json, linked
+ * or escaping item storage).
  */
 export function openCheckoutAt(root) {
-  const ctx = contextAtRoot(root);
-  assertSupportedConfig(ctx.root);
+  const { root: top, commonDir } = contextAtRoot(root);
+  assertSupportedConfig(top);
+  const ctx = contextFor(top, commonDir);
   assertSafeCheckout(ctx);
   return ctx;
 }

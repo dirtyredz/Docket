@@ -6,7 +6,12 @@ import path from "node:path";
 import { test } from "node:test";
 import { CODES } from "../../../src/core/errors.mjs";
 import { canonicalPath } from "../../../src/repository/canonical.mjs";
-import { contextAtRoot, contextFor, resolveRepo } from "../../../src/repository/context.mjs";
+import {
+  checkoutFacts,
+  contextAtRoot,
+  contextFor,
+  resolveRepo,
+} from "../../../src/repository/context.mjs";
 import { tempDir } from "../../helpers/repository.mjs";
 import { addWorktree, docketRepo } from "../../helpers/registry.mjs";
 
@@ -53,6 +58,21 @@ test("contextAtRoot refuses a subdirectory instead of using its ancestor checkou
       /not a checkout root/.test(err.message) &&
       err.details.actual === canonicalPath(r.root),
   );
+});
+
+test("checkoutFacts canonicalises the enclosing checkout once for every opener", (t) => {
+  const r = docketRepo();
+  t.after(r.cleanup);
+  const sub = path.join(r.root, "docs");
+  fs.mkdirSync(sub, { recursive: true });
+  const facts = checkoutFacts(sub);
+  assert.equal(facts.path, canonicalPath(sub));
+  assert.equal(facts.root, canonicalPath(r.root));
+  assert.equal(facts.gitDir, facts.commonDir);
+  assert.throws(() => checkoutFacts(path.join(r.root, "nope")), {
+    code: CODES.NOT_A_REPO,
+    details: { root: path.join(r.root, "nope") },
+  });
 });
 
 test("contextAtRoot refuses missing paths and folders outside any worktree", (t) => {
