@@ -62,7 +62,21 @@ test("inspectCheckout finds the enclosing root from a subdirectory (registry cal
   const r = docketRepo({ "dk-00000001": ITEM });
   t.after(r.cleanup);
   const info = inspectCheckout(path.join(r.root, "docs", "items"));
-  assert.ok(sameKey(info.root, r.root));
+  assert.ok(sameKey(info.root, canonicalPath(r.root)), "root is the canonical (real) path");
+});
+
+test("inspectCheckout reports the real root when reached through an alias (junction, 8.3 temp)", (t) => {
+  // Hosted Windows runners put %TEMP% under an 8.3 short path (RUNNER~1); a fixture's raw path then
+  // differs from the canonical one. A junction is the portable stand-in for that aliasing.
+  const r = docketRepo({ "dk-00000001": ITEM });
+  const alias = tempDir("docket alias ");
+  t.after(r.cleanup);
+  t.after(alias.cleanup);
+  const link = path.join(alias.dir, "via");
+  if (!linkDir(r.root, link)) return t.skip("cannot create links");
+  const info = inspectCheckout(link);
+  assert.ok(sameKey(info.root, canonicalPath(r.root)));
+  assert.ok(!sameKey(info.root, link), "the alias spelling is not echoed back");
 });
 
 test("inspectCheckout refuses missing paths, non-repos and checkouts without docket.json", (t) => {
@@ -207,10 +221,13 @@ test("an unavailable preferred checkout is refused, never replaced by another", 
   register(data.registryFile, wt, { prefer: true });
   const registry = readRegistry(data.registryFile);
   const { repo, checkout } = findCheckout(registry, registry.repos[0].id);
-  assert.ok(sameKey(checkout.path, wt), "the worktree is preferred");
+  assert.ok(sameKey(checkout.path, canonicalPath(wt)), "the worktree is preferred");
   git(r.root, "worktree", "remove", "--force", wt);
   const open = createCheckoutOpener();
   assert.throws(() => open(repo, checkout), { code: CODES.NOT_FOUND });
   const main = repo.checkouts.find((c) => c.id !== checkout.id);
-  assert.ok(sameKey(open(repo, main).root, r.root), "the other checkout opens only when named");
+  assert.ok(
+    sameKey(open(repo, main).root, canonicalPath(r.root)),
+    "the other checkout opens only when named",
+  );
 });

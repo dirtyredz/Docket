@@ -52,9 +52,13 @@ export function git(cwd, ...args) {
   return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
 
-/** A temp dir removed by the returned cleanup (call it in t.after). Paths may contain spaces. */
+/**
+ * A temp dir removed by the returned cleanup (call it in t.after). Paths may contain spaces. The dir is
+ * the REAL path: os.tmpdir() can be an 8.3 short name (hosted Windows: C:\Users\RUNNER~1\...), and
+ * Docket always reports canonical paths, so fixtures that compared raw spellings failed there.
+ */
 export function tempDir(prefix = "docket test ") {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  const dir = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), prefix)));
   return { dir, cleanup: () => fs.rmSync(dir, { recursive: true, force: true }) };
 }
 
