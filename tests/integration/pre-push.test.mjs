@@ -66,7 +66,7 @@ function commitBadTip(r) {
 describe("composed pre-push gate", { skip }, () => {
   test("install sets the opt-in config and installs the managed hook", () => {
     const r = setup();
-    assert.equal(r.install.hook.state, "installed");
+    assert.equal(r.install.hook.change, "created");
     assert.match(git(r.root, "config", "--get", "docket.gateLauncher"), /launcher\.mjs/);
     assert.equal(fs.readFileSync(r.install.hook.path, "utf8"), fs.readFileSync(TEMPLATE, "utf8"));
   });
@@ -174,7 +174,7 @@ describe("composed pre-push gate", { skip }, () => {
     const hook = path.join(r.root, ".git", "hooks", "pre-push");
     fs.writeFileSync(hook, "#!/bin/sh\necho foreign\nexit 0\n");
     const result = installRepo(r.root, { gateRoot, templatePath: TEMPLATE });
-    assert.equal(result.hook.state, "foreign");
+    assert.equal(result.hook.change, "foreign");
     assert.equal(fs.readFileSync(hook, "utf8"), "#!/bin/sh\necho foreign\nexit 0\n");
   });
 

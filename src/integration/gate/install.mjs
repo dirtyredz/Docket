@@ -21,9 +21,21 @@ export function defaultTemplatePath(env = process.env) {
 const isManaged = (text) => MANAGED_MARKERS.some((m) => text.includes(m));
 
 /**
- * Opt `repo` into the last-good gate (hook.state keeps installed/current/updated/foreign; hook.change
- * is the shared created/updated/unchanged/foreign vocabulary): local git config docket.gateLauncher / docket.gateNode, and the
- * managed pre-push hook refreshed from the template. `dryRun` computes the same report and writes nothing. Foreign hooks and core.hooksPath are never
+ * Deprecated: `hook.state`, the original hook vocabulary, kept only as a JSON alias of `hook.change` for
+ * existing `--json` readers. Read `hook.change`; nothing in Docket reads `state`.
+ */
+const LEGACY_HOOK_STATE = Object.freeze({
+  created: "installed",
+  updated: "updated",
+  unchanged: "current",
+  foreign: "foreign",
+});
+
+/**
+ * Opt `repo` into the last-good gate: local git config docket.gateLauncher / docket.gateNode, and the
+ * managed pre-push hook refreshed from the template. hook.change uses the shared report vocabulary
+ * (created | updated | unchanged | foreign); hook.state is its deprecated alias (LEGACY_HOOK_STATE).
+ * `dryRun` computes the same report and writes nothing. Foreign hooks and core.hooksPath are never
  * modified; their state is reported so the owner can wire delegation.
  */
 export function installRepo(
@@ -59,7 +71,6 @@ export function installRepo(
   ];
 
   const hookFile = path.join(ctx.commonDir, "hooks", "pre-push");
-  let state;
   let change;
   let current = null;
   try {
@@ -77,10 +88,8 @@ export function installRepo(
         /* no-op on Windows */
       }
     }
-    state = current === null ? "installed" : "updated";
     change = current === null ? "created" : "updated";
   } else {
-    state = isManaged(current) ? "current" : "foreign";
     change = isManaged(current) ? "unchanged" : "foreign";
   }
 
@@ -89,7 +98,7 @@ export function installRepo(
     config,
     launcher: toSlash(launcher),
     node: toSlash(nodePath),
-    hook: { path: toSlash(hookFile), state, change },
+    hook: { path: toSlash(hookFile), change, state: LEGACY_HOOK_STATE[change] },
     hooksPath: hooksPathState(ctx),
     active,
   };

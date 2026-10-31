@@ -23,7 +23,7 @@ export async function gate(argv, io) {
   if (sub === "install") {
     const result = installRepo(args.repo ?? io.cwd, { dryRun: Boolean(args["dry-run"]) });
     const notes = [];
-    if (result.hook.state === "foreign") {
+    if (result.hook.change === "foreign") {
       notes.push(
         `pre-push at ${result.hook.path} is not the managed hook; make it call the managed template or run: node "${result.launcher}" <root> "$@" < refs`,
       );

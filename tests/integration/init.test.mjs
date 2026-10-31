@@ -195,7 +195,7 @@ describe("docket init --dry-run and report", () => {
         g.config.map((c) => c.state),
         ["created", "created"],
       );
-      assert.equal(g.hook.state, "installed");
+      assert.equal(g.hook.change, "created");
       const dryInit = runCli(["init", "--gate", "--dry-run", "--repo", r.root], { env });
       assert.match(dryInit.stdout, /git config docket\.gateLauncher: would be created/);
       assert.match(dryInit.stdout, /git config docket\.gateNode: would be created/);
@@ -343,7 +343,7 @@ describe("docket init --no-agent-snippet (0.4.5)", () => {
         env: { DOCKET_HOME: home.dir },
       });
       assert.equal(out.status, 0, out.stdout + out.stderr);
-      assert.equal(out.json.data.gate.hook.state, "installed");
+      assert.equal(out.json.data.gate.hook.change, "created");
       assert.equal(fs.existsSync(path.join(r.root, "CLAUDE.md")), false);
     },
   );
