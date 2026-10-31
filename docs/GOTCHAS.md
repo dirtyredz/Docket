@@ -123,5 +123,7 @@ configPath}`; only `resolveRepo`/`contextAtRoot` add `gitDir`, and nothing in co
 - **In Windows PowerShell 5.1 strict mode, call `npm.cmd`, not `npm`.** The `npm.ps1` shim reads
   `$MyInvocation.Statement`, which 5.1 lacks. `Find-Tool` (type Application) already returns `npm.cmd`.
   PowerShell names are case-insensitive: a helper function called `Git` shadows `git.exe` and recurses.
+- **5.1 under a pwsh 7 parent can't load `Get-FileHash`** (and its `.psm1` siblings). Use `Get-Sha256Hex`;
+  `release-scripts.test.ps1` bans them.
 - **`install.ps1` without `-Tag` installs the latest PUBLISHED release.** The release workflow only drafts;
   install a draft by its tag.
