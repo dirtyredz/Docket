@@ -71,6 +71,9 @@ Non-obvious traps, from `plans/PLAN.md` sections 6 and 7, the merge test, and bu
   date can only come from a move-in batch.
 - **`gate install` / `--dry-run` wording.** Dry runs write nothing, including git config; changed steps read
   "would be created/updated" (verified: `git config --get docket.gateLauncher` is empty after a dry run).
+  In `--json`, read `hook.change`; `hook.state` (installed/current/...) is a deprecated alias.
+- **Headless contexts carry no `gitDir`.** Both openers return `{root, commonDir, itemsDir, docketDir,
+configPath}`; only `resolveRepo`/`contextAtRoot` add `gitDir`, and nothing in core reads it.
 - **`npm install --global` needs an absolute tarball path**; a relative one is read as a GitHub spec.
 - **`list --count-by` counts the filtered view** (open only unless `--all` or `--status`); `--limit` does not apply.
 - **`--dry-run` still reads the gate.** `init --gate --dry-run` and `gate install --dry-run` fail if no gate is
