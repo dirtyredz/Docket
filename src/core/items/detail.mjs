@@ -6,7 +6,7 @@
 import { contentView } from "../format/content.mjs";
 import { notFound } from "../errors.mjs";
 import { parseEntries } from "../validation/check.mjs";
-import { readItemFile } from "../../storage/item-store.mjs";
+import { readItemFile, storeEntry } from "../../storage/item-store.mjs";
 import { isBlocked, reverseRelations } from "./query.mjs";
 
 /**
@@ -18,9 +18,7 @@ export function readItem(ctx, id, { records, claims }) {
   const file = readItemFile(ctx, id);
   if (!file) throw notFound(id);
   const content = file.bytes.toString("utf8");
-  const [fresh] = parseEntries([
-    { name: `${id}.md`, isFile: true, bytes: file.bytes, revision: file.revision },
-  ]);
+  const [fresh] = parseEntries([storeEntry(`${id}.md`, file.bytes, { revision: file.revision })]);
   const surrounding = [...records.filter((r) => r.id !== id), fresh];
   const statusOf = (x) => surrounding.find((r) => r.id === x)?.fields?.status;
   const data = {

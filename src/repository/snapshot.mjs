@@ -1,20 +1,18 @@
 // Snapshots of a store: the working tree's `docs/items/`, or the same directory as committed at a Git
-// ref. A snapshot is {source, entries: [{name, isFile, bytes, revision}], configError}.
+// ref. A snapshot is {source, entries, configError}; entries are store entries (storage/item-store.mjs
+// storeEntry: {name, isFile, bytes, revision}; working-tree entries also carry their stat facts).
 import { CODES, docketError } from "../core/errors.mjs";
-import { revisionOf } from "../storage/revision.mjs";
-import { listItemEntries } from "../storage/item-store.mjs";
+import { listItemEntries, storeEntry } from "../storage/item-store.mjs";
 import { parseConfig, readConfigBytes } from "./config.mjs";
 import { git } from "./context.mjs";
 import { ITEMS_DIR } from "./paths.mjs";
 
 export function workingSnapshot(ctx) {
-  const entries = listItemEntries(ctx).map(({ name, isFile, bytes, revision }) => ({
-    name,
-    isFile,
-    bytes,
-    revision,
-  }));
-  return { source: "working tree", entries, configError: parseConfig(readConfigBytes(ctx)).error };
+  return {
+    source: "working tree",
+    entries: listItemEntries(ctx),
+    configError: parseConfig(readConfigBytes(ctx)).error,
+  };
 }
 
 // `git cat-file --batch` output: "<sha> <type> <size>\n<content>\n" per object.
@@ -68,8 +66,7 @@ export function refSnapshot(ctx, ref) {
   const entries = rows
     .map((r) => {
       const isFile = r.type === "blob" && r.mode !== "120000";
-      const bytes = isFile ? blobs.get(r.sha) : undefined;
-      return { name: r.name, isFile, bytes, revision: bytes ? revisionOf(bytes) : undefined };
+      return storeEntry(r.name, isFile ? blobs.get(r.sha) : undefined, { isFile });
     })
     .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   const configRow = git(ctx.root, ["ls-tree", commit, "--", "docket.json"]).trim();

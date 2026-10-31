@@ -8,7 +8,18 @@ import { readWithRevision, revisionOf } from "./revision.mjs";
 
 export const lockPathFor = (ctx) => path.join(ctx.docketDir, "items.lock");
 
-/** Every entry in the items directory: {name, path, isFile, bytes?, revision?, mtimeMs?, size?}. */
+/**
+ * The one store-entry shape: {name, isFile, bytes?, revision?}. Working-tree and Git-ref snapshots, the
+ * index and single-file reads all hand parseEntries this shape. `revision` defaults to the bytes' hash.
+ */
+export function storeEntry(name, bytes, { isFile = true, revision } = {}) {
+  return { name, isFile, bytes, revision: revision ?? (bytes ? revisionOf(bytes) : undefined) };
+}
+
+/**
+ * Every entry in the items directory, by name: a storeEntry (bytes and revision only `withBytes`) plus
+ * the stat facts the index reuses: {path, mtimeMs, size}.
+ */
 export function listItemEntries(ctx, { withBytes = true } = {}) {
   let names;
   try {
@@ -20,18 +31,14 @@ export function listItemEntries(ctx, { withBytes = true } = {}) {
   return names.sort().map((name) => {
     const file = path.join(ctx.itemsDir, name);
     const stat = fs.statSync(file);
-    const entry = {
-      name,
+    const isFile = stat.isFile();
+    const bytes = withBytes && isFile ? fs.readFileSync(file) : undefined;
+    return {
+      ...storeEntry(name, bytes, { isFile }),
       path: file,
-      isFile: stat.isFile(),
       mtimeMs: stat.mtimeMs,
       size: stat.size,
     };
-    if (withBytes && entry.isFile) {
-      entry.bytes = fs.readFileSync(file);
-      entry.revision = revisionOf(entry.bytes);
-    }
-    return entry;
   });
 }
 

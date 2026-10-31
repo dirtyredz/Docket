@@ -7,8 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseEntries } from "../../core/validation/check.mjs";
 import { atomicWrite } from "../../storage/atomic-write.mjs";
-import { listItemEntries } from "../../storage/item-store.mjs";
-import { revisionOf } from "../../storage/revision.mjs";
+import { listItemEntries, storeEntry } from "../../storage/item-store.mjs";
 
 export const INDEX_VERSION = 2; // 2: openNoteCount (0.6.0)
 const RACY_MS = 2000;
@@ -44,17 +43,17 @@ export function loadIndex(ctx, { rebuild = false } = {}) {
       stats.reused++;
       continue;
     }
-    const bytes = entry.isFile ? fs.readFileSync(entry.path) : undefined;
-    const hash = bytes ? revisionOf(bytes) : null;
+    const read = storeEntry(entry.name, entry.isFile ? fs.readFileSync(entry.path) : undefined, {
+      isFile: entry.isFile,
+    });
+    const hash = read.revision ?? null;
     if (cached && cached.hash === hash && hash) {
       files[entry.name] = { ...cached, size: entry.size, mtimeMs: entry.mtimeMs };
       needsWrite = true;
       stats.reused++;
       continue;
     }
-    const [record] = parseEntries([
-      { name: entry.name, isFile: entry.isFile, bytes, revision: hash },
-    ]);
+    const [record] = parseEntries([read]);
     files[entry.name] = {
       name: entry.name,
       id: record.id,

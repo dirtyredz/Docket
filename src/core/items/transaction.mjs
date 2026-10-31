@@ -5,7 +5,7 @@ import { CODES, docketError, notFound } from "../errors.mjs";
 import { serializeChecked } from "../format/serialize.mjs";
 import { parseEntries, recordErrors } from "../validation/check.mjs";
 import { workingSnapshot } from "../../repository/snapshot.mjs";
-import { lockPathFor, writeItemFile } from "../../storage/item-store.mjs";
+import { lockPathFor, storeEntry, writeItemFile } from "../../storage/item-store.mjs";
 import { withLock } from "../../storage/lock.mjs";
 
 const keyOf = (e) => `${e.file}|${e.code}|${e.message}`;
@@ -79,9 +79,7 @@ export function mutateStore(ctx, plan, { lock, ops } = {}) {
       const candidate = new Map(byId);
       const outputs = writes.map((w) => {
         const text = serializeChecked(w);
-        const [record] = parseEntries([
-          { name: `${w.id}.md`, isFile: true, bytes: Buffer.from(text) },
-        ]);
+        const [record] = parseEntries([storeEntry(`${w.id}.md`, Buffer.from(text))]);
         candidate.set(w.id, record);
         return { ...w, text };
       });
