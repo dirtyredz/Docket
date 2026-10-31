@@ -1,20 +1,12 @@
 // `add`: mint a `dk-` ID, put the item at the end of its priority band, never overwrite a file.
-import { CODES, docketError } from "../errors.mjs";
-import { ENUMS } from "../format/schema.mjs";
-import { newItemRest } from "../format/content.mjs";
+import { assertEnum } from "../format/schema.mjs";
+import { cleanTitle, newItemRest } from "../format/content-edit.mjs";
 import { allocateId } from "../identity/id.mjs";
 import { rankAtEnd } from "../identity/rank.mjs";
 
-const invalid = (message) => docketError(CODES.INVALID, message);
 const unique = (list = []) => [...new Set(list)];
 
-/** Trim and validate a title: one non-empty line. Shared by add and set --title. Throws DOCKET_INVALID. */
-export function cleanTitle(raw) {
-  const title = (raw ?? "").trim();
-  if (!title || /[\r\n]/.test(title)) throw invalid("title must be one non-empty line");
-  return title;
-}
-
+/** Ranks of the valid items in `priority`, except `exceptId` (the item being moved). */
 export function bandRanks(records, priority, exceptId = null) {
   return records
     .filter((r) => r.fields?.priority === priority && r.id !== exceptId && r.fields.rank)
@@ -36,14 +28,9 @@ export function planAdd(store, input, ctx) {
  * batch.mjs (after withDates) call it. Returns {write, value}; planAdd wraps it, batch collects many.
  */
 export function planAddOne({ records }, input, { random }, dates) {
-  if (!ENUMS.type.includes(input.type))
-    throw invalid(`type must be one of ${ENUMS.type.join(", ")}`);
-  if (!ENUMS.priority.includes(input.priority)) {
-    throw invalid(`priority must be one of ${ENUMS.priority.join(", ")}`);
-  }
-  if (input.status !== undefined && !ENUMS.status.includes(input.status)) {
-    throw invalid(`status must be one of ${ENUMS.status.join(", ")}`);
-  }
+  assertEnum("type", input.type);
+  assertEnum("priority", input.priority);
+  if (input.status !== undefined) assertEnum("status", input.status);
   const title = cleanTitle(input.title);
   const taken = new Set(records.map((r) => r.id));
   const id = allocateId({ taken: (x) => taken.has(x), random });

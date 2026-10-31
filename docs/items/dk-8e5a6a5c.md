@@ -2,8 +2,8 @@
 id: dk-8e5a6a5c
 type: task
 created: 2026-10-05
-status: todo
-since: 2026-10-05
+status: done
+since: 2026-10-31
 area: structure
 priority: P2
 rank: zzz

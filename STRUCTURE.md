@@ -56,11 +56,11 @@ integration/init  -->  repository, storage, integration/gate (install)
 
 - `src/bootstrap/` — recovered merge-test validator and a bootstrap adapter (quarantined; not shipped)
 - `src/core/` — the shared error type (`errors.mjs`)
-- `src/core/format/` — schema constants, strict parser, canonical serializer, round-trip guard and the content grammar (body/Notes boundaries, note header and ref rules)
+- `src/core/format/` — schema constants and `assertEnum`, strict parser, canonical serializer, round-trip guard, the content grammar and read model (`content.mjs`: body/Notes boundaries, note header and ref rules) and the content edits with the title rule (`content-edit.mjs`)
 - `src/core/validation/` — item checks, relation graph integrity, warnings, check orchestration, `checkStore`
 - `src/core/identity/` — random ID allocation, fractional rank, local-date rules
 - `src/core/items/` — add, batch add, set (with claim release on completion), complete, link and `linkItem` (with revision maps), query, detail, the relations view, revision preconditions and the shared mutation transaction with its `withWritten` result helper
-- `src/core/items/content/` — body replacement and note lifecycle (append, resolve): the content operations behind `set --body-file` and `note`
+- `src/core/items/content/` — body replacement and note lifecycle (append, resolve): the content operations behind `set --body-file` and `note`, and their shared preserved-prefix write and post-edit check (`write.mjs`)
 - `src/storage/` — content revisions, atomic write, lock, item store
 - `src/repository/` — worktree and common-dir discovery and explicit-root contexts, `docket.json`, working-tree or Git-tree snapshot, path identity, canonical real paths, containment and the checkout guard, checkout identity and verified opening (`registered-checkout.mjs`)
 - `src/library/` — public facades for the headless library (ADR-30, `docs/LIBRARY.md`): one re-export-only module per `package.json` `exports` subpath, naming exactly the documented names (errors, schema, date, claims); no logic

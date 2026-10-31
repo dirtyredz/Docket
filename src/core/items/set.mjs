@@ -1,11 +1,11 @@
 // `set`: edit scalar fields. id and created never change. A real status change rewrites `since`; a
 // no-op status assignment does not. Reordering takes relative placement, never a caller-supplied rank.
 import { CODES, docketError, notFound } from "../errors.mjs";
-import { CLOSED_STATUSES } from "../format/schema.mjs";
+import { CLOSED_STATUSES, assertEnum } from "../format/schema.mjs";
+import { cleanTitle, withTitle } from "../format/content-edit.mjs";
 import { rankAtEnd, rankAtStart, rankBetween } from "../identity/rank.mjs";
 import { editableRecord } from "./transaction.mjs";
-import { withTitle } from "../format/content.mjs";
-import { bandRanks, cleanTitle } from "./add.mjs";
+import { bandRanks } from "./add.mjs";
 import { assertRevision } from "./revisions.mjs";
 
 const usage = (message) => docketError(CODES.USAGE, message);
@@ -35,13 +35,17 @@ export function placeRank(records, id, priority, placement) {
 }
 
 /**
- * Plan a set. changes: {status?, priority?, type?, area?, title?, placement?}. title rewrites only the H1. A placement relative to another
- * item adopts that item's priority when --priority is not given. A supplied `expect` must match the
- * current revision, even when the change turns out to be a no-op.
+ * Plan a set. changes: {status?, priority?, type?, area?, title?, placement?}. title rewrites only the
+ * H1. Enum values are checked here (DOCKET_INVALID, details.field), so every caller is protected. A
+ * placement relative to another item adopts that item's priority when --priority is not given. A
+ * supplied `expect` must match the current revision, even when the change turns out to be a no-op.
  */
 export function planSet({ records, byId }, id, changes, { today, expect }) {
   const rec = editableRecord(byId, id);
   assertRevision(rec, expect);
+  for (const field of ["type", "status", "priority"]) {
+    if (changes[field] !== undefined) assertEnum(field, changes[field]);
+  }
   const before = rec.fields;
   const f = { ...before };
   if (changes.type !== undefined) f.type = changes.type;

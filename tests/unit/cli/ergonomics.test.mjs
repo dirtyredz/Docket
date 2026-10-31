@@ -170,7 +170,10 @@ describe("list", () => {
 
   test("--count-by rejects an unknown field", () => {
     const r = repo(items());
-    assert.equal(run(r, ["list", "--count-by", "area"]).status, 2);
+    const out = run(r, ["list", "--count-by", "area"]);
+    assert.equal(out.status, 2);
+    assert.equal(out.json.error.code, "DOCKET_USAGE");
+    assert.match(out.json.error.message, /^--count-by must be one of status, type, priority/);
   });
 
   test("rank column is hidden by default and shown with --rank", () => {

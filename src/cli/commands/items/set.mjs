@@ -1,13 +1,12 @@
 // `set` command: change an item's status, priority, type, area, title or rank placement, or (alone,
 // with --expect) replace its facts body from --body-file.
-import { ENUMS } from "../../../core/format/schema.mjs";
 import { localDate } from "../../../core/identity/date.mjs";
 import { setItem } from "../../../core/items/complete.mjs";
 import { replaceBody } from "../../../core/items/content/body.mjs";
 import * as claims from "../../../state/claims/store.mjs";
 import { parseCommand, requirePositional, usageError } from "../../args.mjs";
 import { readStrictInput } from "../../input.mjs";
-import { bool, checkEnum, repoOf, str } from "./options.mjs";
+import { bool, flagNamed, repoOf, str } from "./options.mjs";
 
 const SCALAR_FLAGS = [
   "status",
@@ -54,9 +53,6 @@ export async function set(argv, io) {
   if (args["body-file"] !== undefined) return setBody(args, io, id);
   const placements = ["before", "after", "top", "bottom"].filter((k) => args[k] !== undefined);
   if (placements.length > 1) throw usageError(`use only one of --${placements.join(", --")}`);
-  if (args.status) checkEnum("status", [args.status], ENUMS.status);
-  if (args.priority) checkEnum("priority", [args.priority], ENUMS.priority);
-  if (args.type) checkEnum("type", [args.type], ENUMS.type);
   const changes = {
     status: args.status,
     priority: args.priority,
@@ -65,11 +61,10 @@ export async function set(argv, io) {
     title: args.title,
     placement: placements.length ? { [placements[0]]: args[placements[0]] } : undefined,
   };
-  const { data, warnings } = setItem(repoOf(args, io), id, changes, {
-    today: localDate(),
-    expect: args.expect,
-    claims,
-  });
+  const ctx = repoOf(args, io);
+  const { data, warnings } = flagNamed(() =>
+    setItem(ctx, id, changes, { today: localDate(), expect: args.expect, claims }),
+  );
   const text = data.noop ? `${id}: no change` : `${id}: ${data.changed.join(", ")}`;
   return { data, text, warnings };
 }

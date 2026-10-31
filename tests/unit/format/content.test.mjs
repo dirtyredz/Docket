@@ -1,18 +1,17 @@
 // Item content grammar: body/Notes slices, rule-10 errors, exact-byte edits.
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import { bodyOf, contentView, isNoteRef, parseContent } from "../../../src/core/format/content.mjs";
 import {
   allocateNoteRef,
   appendNote,
-  bodyOf,
-  contentView,
-  isNoteRef,
+  cleanTitle,
   newItemRest,
-  parseContent,
   withBody,
   withNoteState,
   withTitle,
-} from "../../../src/core/format/content.mjs";
+} from "../../../src/core/format/content-edit.mjs";
+import { CODES } from "../../../src/core/errors.mjs";
 import { parseItem } from "../../../src/core/format/parse.mjs";
 import { itemText } from "../../helpers/repository.mjs";
 
@@ -41,6 +40,17 @@ describe("legacy items (no Notes)", () => {
 
   test("withTitle rewrites only the H1", () => {
     assert.equal(withTitle(notesRest, "New"), notesRest.replace("# T", "# New"));
+  });
+
+  test("cleanTitle trims, and names the title field when it refuses", () => {
+    assert.equal(cleanTitle("  New  "), "New");
+    for (const bad of ["", "  ", "a\nb", undefined]) {
+      assert.throws(
+        () => cleanTitle(bad),
+        (e) => e.code === CODES.INVALID && e.details.field === "title",
+        JSON.stringify(bad),
+      );
+    }
   });
 });
 

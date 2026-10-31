@@ -1,9 +1,9 @@
 // `list` command: filtered, limited, optionally counted item listing from the index.
 import { ENUMS } from "../../../core/format/schema.mjs";
-import { COUNT_FIELDS, countBy, listItems } from "../../../core/items/query.mjs";
+import { countBy, listItems } from "../../../core/items/query.mjs";
 import { loadIndex } from "../../../state/index/build.mjs";
 import { many, parseCommand, usageError } from "../../args.mjs";
-import { bool, checkEnum, repeat, repoOf, str } from "./options.mjs";
+import { bool, checkEnum, flagNamed, repeat, repoOf, str } from "./options.mjs";
 
 const LIST_LIMIT_DEFAULT = 50;
 const LIST_LIMIT_MAX = 500;
@@ -48,10 +48,7 @@ export async function list(argv, io) {
   const { items, invalid } = listItems(records, filters);
   if (args["count-by"] !== undefined) {
     const field = args["count-by"];
-    if (!COUNT_FIELDS.includes(field)) {
-      throw usageError(`--count-by must be one of ${COUNT_FIELDS.join(", ")}`);
-    }
-    const counts = countBy(items, field);
+    const counts = flagNamed(() => countBy(items, field), { field: "count-by" });
     const lines = Object.entries(counts).map(([k, n]) => `${k.padEnd(8)} ${n}`);
     lines.push(`${"total".padEnd(8)} ${items.length}`);
     return {

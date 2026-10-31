@@ -1,6 +1,7 @@
 // Item content grammar: everything after the frontmatter. An H1 title, the facts body, and an optional
-// final `## Notes` section of untrusted discussion notes (ITEM-SPEC check group 10). Exposes exact source
-// slices so content edits rewrite only the bytes they own. Never decodes or rewrites frontmatter.
+// final `## Notes` section of untrusted discussion notes (ITEM-SPEC check group 10). Parses it into exact
+// source slices and the read model built from them; the edits that rewrite those slices live in
+// content-edit.mjs. Never decodes or rewrites frontmatter.
 
 export const NOTES_HEADING = "## Notes";
 export const NOTE_STATES = Object.freeze(["open", "resolved"]);
@@ -25,14 +26,6 @@ export function isNoteRef(value) {
 
 /** The header line of a note (no LF). */
 export const noteHeader = ({ ref, state, author }) => `### ${ref}${SEP}${state}${SEP}${author}`;
-
-/** The first free reference at or after `now` (a Date), advancing one millisecond per collision. */
-export function allocateNoteRef(now, takenRefs) {
-  const taken = new Set(takenRefs);
-  let t = now.getTime();
-  while (taken.has(new Date(t).toISOString())) t += 1;
-  return new Date(t).toISOString();
-}
 
 function* linesOf(text, from) {
   let start = from;
@@ -169,42 +162,7 @@ export function contentView(rest, content) {
 export const openNoteCount = (content) =>
   content ? content.notes.filter((n) => n.state === "open").length : 0;
 
-/** The `rest` for a new item: H1 title, blank line, optional body, single trailing newline. */
-export function newItemRest(title, body = "") {
-  const trimmed = body.replace(/\r\n?/g, "\n").replace(/\s+$/, "");
-  return `# ${title}\n${trimmed ? `\n${trimmed}\n` : ""}`;
-}
-
-/** rest with its H1 title line replaced; every other byte (body, Notes, line endings) is kept. */
-export function withTitle(rest, title) {
-  return rest.replace(/^(\s*)# .*/, (_, lead) => lead + "# " + title);
-}
-
 /** The display body of an item without Notes (inverse of newItemRest for items without Notes). */
 export function bodyOf(rest) {
   return contentView(rest, parseContent(rest)).body;
-}
-
-/**
- * rest with a note appended: the whole existing text is kept as a prefix; only framing (a terminal LF
- * when missing, the `## Notes` heading on first use) and the new record are added.
- */
-export function appendNote(rest, content, { ref, state = "open", author, text }) {
-  let out = rest.endsWith("\n") || rest === "" ? rest : `${rest}\n`;
-  if (!content.hasNotes) out += `\n${NOTES_HEADING}\n`;
-  return `${out}\n${noteHeader({ ref, state, author })}\n\n${text}${text.endsWith("\n") ? "" : "\n"}`;
-}
-
-/** rest with one note's state token changed; every other byte is kept. */
-export function withNoteState(rest, note, state) {
-  return (
-    rest.slice(0, note.headerStart) + noteHeader({ ...note, state }) + rest.slice(note.headerEnd)
-  );
-}
-
-/** rest with the body source replaced; title prefix and Notes suffix are kept byte for byte. */
-export function withBody(rest, content, body) {
-  const prefix = rest.slice(0, content.titleEnd);
-  const framing = body !== "" && prefix !== "" && !prefix.endsWith("\n") ? "\n" : "";
-  return prefix + framing + body + rest.slice(content.bodyEnd);
 }

@@ -97,6 +97,22 @@ describe("add", () => {
 });
 
 describe("set", () => {
+  test("a bad enum value is a usage error naming the flag, from core's details.field", () => {
+    const r = repo({ [A]: itemText({ id: A }) });
+    const before = readItem(r.root, A);
+    for (const [flag, value] of [
+      ["status", "finished"],
+      ["priority", "P9"],
+      ["type", "chore"],
+    ]) {
+      const out = dk(r, "set", A, `--${flag}`, value);
+      assert.equal(out.status, 2, flag);
+      assert.equal(out.json.error.code, "DOCKET_USAGE");
+      assert.match(out.json.error.message, new RegExp(`^--${flag} must be one of `));
+    }
+    assert.equal(readItem(r.root, A), before);
+  });
+
   test("status change reports changed and sets since to today", () => {
     const r = repo({ [A]: itemText({ id: A }) });
     const d = ok(dk(r, "set", A, "--status", "wip"));

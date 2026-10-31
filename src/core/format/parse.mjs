@@ -2,7 +2,16 @@
 // Returns every grammar problem found rather than stopping at the first, plus whatever fields could be
 // read, so `check` can still run graph checks on a partly broken store and report everything at once.
 import { parseContent } from "./content.mjs";
-import { DATE_RE, ID_RE, KEYS, LIST_KEYS, RANK_RE, REQUIRED_KEYS, TOKEN_RE } from "./schema.mjs";
+import {
+  DATE_KEYS,
+  DATE_RE,
+  ID_RE,
+  KEYS,
+  LIST_KEYS,
+  RANK_RE,
+  REQUIRED_KEYS,
+  TOKEN_RE,
+} from "./schema.mjs";
 
 const BOM = [0xef, 0xbb, 0xbf];
 const decoder = new TextDecoder("utf-8", { fatal: true });
@@ -45,7 +54,7 @@ function checkValue(key, value, line, errors) {
     if (REQUIRED_KEYS.includes(key)) bad("value is required");
     return "";
   }
-  if (key === "created" || key === "since") {
+  if (DATE_KEYS.includes(key)) {
     if (!DATE_RE.test(value)) bad("expected a date YYYY-MM-DD");
   } else if (!TOKEN_RE.test(value)) {
     bad("expected a plain token (letters, digits, . _ -)");

@@ -135,6 +135,26 @@ describe("planAdd", () => {
 });
 
 describe("planSet", () => {
+  test("validates enum values itself (every caller is protected) and writes nothing", () => {
+    const { ctx, root } = setup({ [id(1)]: {} });
+    const before = readItem(root, id(1));
+    for (const [field, value] of [
+      ["status", "finished"],
+      ["priority", "P9"],
+      ["type", "chore"],
+    ]) {
+      assert.throws(
+        () => set(ctx, id(1), { [field]: value }),
+        (e) =>
+          e.code === "DOCKET_INVALID" &&
+          e.details.field === field &&
+          e.message.startsWith(`${field} must be one of`),
+        field,
+      );
+    }
+    assert.equal(readItem(root, id(1)), before);
+  });
+
   test("id and created never change; real status change sets since", () => {
     const { ctx } = setup({ [id(1)]: { created: "2026-01-01", since: "2026-02-02" } });
     const { value } = set(ctx, id(1), { status: "wip" });
@@ -368,22 +388,22 @@ describe("field-named add errors", () => {
   const bad = (input) =>
     planAdd(store, { type: "task", priority: "P2", title: "t", ...input }, ctx);
 
-  test("core names the field, not a CLI flag", () => {
+  test("core names the field (message and details.field), not a CLI flag", () => {
     assert.throws(
       () => bad({ type: "nope" }),
-      (e) => e.message.startsWith("type must be one of"),
+      (e) => e.message.startsWith("type must be one of") && e.details.field === "type",
     );
     assert.throws(
       () => bad({ priority: "P9" }),
-      (e) => e.message.startsWith("priority must be one of"),
+      (e) => e.message.startsWith("priority must be one of") && e.details.field === "priority",
     );
     assert.throws(
       () => bad({ status: "x" }),
-      (e) => e.message.startsWith("status must be one of"),
+      (e) => e.message.startsWith("status must be one of") && e.details.field === "status",
     );
     assert.throws(
       () => bad({ title: "a\nb" }),
-      (e) => e.message === "title must be one non-empty line",
+      (e) => e.message === "title must be one non-empty line" && e.details.field === "title",
     );
   });
 

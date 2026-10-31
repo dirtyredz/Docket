@@ -2,26 +2,13 @@
 // facts: resolving copies nothing into the body. Appends keep the whole existing file as a prefix;
 // resolve rewrites one state token. Both run through the shared transaction, revision-checked in the lock.
 import { CODES, docketError } from "../../errors.mjs";
-import {
-  NOTE_AUTHORS,
-  allocateNoteRef,
-  appendNote,
-  isNoteRef,
-  parseContent,
-  withNoteState,
-} from "../../format/content.mjs";
+import { NOTE_AUTHORS, isNoteRef } from "../../format/content.mjs";
+import { allocateNoteRef, appendNote, withNoteState } from "../../format/content-edit.mjs";
 import { assertRevision } from "../revisions.mjs";
 import { editableContent, mutateStore, withWritten } from "../transaction.mjs";
+import { contentWrite, verifyEdit } from "./write.mjs";
 
-const invalid = (message, details) => docketError(CODES.INVALID, message, details);
-
-const write = (rec, rest, expect) => ({
-  id: rec.id,
-  fields: rec.fields,
-  frontmatter: rec.frontmatter,
-  rest,
-  expectedRevision: expect ?? rec.revision,
-});
+const invalid = (message) => docketError(CODES.INVALID, message);
 
 /** Validate note text: a string, LF only, not blank. Returned unchanged (never trimmed). */
 export function cleanNoteText(text) {
@@ -49,20 +36,17 @@ export function planNoteAppend({ byId }, id, input, { now, expect }) {
     rec.content.notes.map((n) => n.ref),
   );
   const rest = appendNote(rec.rest, rec.content, { ref, author, text });
-  const after = parseContent(rest);
-  const last = after.notes.at(-1);
-  if (
-    after.errors.length ||
-    last?.ref !== ref ||
-    after.notes.length !== rec.content.notes.length + 1
-  ) {
-    const why = after.errors.map((e) => e.message).join("; ");
-    throw invalid(
-      `${id}: the note cannot be added${why ? `: ${why}` : " (close any open code fence in the body first)"}; headings in note text must be fenced or escaped`,
-      { id, errors: after.errors },
-    );
-  }
-  return { writes: [write(rec, rest, expect)], value: { id, ref, author, state: "open" } };
+  verifyEdit(
+    id,
+    rest,
+    (after) =>
+      after.notes.at(-1)?.ref === ref && after.notes.length === rec.content.notes.length + 1,
+    (errors) => {
+      const why = errors.map((e) => e.message).join("; ");
+      return `the note cannot be added${why ? `: ${why}` : " (close any open code fence in the body first)"}; headings in note text must be fenced or escaped`;
+    },
+  );
+  return { writes: [contentWrite(rec, rest, expect)], value: { id, ref, author, state: "open" } };
 }
 
 /**
@@ -88,7 +72,7 @@ export function planNoteResolve({ byId }, id, ref, { expect }) {
     revision: rec.revision,
   };
   if (value.noop) return { writes: [], value };
-  return { writes: [write(rec, withNoteState(rec.rest, note, "resolved"), expect)], value };
+  return { writes: [contentWrite(rec, withNoteState(rec.rest, note, "resolved"), expect)], value };
 }
 
 /** Append a note. Returns {id, ref, author, state, noop: false, revision}. */

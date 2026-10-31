@@ -2,11 +2,13 @@
 // exactly as supplied; frontmatter, title and the Notes section are kept byte for byte. The caller must
 // name the revision it read. `since`, rank and claims are untouched.
 import { CODES, docketError } from "../../errors.mjs";
-import { contentView, parseContent, withBody } from "../../format/content.mjs";
+import { contentView } from "../../format/content.mjs";
+import { withBody } from "../../format/content-edit.mjs";
 import { assertRevision } from "../revisions.mjs";
 import { editableContent, mutateStore, withWritten } from "../transaction.mjs";
+import { contentWrite, verifyEdit } from "./write.mjs";
 
-const invalid = (message, details) => docketError(CODES.INVALID, message, details);
+const invalid = (message) => docketError(CODES.INVALID, message);
 
 /**
  * Plan a body replacement. body: the exact new source after the H1 (empty clears the facts).
@@ -27,27 +29,21 @@ export function planBodyReplace({ byId }, id, body, { expect }) {
   if (body === current.bodySource) {
     return { writes: [], value: { id, noop: true, revision: rec.revision } };
   }
+  const { titleEnd, bodyEnd, notes } = rec.content;
   const rest = withBody(rec.rest, rec.content, body);
-  const after = parseContent(rest);
-  const kept =
-    after.errors.length === 0 &&
-    rest.slice(0, rec.content.titleEnd) === rec.rest.slice(0, rec.content.titleEnd) &&
-    rest.slice(after.bodyEnd) === rec.rest.slice(rec.content.bodyEnd) &&
-    after.notes.length === rec.content.notes.length;
-  if (!kept) {
-    throw invalid(
-      `${id}: the body cannot contain a \`## Notes\` heading, note headers or an unclosed code fence`,
-      { id, errors: after.errors },
-    );
-  }
-  const write = {
+  verifyEdit(
     id,
-    fields: rec.fields,
-    frontmatter: rec.frontmatter,
     rest,
-    expectedRevision: expect,
+    (after) =>
+      rest.slice(0, titleEnd) === rec.rest.slice(0, titleEnd) &&
+      rest.slice(after.bodyEnd) === rec.rest.slice(bodyEnd) &&
+      after.notes.length === notes.length,
+    () => "the body cannot contain a `## Notes` heading, note headers or an unclosed code fence",
+  );
+  return {
+    writes: [contentWrite(rec, rest, expect)],
+    value: { id, noop: false, revision: null },
   };
-  return { writes: [write], value: { id, noop: false, revision: null } };
 }
 
 /** Replace a body. Returns {id, noop, revision} (the current revision on a no-op). */

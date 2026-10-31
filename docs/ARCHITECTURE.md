@@ -17,10 +17,11 @@ and M6 implemented (CLI, core, storage, index, claims, gate, init, registry, hea
 
 An item file is three byte ranges: frontmatter, the H1 title plus the **body** (authoritative facts), and an
 optional final **Notes** section (untrusted discussion; ADR-26). `core/format/content.mjs` finds the
-boundaries and owns the Notes grammar; `core/items/content/` holds body replacement and note
-append/resolve. They write through the **preserved-prefix** path of the shared transaction: the frontmatter
-is kept verbatim and only the bytes of the edited range change, then the result is reparsed and revision
-checked (ADR-27). Scalar and relation edits keep the canonical rewrite. Index version 2 caches
+boundaries, owns the Notes grammar and builds the read model; `core/format/content-edit.mjs` rewrites
+the slices (title, body, note append and state). `core/items/content/` holds body replacement and note
+append/resolve. They write through the **preserved-prefix** path (`content/write.mjs`) of the shared
+transaction: the frontmatter is kept verbatim and only the bytes of the edited range change, then the
+result is reparsed against what the edit kept and revision checked (ADR-27). Scalar and relation edits keep the canonical rewrite. Index version 2 caches
 `openNoteCount` per item and no body or note text, so discussion filters need no file reads; version 1
 caches rebuild on first run.
 

@@ -16,13 +16,21 @@ export function checkEnum(name, values, allowed) {
   return values;
 }
 
-// Core names the field ("type must be ..."); the CLI shows the flag and exits as a usage error.
-export function flagNamed(run) {
+// A core input error names its field (details.field, the message starting with it: "type must be
+// ..."); the CLI shows the matching flag and exits as a usage error. `flags` maps field -> flag.
+const FLAG_OF_FIELD = { type: "type", priority: "priority", status: "status", title: "title" };
+
+export function flagNamed(run, flags = FLAG_OF_FIELD) {
   try {
     return run();
   } catch (err) {
-    if (err.code === CODES.INVALID && /^(type|priority|status|title) must /.test(err.message)) {
-      throw usageError(`--${err.message}`);
+    const field = err.details?.field;
+    const flag = err.code === CODES.INVALID && Object.hasOwn(flags, field) ? flags[field] : null;
+    if (flag) {
+      const message = err.message.startsWith(`${field} `)
+        ? err.message.slice(field.length)
+        : `: ${err.message}`;
+      throw usageError(`--${flag}${message}`);
     }
     throw err;
   }

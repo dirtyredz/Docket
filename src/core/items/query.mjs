@@ -52,10 +52,15 @@ export function listItems(records, filters = {}) {
 /** Fields `countBy` accepts. */
 export const COUNT_FIELDS = ["status", "type", "priority"];
 
-/** Counts of summaries per value of `field` (one of COUNT_FIELDS): every enum value, zeros included. */
+/**
+ * Counts of summaries per value of `field` (one of COUNT_FIELDS): every enum value, zeros included. Core
+ * owns the field check: anything else is DOCKET_INVALID with details {field: "field"} (the argument).
+ */
 export function countBy(items, field) {
   if (!COUNT_FIELDS.includes(field)) {
-    throw docketError(CODES.INVALID, `field must be one of ${COUNT_FIELDS.join(", ")}`);
+    throw docketError(CODES.INVALID, `field must be one of ${COUNT_FIELDS.join(", ")}`, {
+      field: "field",
+    });
   }
   const counts = Object.fromEntries(ENUMS[field].map((v) => [v, 0]));
   for (const item of items) counts[item[field]] += 1;
