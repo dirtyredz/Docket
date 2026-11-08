@@ -5,7 +5,8 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { startServer } from "../../src/viewer/server/main.mjs";
-import { inspectCheckout, registerCheckout } from "../../src/state/registry/registration.mjs";
+import { inspectCheckout } from "../../src/repository/registered-checkout.mjs";
+import { registerCheckout } from "../../src/state/registry/registration.mjs";
 import { updateRegistry } from "../../src/state/registry/store.mjs";
 import { git, makeRepo, tempDir } from "./repository.mjs";
 
@@ -60,7 +61,9 @@ export async function viewer(registryFile) {
       }
       if (data !== null) h["content-length"] = Buffer.byteLength(data);
       const req = http.request(
-        { host: "127.0.0.1", port: server.port, method, path: urlPath, headers: h },
+        // agent: false: a fresh socket per request. Tests block the in-process server with spawnSync
+        // (runCli); a pooled socket idle past the server's 5 s keep-alive is reset under load.
+        { host: "127.0.0.1", port: server.port, method, path: urlPath, headers: h, agent: false },
         (res) => {
           const chunks = [];
           res.on("data", (c) => chunks.push(c));

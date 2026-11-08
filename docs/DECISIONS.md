@@ -1,7 +1,21 @@
 # DECISIONS
 
-ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-28 are 2026-10-05.
+ADRs, newest first. ADRs 01-18 are dated 2026-10-04 (inception); ADRs 19-28 are 2026-10-05; ADR-29 is 2026-10-11.
 Evidence paths are relative to `docs/research/`.
+
+## ADR-29: A supported library surface: subpath exports of the existing modules
+
+- **Context:** Command Deck needs Docket's item, registry and revision rules in-process; 0.6.0 had no exports,
+  and shelling out to `dk --json` caps lists at 500 and hides the relation revision map.
+- **Decision:** package.json `exports` maps one subpath per existing responsibility module (items, index,
+  claims, schema, date, errors, repository, registry, markdown); no root entry, no patterns, no facade. README
+  "Library API" lists the supported names with their revision and error semantics; other names stay internal.
+  The viewer's last-good registry source and registered-checkout verification moved to
+  `state/registry/source.mjs` and `repository/registered-checkout.mjs` so both consumers share one policy. The
+  build refuses a catch-all, a pattern or an unshipped target; a packaging test installs the tarball.
+- **Rejected:** a catch-all facade (promises every internal); embedding or proxying the viewer (a second app and
+  auth boundary); deep imports (no contract, break on any move).
+- **Evidence:** `tests/packaging/library.test.mjs`, `tests/unit/repository`, `tests/unit/state/registry/source.test.mjs`.
 
 ## ADR-28: Managed, versioned agent snippet and a tool-neutral guide
 
@@ -136,20 +150,6 @@ Evidence paths are relative to `docs/research/`.
 - **Rejected:** whole-file rule (punishes ordinary Markdown); no file-wide line-ending rule.
 - **Evidence:** `tests/unit/core/conformance.test.mjs` pins this and every other prototype difference.
 
-## ADR-15: Gate opt-in is local git config, read by the managed template
-
-- **Context:** M1c needs a per-repo switch in a template shared by every gated repo, and un-opted repos
-  must behave exactly as before.
-- **Decision:** `docket gate install` writes `docket.gateLauncher` / `docket.gateNode` to the clone's
-  local git config (shared by its linked worktrees). The template branches on that key only; without it
-  the hook runs its old steps unchanged. The launcher contract (`<entry> --repo <root> --pre-push`,
-  refs on stdin) also carried the bootstrap checker, so the template change landed in M0, not M1c.
-- **Rejected:** a committed flag in `docket.json` (a fresh clone has no installed gate to run); appending
-  a call to installed hooks (hook-sync replaces managed hooks from the template); a Docket-owned
-  `core.hooksPath` (clobbers the first adopter's wrapper).
-- **Evidence:** `tests/integration/pre-push.test.mjs` "un-opted repos behave exactly as before" runs the
-  pre-change template from the harness repo's HEAD against the new one in six scenarios.
-
-> ADRs 13 and 14 (Node 22, CLI output contract) moved to `records/decisions/2026-10.md`.
+> ADRs 13 to 15 (Node 22, CLI output contract, gate opt-in) moved to `records/decisions/2026-10.md`.
 
 > ADRs 07-12 moved to `records/decisions/2026-10.md`.

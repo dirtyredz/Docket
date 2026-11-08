@@ -52,6 +52,11 @@ Non-obvious traps, from `plans/PLAN.md` sections 6 and 7, the merge test, and bu
   absolute node path) at install; re-run `docket gate install` after moving Node.
 - **`list` is bounded at 500.** Tools that need every item page by priority, then status, and fail loudly if
   a slice still truncates.
+- **Only the exported subpaths import.** package.json `exports` blocks `import "docket"` and deep `docket/src/...`
+  imports from an installed copy (`ERR_PACKAGE_PATH_NOT_EXPORTED`); spawning `src/cli/main.mjs` by file path still
+  works. Moving or renaming an exported module must keep its subpath, or library consumers break.
+- **Library calls are synchronous.** Index loads, locks and Git checks block the calling thread; a long-lived
+  consumer keeps one registry source and one checkout opener and runs them off its request/UI thread.
 - **Spawn Docket as `node <main.mjs>`, not `docket.cmd`.** Node refuses to spawn `.cmd` files without a shell;
   adapters find `node_modules/docket/src/cli/main.mjs` beside the `docket` launcher on PATH, or `DOCKET_CLI`.
 - **`init` leaves an empty `docs/items/`.** Git does not track empty directories; the folder appears in the

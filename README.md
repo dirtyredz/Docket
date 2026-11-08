@@ -4,7 +4,7 @@ Docket is a Windows 11 command-line tool and local viewer for tracking work as M
 files, one file per item, stored in the repository the work belongs to. Items branch and merge with the
 code, and every index or cache can be rebuilt from the files.
 
-**Status (0.6.0, built, unpushed): CLI, gate, `docket init`, batch add, move-in playbook, repo registry, local viewer, facts and notes, and the agent guide.** The item format is `docs/research/ITEM-SPEC.md`; the plan is
+**Status (0.7.0, built, unpushed): CLI, gate, `docket init`, batch add, move-in playbook, repo registry, local viewer, facts and notes, the agent guide, and the library API.** The item format is `docs/research/ITEM-SPEC.md`; the plan is
 `docs/plans/PLAN.md`.
 
 ## Commands
@@ -56,6 +56,67 @@ instructions. Raise an open note with the owner, save the agreed facts with `dk 
 `dk note resolve <id> <ref> --expect <new rev>`. Agents record questions with `--author agent`. `dk list --notes open`
 finds items with open notes. `docket guide` prints the full tool-neutral agent guide.
 
+## Library API (0.7.0)
+
+Installing the tarball also gives Node programs (Command Deck first) a small, supported import surface: the same
+operations the CLI and viewer run, so a consumer reuses Docket's locking, validation, claims, registry and revision
+rules instead of re-implementing them. There is no root entry and no catch-all: only the subpaths below resolve
+(`import "docket"` and deep `docket/src/...` imports fail with `ERR_PACKAGE_PATH_NOT_EXPORTED`), and only the names
+listed are supported. Other names those modules happen to export are internal and may change in any release.
+While Docket is 0.x, a breaking change to a listed name bumps the minor version; pin the tarball.
+
+| Subpath                                 | Supported names                                                                                    |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `docket/package.json`                   | `version` (import with `{ with: { type: "json" } }`)                                               |
+| `docket/errors`                         | `CODES`, `KIND_OF_CODE`                                                                            |
+| `docket/schema`                         | `ENUMS`, `ID_RE`, `RELATION_KEYS`, `CLOSED_STATUSES`                                               |
+| `docket/date`                           | `localDate(now?)`                                                                                  |
+| `docket/items/index`                    | `loadIndex(ctx, {rebuild?})` → `{records, stats}`                                                  |
+| `docket/items/query`                    | `listItems(records, filters)` → `{items, invalid}`, `compareItems`, `countBy`, `COUNT_FIELDS`      |
+| `docket/items/detail`                   | `readItem(ctx, id, {records, claims})` → `{data, content}`                                         |
+| `docket/items/relations`                | `relationsView(ctx, id, {records, claims})`                                                        |
+| `docket/items/set`                      | `setItem(ctx, id, changes, {today, expect, claims})` → `{data, warnings}`                          |
+| `docket/items/body`                     | `replaceBody(ctx, id, body, {expect})`                                                             |
+| `docket/items/notes`                    | `addNote(ctx, id, {text, author}, {expect})`, `resolveNote(ctx, id, ref, {expect})`                |
+| `docket/items/link`                     | `linkItem(ctx, id, change, {expect, expectRevisions})`                                             |
+| `docket/claims`                         | `readClaims`, `releaseItem` (pass the module namespace as `claims`)                                |
+| `docket/repository/context`             | `contextFor(root, commonDir)`                                                                      |
+| `docket/repository/canonical`           | `canonicalPath(p)`, `sameKey(a, b)`                                                                |
+| `docket/repository/containment`         | `assertSafeCheckout(ctx)`                                                                          |
+| `docket/repository/registered-checkout` | `inspectCheckout(p)`, `unavailableReason(repo, checkout)`, `createCheckoutOpener({now?})`          |
+| `docket/registry/paths`                 | `registryPath(env)`                                                                                |
+| `docket/registry/source`                | `createRegistrySource(file)`, `findCheckout(registry, repoId, checkoutId?)`                        |
+| `docket/markdown`                       | `renderMarkdown(text, {resolveLink?})` (sanitized HTML; unresolved links become `span.unresolved`) |
+
+**Checkouts.** Every item operation takes a checkout context `ctx`. For a registered checkout:
+`createRegistrySource(registryPath(process.env)).get()` returns `{registry, error, missing}` (a broken file keeps the
+last good registry and reports `error`; `missing` means no registry file), `findCheckout` resolves registry ids
+(default: the preferred checkout; unknown ids are `DOCKET_NOT_FOUND`, never another checkout), and one long-lived
+`openCheckout = createCheckoutOpener()` returns `ctx` after verifying the registration against Git. Reads may reuse
+a verification for 5 s; pass `{fresh: true}` before every mutation. An unavailable checkout throws
+`DOCKET_NOT_FOUND` with `err.unavailable` (the reason); linked or escaping item storage throws `DOCKET_USAGE`. For a
+path that is not registered: `inspectCheckout(p)` (it finds the enclosing root, so require
+`sameKey(info.root, canonicalPath(p))`), then `contextFor(info.root, info.commonDir)` and `assertSafeCheckout(ctx)`.
+
+**Revisions.** `revision` is a hash of the item file's exact bytes, returned by `loadIndex` records, `readItem`,
+`relationsView` and every mutation. Mutations take `expect` (the revision the caller read) and check it inside the
+item lock, before planning, so a stale caller is refused even when its change would be a no-op. `expect` is
+required for `replaceBody` and optional elsewhere (omitting it skips the check: always pass it from a UI).
+`addNote` defaults `author` to `owner`; set it explicitly. A relation edit also needs `expectRevisions`, the full `relationsView(...).revisions` map: removing a
+`relates` edge stored on the other item rewrites that file too. Results: `setItem` → `{data: {changed, fields,
+completed, revision, noop, claimReleased?}, warnings}`; `replaceBody` → `{id, noop, revision}`; `addNote` →
+`{id, ref, author, state, revision}`; `resolveNote` → `{id, ref, state, noop, revision}`; `linkItem` → `{id, changes,
+fields, written: [{id, revision}]}`. Completing an item releases its claim; a failed release is a warning, never a
+failed save. Relation edits that rewrite two files write each atomically, not both as one transaction.
+
+**Errors.** Failures are `Error`s with a stable `code` (`CODES` values) and optional `details`:
+`DOCKET_CONFLICT` (stale `expect`; `details: {id, expected, actual}`), `DOCKET_LOCKED` (another writer holds the lock),
+`DOCKET_NOT_FOUND` (item, note, registered repo or checkout, or an unavailable checkout), `DOCKET_INVALID` (malformed
+item that must be fixed by hand, a change that would introduce a validation error, or a broken registry),
+`DOCKET_USAGE` (bad input: ids, refs, missing `expect`, unsafe paths), `DOCKET_NOT_A_REPO`, `DOCKET_GIT`.
+`KIND_OF_CODE` maps each code to `usage`, `conflict`, `notFound`, `failed` or `internal`. All operations are
+synchronous (file scans, locks, Git subprocesses): call them off any latency-sensitive thread.
+
 ## Install
 
 Requires Node 22 or newer. Use an ABSOLUTE tarball path with `npm install --global`: a relative one is read as a GitHub spec.
@@ -70,7 +131,7 @@ docket gate promote dist/docket-<version>.tgz   # tested copy under %LOCALAPPDAT
 docket gate install --repo .                    # opt this clone's pre-push hook in
 ```
 
-Upgrade or release 0.6.0: `npm run build`, then `npm install --global C:/path/to/repo/dist/docket-0.6.0.tgz` (absolute path),
-`docket gate promote C:/path/to/repo/dist/docket-0.6.0.tgz`, and in each repo `docket init --dry-run` then `docket init` to
+Upgrade or release 0.7.0: `npm run build`, then `npm install --global C:/path/to/repo/dist/docket-0.7.0.tgz` (absolute path),
+`docket gate promote C:/path/to/repo/dist/docket-0.7.0.tgz`, and in each repo `docket init --dry-run` then `docket init` to
 upgrade the agent snippet. Check adopting repos for a prose `## Notes` section first (`dk check`). The first run after
 upgrading rebuilds the index cache.

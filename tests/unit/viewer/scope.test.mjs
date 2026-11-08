@@ -9,8 +9,9 @@ import {
 } from "../../../src/repository/containment.mjs";
 import { CODES } from "../../../src/core/errors.mjs";
 import { contextFor } from "../../../src/repository/context.mjs";
-import { checkItemId, createCheckoutOpener, lookup } from "../../../src/viewer/server/scope.mjs";
-import { readRegistry } from "../../../src/state/registry/store.mjs";
+import { createCheckoutOpener } from "../../../src/repository/registered-checkout.mjs";
+import { createRegistrySource } from "../../../src/state/registry/source.mjs";
+import { checkItemId, mutateScoped, openScoped } from "../../../src/viewer/server/scope.mjs";
 import { itemText, tempDir } from "../../helpers/repository.mjs";
 import { appData, docketRepo, register } from "../../helpers/viewer.mjs";
 
@@ -134,50 +135,43 @@ function registered(t) {
     data.cleanup();
   });
   const { repo, checkout } = register(data.registryFile, r.root, { alias: "scoped" });
-  return { data, r, repo, checkout, registry: readRegistry(data.registryFile) };
+  const deps = {
+    registrySource: createRegistrySource(data.registryFile),
+    openCheckout: createCheckoutOpener(),
+  };
+  return { data, r, repo, checkout, deps };
 }
 
-test("lookup validates ids and finds registered checkouts", (t) => {
-  const { repo, checkout, registry } = registered(t);
-  assert.equal(lookup(registry, repo.id).checkout.id, checkout.id);
-  assert.equal(lookup(registry, repo.id, checkout.id).repo.id, repo.id);
-  for (const [r, c] of [
-    ["../x", undefined],
-    ["", undefined],
-    [undefined, undefined],
-    [repo.id, "../x"],
-    [repo.id, "nope"],
-  ]) {
-    assert.throws(() => lookup(registry, r, c), { code: CODES.USAGE }, `${r} ${c}`);
-  }
-  assert.throws(() => lookup(registry, "r-00000000"), { code: CODES.NOT_FOUND });
-  assert.throws(() => lookup(registry, repo.id, "c-00000000"), { code: CODES.NOT_FOUND });
-});
-
-test("opener refuses a deleted checkout", (t) => {
-  const { r, repo, checkout } = registered(t);
-  const open = createCheckoutOpener();
-  assert.equal(open(repo, checkout).root, checkout.path);
-  fs.rmSync(r.root, { recursive: true, force: true });
-  assert.throws(() => open(repo, checkout, { fresh: true }), {
+// The viewer adapter binds route params to the shared registry source, lookup and opener.
+test("openScoped resolves registry ids (preferred by default) to an opened checkout", (t) => {
+  const { repo, checkout, deps } = registered(t);
+  const out = openScoped(deps, { repo: repo.id });
+  assert.equal(out.checkout.id, checkout.id);
+  assert.equal(out.ctx.root, checkout.path);
+  assert.equal(openScoped(deps, { repo: repo.id, checkout: checkout.id }).repo.id, repo.id);
+  assert.throws(() => openScoped(deps, { repo: "../x" }), { code: CODES.USAGE });
+  assert.throws(() => openScoped(deps, { repo: repo.id, checkout: "c-00000000" }), {
     code: CODES.NOT_FOUND,
-    message: /unavailable/,
   });
 });
 
-test("opener refuses a checkout whose items dir became a junction", (t) => {
-  const { r, repo, checkout } = registered(t);
-  const outside = tempDir("docket outside ");
-  t.after(outside.cleanup);
-  fs.mkdirSync(path.join(outside.dir, "items"));
-  const open = createCheckoutOpener();
-  open(repo, checkout);
-  fs.rmSync(path.join(r.root, "docs", "items"), { recursive: true });
-  if (!link(path.join(outside.dir, "items"), path.join(r.root, "docs", "items"))) {
-    return t.skip("cannot create links");
-  }
-  // Link checks run on every open, even when the verification is cached.
-  assert.throws(() => open(repo, checkout), { code: CODES.USAGE });
+test("mutateScoped checks the item id, opens fresh and invalidates the catalog entry", (t) => {
+  const { r, repo, checkout, deps } = registered(t);
+  const invalidated = [];
+  const all = { ...deps, catalog: { invalidate: (a, b) => invalidated.push([a.id, b.id]) } };
+  const params = { repo: repo.id, checkout: checkout.id, id: "dk-00000001" };
+  assert.equal(
+    mutateScoped(all, params, (ctx, id) => `${ctx.root}|${id}`),
+    `${checkout.path}|dk-00000001`,
+  );
+  assert.deepEqual(invalidated, [[repo.id, checkout.id]]);
+  assert.throws(() => mutateScoped(all, { ...params, id: "../x" }, () => 1), {
+    code: CODES.USAGE,
+  });
+  openScoped(deps, params); // cache a read verification, then lose the checkout
+  fs.rmSync(path.join(r.root, ".git"), { recursive: true, force: true });
+  assert.throws(() => mutateScoped(all, params, () => 1), { code: CODES.NOT_FOUND });
+  assert.equal(invalidated.length, 1);
 });
 
 test("contextFor builds the checkout context, with gitDir only when known", () => {

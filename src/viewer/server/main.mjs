@@ -13,8 +13,9 @@ import {
   sendJson,
   statusFor,
 } from "./boundary.mjs";
+import { createCheckoutOpener } from "../../repository/registered-checkout.mjs";
+import { createRegistrySource } from "../../state/registry/source.mjs";
 import { createCatalog } from "./item-catalog.mjs";
-import { createCheckoutOpener, createRegistrySource } from "./scope.mjs";
 import { loadAssets } from "./static.mjs";
 import { bodyRoutes } from "./routes/body.mjs";
 import { documentRoutes } from "./routes/documents.mjs";

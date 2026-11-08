@@ -1,53 +1,16 @@
 // Registration: checkouts grouped by canonical Git common directory (linked worktrees join one logical
 // repo; independent clones stay separate), unique case-insensitive aliases, the preferred checkout and
-// document overrides. Pure functions over a registry document; persistence is store.mjs.
+// document overrides. Pure functions over a registry document: persistence is store.mjs, long-lived
+// reads and id lookup are source.mjs, checkout inspection and availability are
+// repository/registered-checkout.mjs.
 import { randomBytes } from "node:crypto";
-import fs from "node:fs";
 import path from "node:path";
 import { CODES, docketError } from "../../core/errors.mjs";
 import { canonicalPath, pathKey, sameKey } from "../../repository/canonical.mjs";
-import { parseConfig, readConfigBytes } from "../../repository/config.mjs";
-import { resolveRepo } from "../../repository/context.mjs";
+import { unavailableReason } from "../../repository/registered-checkout.mjs";
 import { ALIAS_RE, checkDocPath, DOC_NAMES } from "./schema.mjs";
 
 const usage = (message, details) => docketError(CODES.USAGE, message, details);
-
-/**
- * Facts about the checkout at `p`: {root, commonDir, main}. Paths are canonical. Requires `p` to be in
- * a Git checkout whose root carries a supported docket.json. Throws DOCKET_NOT_A_REPO / DOCKET_USAGE.
- */
-export function inspectCheckout(p) {
-  let real;
-  try {
-    real = canonicalPath(p);
-  } catch {
-    throw docketError(CODES.NOT_A_REPO, `no such directory: ${p}`);
-  }
-  const ctx = resolveRepo(real);
-  const root = canonicalPath(ctx.root);
-  const commonDir = canonicalPath(ctx.commonDir);
-  const bytes = readConfigBytes({ configPath: `${root}/docket.json` });
-  if (bytes === null) {
-    throw usage(`${root} has no docket.json (run docket init there first)`, { root });
-  }
-  const { error } = parseConfig(bytes);
-  if (error) throw usage(`${root}/docket.json: ${error.message}`, { root });
-  return { root, commonDir, main: sameKey(canonicalPath(ctx.gitDir), commonDir) };
-}
-
-/** Why a registered checkout cannot be used right now, or null when it is available. */
-export function unavailableReason(repo, checkout) {
-  if (!fs.existsSync(checkout.path)) return "path does not exist";
-  let info;
-  try {
-    info = inspectCheckout(checkout.path);
-  } catch (err) {
-    return err.message;
-  }
-  if (!sameKey(info.root, checkout.path)) return `not a checkout root (root is ${info.root})`;
-  if (!sameKey(info.commonDir, repo.commonDir)) return "now belongs to a different clone";
-  return null;
-}
 
 /** A fresh "<prefix>-<8hex>" id not in `taken` (a Set, updated with the new id). */
 function freshId(prefix, taken) {

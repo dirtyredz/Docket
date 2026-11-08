@@ -1,6 +1,6 @@
 {
   "name": "docket",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "description": "Windows CLI and local viewer over per-repo Markdown work items.",
@@ -10,6 +10,28 @@
   "bin": {
     "docket": "src/cli/main.mjs",
     "dk": "src/cli/main.mjs"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    "./errors": "./src/core/errors.mjs",
+    "./schema": "./src/core/format/schema.mjs",
+    "./date": "./src/core/identity/date.mjs",
+    "./items/query": "./src/core/items/query.mjs",
+    "./items/detail": "./src/core/items/detail.mjs",
+    "./items/relations": "./src/core/items/relations-view.mjs",
+    "./items/set": "./src/core/items/complete.mjs",
+    "./items/body": "./src/core/items/content/body.mjs",
+    "./items/notes": "./src/core/items/content/notes.mjs",
+    "./items/link": "./src/core/items/link.mjs",
+    "./items/index": "./src/state/index/build.mjs",
+    "./claims": "./src/state/claims/store.mjs",
+    "./repository/context": "./src/repository/context.mjs",
+    "./repository/canonical": "./src/repository/canonical.mjs",
+    "./repository/containment": "./src/repository/containment.mjs",
+    "./repository/registered-checkout": "./src/repository/registered-checkout.mjs",
+    "./registry/paths": "./src/state/registry/paths.mjs",
+    "./registry/source": "./src/state/registry/source.mjs",
+    "./markdown": "./src/viewer/documents/render.mjs"
   },
   "files": [
     "src/cli/",
@@ -24,11 +46,12 @@
     "README.md"
   ],
   "scripts": {
-    "test": "npm run test:bootstrap && npm run test:format && npm run test:core && npm run test:storage && npm run test:cli && npm run test:coordination && npm run test:registry && npm run test:viewer && npm run test:e2e && npm run test:integration && npm run test:packaging && npm run test:layout",
+    "test": "npm run test:bootstrap && npm run test:format && npm run test:core && npm run test:storage && npm run test:repository && npm run test:cli && npm run test:coordination && npm run test:registry && npm run test:viewer && npm run test:e2e && npm run test:integration && npm run test:packaging && npm run test:layout",
     "test:bootstrap": "node src/bootstrap/check.mjs --repo .",
     "test:format": "node --test \"tests/unit/format/*.test.mjs\"",
     "test:core": "node --test \"tests/unit/core/*.test.mjs\"",
     "test:storage": "node --test \"tests/unit/storage/*.test.mjs\"",
+    "test:repository": "node --test \"tests/unit/repository/*.test.mjs\"",
     "test:cli": "node --test \"tests/unit/cli/*.test.mjs\"",
     "test:coordination": "node --test \"tests/unit/state/*.test.mjs\"",
     "test:registry": "node --test \"tests/unit/state/registry/*.test.mjs\"",

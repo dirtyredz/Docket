@@ -1,9 +1,9 @@
 // `docket repo add|list|remove|scan`: thin adapter over state/registry. The registry is per machine
 // (registryPath: DOCKET_HOME or %LOCALAPPDATA%/Docket); nothing here touches a repo's files.
+import { inspectCheckout } from "../../repository/registered-checkout.mjs";
 import { registryPath } from "../../state/registry/paths.mjs";
 import {
   describeRegistry,
-  inspectCheckout,
   parseDocOverrides,
   registerCheckout,
   unregister,

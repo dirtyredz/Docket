@@ -102,6 +102,9 @@ Promotion, smoke test, and repo opt-in are separate modules under `integration/g
 
 `docket serve` binds `127.0.0.1` only, prints the URL, and runs in the foreground.
 
+- **Scope.** `viewer/server/scope.mjs` binds route ids to the shared last-good registry source
+  (`state/registry/source.mjs`) and verifying checkout opener (`repository/registered-checkout.mjs`); library
+  consumers use the same two.
 - **Targeting.** Overview and title search read one preferred checkout per group (counted once). Other
   checkouts load on demand. Edits need an explicitly selected checkout, addressed by registry ids only (never
   client paths), re-verified against Git on every mutation. Other worktrees' claims and branch work are
@@ -135,6 +138,8 @@ through an agent following `MOVE-IN.md` with the ordinary `dk add` / `dk set` co
 
 ## External interfaces
 
-CLI with `--repo` and bounded `--json` (no MCP). Git pre-push hook via the managed template's opt-in
+CLI with `--repo` and bounded `--json` (no MCP). A Node library surface (package.json subpath exports, README
+"Library API", ADR-29) for in-process consumers such as Command Deck: the same core operations, registry source
+and checkout opener the viewer uses, with no root entry or catch-all. Git pre-push hook via the managed template's opt-in
 Docket callback. Repo-specific adapters (legacy-writer retirement, documentation checkers) live in the
 adopting repo, not here.

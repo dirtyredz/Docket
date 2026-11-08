@@ -2,14 +2,14 @@
 
 Windows 11 CLI (`docket` / `dk`) and local viewer over per-repo Markdown work items. Status: the CLI, core, pre-push
 gate, `docket init`, the move-in playbook, the repo registry, the local viewer (`docket serve`), facts and notes and the
-agent guide are built in 0.6.0, not yet pushed (importers removed, ADR-19; viewer plan `docs/plans/PLAN-VIEWER.md`).
+agent guide are built in 0.6.0, and the library API (subpath exports, README "Library API") in 0.7.0, not yet pushed (importers removed, ADR-19; viewer plan `docs/plans/PLAN-VIEWER.md`).
 
 ## Working here
 
 - Read `STRUCTURE.md` (code map and `## Layout`), then `docs/GOTCHAS.md`. `docs/ARCHITECTURE.md` for
   flows, `docs/DECISIONS.md` for why.
 - Stack: Node >= 22 (24 planned, ADR-13), plain ESM (`.mjs`), npm, `node:test`. No TypeScript.
-- Tests: `npm test` (everything), or `npm run test:<area>` (unit areas live under `tests/unit/`) for bootstrap, format, core, storage, cli,
+- Tests: `npm test` (everything), or `npm run test:<area>` (unit areas live under `tests/unit/`) for bootstrap, format, core, storage, repository, cli,
   coordination (tests/unit/state), registry (tests/unit/state/registry), viewer, e2e (Playwright; Edge/Chrome fallback), integration, packaging, layout (bootstrap and layout are scripts, not test folders). Integration and packaging do real pushes to temp bare
   remotes and need the harness template (`~/.claude/hooks/structure/pre-push.template.sh`).
 - `npm run build` packs `dist/docket-<v>.tgz`. Ship it: `npm install --global <tgz>`, (ABSOLUTE tarball path: a relative one is misread as a GitHub spec), then

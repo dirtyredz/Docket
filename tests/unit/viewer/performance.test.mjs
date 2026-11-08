@@ -7,7 +7,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { after, before, test } from "node:test";
 import { createCatalog } from "../../../src/viewer/server/item-catalog.mjs";
-import { createCheckoutOpener, createRegistrySource } from "../../../src/viewer/server/scope.mjs";
+import { createCheckoutOpener } from "../../../src/repository/registered-checkout.mjs";
+import { createRegistrySource } from "../../../src/state/registry/source.mjs";
 import { appData, docketRepo, register, viewer } from "../../helpers/viewer.mjs";
 import { itemText } from "../../helpers/repository.mjs";
 
@@ -74,11 +75,11 @@ test("cold overview completes within the target and counts every item", async (t
   assert.equal(fixture.total, TOTAL);
   const { ms, value } = await timed(async () => {
     const v = await viewer(home.registryFile);
+    t.after(() => v.close()); // registered before settling, so a failed settle cannot leak the server
     const overview = await v.settled(60000);
     return { v, overview };
   });
   const { v, overview } = value;
-  t.after(() => v.close());
   t.diagnostic(
     `cold overview (29 repos, ${TOTAL} items, indexes built from nothing): ${ms.toFixed(0)} ms`,
   );
