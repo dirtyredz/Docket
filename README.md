@@ -35,7 +35,7 @@ docket gate promote <tarball>  /  docket gate install [--dry-run]  /  docket gat
 ```
 
 `docket init` creates `docs/items/` and `docket.json`, ignores `.docket/` and writes a managed, versioned agent snippet
-into both CLAUDE.md and AGENTS.md (re-running upgrades it in place; a customised section is reported for manual review;
+into AGENTS.md only (CLAUDE.md is never written) (re-running upgrades it in place; a customised section is reported for manual review;
 `--no-agent-snippet` skips both, for repos whose agent files are managed elsewhere). To move an existing backlog in, have an agent follow the `docs/MOVE-IN.md` playbook (shipped inside the installed package, under the `docket` package root).
 
 ## UI and library

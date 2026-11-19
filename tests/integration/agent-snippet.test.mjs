@@ -1,5 +1,5 @@
 // The managed agent snippet: exact legacy migration, managed upgrade, manual-review cases, byte and
-// line-ending preservation, both agent files, dry run and second-run idempotence.
+// line-ending preservation, AGENTS.md only, dry run and second-run idempotence.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -153,19 +153,17 @@ describe("ensureAgentSnippets", () => {
     return fs.existsSync(f) ? fs.readFileSync(f, "utf8") : null;
   };
 
-  test("writes both files, creating missing ones; second run is unchanged", () => {
+  test("legacy AGENTS.md is migrated, CLAUDE.md is never touched; second run is unchanged", () => {
     const root = dir();
-    fs.writeFileSync(path.join(root, "CLAUDE.md"), crlf(`# Mine\n\n${LEGACY_SNIPPET}`));
+    fs.writeFileSync(path.join(root, "AGENTS.md"), crlf(`# Mine\n\n${LEGACY_SNIPPET}`));
+    fs.writeFileSync(path.join(root, "CLAUDE.md"), `# Mine\n\n${LEGACY_SNIPPET}`);
     const first = ensureAgentSnippets(root);
-    assert.deepEqual(first, [
-      { path: "CLAUDE.md", state: "updated" },
-      { path: "AGENTS.md", state: "created" },
-    ]);
-    assert.equal(read(root, "CLAUDE.md"), crlf(`# Mine\n\n${BLOCK}`));
-    assert.ok(read(root, "AGENTS.md").endsWith(BLOCK));
+    assert.deepEqual(first, [{ path: "AGENTS.md", state: "updated" }]);
+    assert.equal(read(root, "AGENTS.md"), crlf(`# Mine\n\n${BLOCK}`));
+    assert.equal(read(root, "CLAUDE.md"), `# Mine\n\n${LEGACY_SNIPPET}`);
     assert.deepEqual(
       ensureAgentSnippets(root).map((f) => f.state),
-      ["unchanged", "unchanged"],
+      ["unchanged"],
     );
   });
 
@@ -173,33 +171,37 @@ describe("ensureAgentSnippets", () => {
     const root = dir();
     const v2 = `# Mine\n\n${BLOCK.replace("Docket", "Docket (ours)")}`;
     const v3 = crlf(`# Mine\n\n${BLOCK.replace("begin v2", "begin v3")}`);
-    fs.writeFileSync(path.join(root, "CLAUDE.md"), v2);
-    fs.writeFileSync(path.join(root, "AGENTS.md"), v3);
+    fs.writeFileSync(path.join(root, "AGENTS.md"), v2);
     const dry = ensureAgentSnippets(root, { dryRun: true });
     const real = ensureAgentSnippets(root);
     assert.deepEqual(dry, real);
     assert.deepEqual(
       real.map((r) => [r.state, r.reason]),
-      [
-        ["manual-review", "customised v2 docket:agent-snippet block"],
-        ["manual-review", "unknown snippet version v3"],
-      ],
+      [["manual-review", "customised v2 docket:agent-snippet block"]],
     );
-    assert.equal(read(root, "CLAUDE.md"), v2);
+    assert.equal(read(root, "AGENTS.md"), v2);
+    fs.writeFileSync(path.join(root, "AGENTS.md"), v3);
+    assert.deepEqual(
+      ensureAgentSnippets(root).map((r) => [r.state, r.reason]),
+      [["manual-review", "unknown snippet version v3"]],
+    );
     assert.equal(read(root, "AGENTS.md"), v3);
   });
 
   test("dry run reports and writes nothing; manual review leaves the file byte-identical", () => {
     const root = dir();
     const custom = `# Mine\n\n## Work items (Docket)\n\nOur own rules.\n`;
-    fs.writeFileSync(path.join(root, "CLAUDE.md"), custom);
+    fs.writeFileSync(path.join(root, "AGENTS.md"), custom);
     const dry = ensureAgentSnippets(root, { dryRun: true });
     assert.equal(dry[0].state, "manual-review");
-    assert.equal(dry[1].state, "created");
-    assert.equal(read(root, "AGENTS.md"), null);
     ensureAgentSnippets(root);
-    assert.equal(read(root, "CLAUDE.md"), custom);
-    assert.ok(read(root, "AGENTS.md").endsWith(BLOCK));
+    assert.equal(read(root, "AGENTS.md"), custom);
+    const empty = dir();
+    assert.equal(ensureAgentSnippets(empty, { dryRun: true })[0].state, "created");
+    assert.equal(read(empty, "AGENTS.md"), null);
+    ensureAgentSnippets(empty);
+    assert.ok(read(empty, "AGENTS.md").endsWith(BLOCK));
+    assert.equal(read(empty, "CLAUDE.md"), null);
   });
 });
 
@@ -243,11 +245,11 @@ describe("blank-line-only differences (Prettier)", () => {
     const t = tempDir("docket snippet ");
     cleanups.push(t.cleanup);
     const text = `# Mine\n\n${variants["blank after begin"]}`;
-    for (const n of ["CLAUDE.md", "AGENTS.md"]) fs.writeFileSync(path.join(t.dir, n), text);
+    fs.writeFileSync(path.join(t.dir, "AGENTS.md"), text);
     for (const dryRun of [true, false]) {
       const states = ensureAgentSnippets(t.dir, { dryRun }).map((r) => r.state);
-      assert.deepEqual(states, ["unchanged", "unchanged"]);
+      assert.deepEqual(states, ["unchanged"]);
     }
-    assert.equal(fs.readFileSync(path.join(t.dir, "CLAUDE.md"), "utf8"), text);
+    assert.equal(fs.readFileSync(path.join(t.dir, "AGENTS.md"), "utf8"), text);
   });
 });

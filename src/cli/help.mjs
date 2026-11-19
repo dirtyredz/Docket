@@ -13,12 +13,12 @@ const HELP = {
   init: `Usage: docket init [--gate] [--no-agent-snippet] [--dry-run]
 
 Make this repo a Docket repo (idempotent). Creates docs/items/ and docket.json, ignores .docket/ and
-writes the managed agent snippet into both CLAUDE.md and AGENTS.md (creating them when missing).
+writes the managed agent snippet into AGENTS.md (creating it when missing; CLAUDE.md is never touched).
 Re-running upgrades an older managed snippet, or the exact pre-0.6 unmarked one, in place; duplicate
 or incomplete markers and customised sections are reported for manual review and left alone.
 Reports each file as created, updated, unchanged or needs manual review.
   --gate      also install the pre-push gate (see docket gate install)
-  --no-agent-snippet  touch neither CLAUDE.md nor AGENTS.md (creates neither)
+  --no-agent-snippet  do not touch AGENTS.md (creates nothing)
   --dry-run   report what would change; write nothing`,
   check: `Usage: docket check [--ref <rev>]
 

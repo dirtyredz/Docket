@@ -119,7 +119,7 @@ published release). Owner side: `scripts/release/cut.ps1` (bump, commit, tag, co
 
 `docket init` (`integration/init.mjs`, adapter `cli/commands/init.mjs`) makes the current worktree a Docket
 repo: it creates `docs/items/` and `docket.json` (store version only), ignores `.docket/`, writes the managed agent
-snippet (`integration/agent-snippet.mjs`, ADR-28) into both `CLAUDE.md` and `AGENTS.md` (creating either; an
+snippet (`integration/agent-snippet.mjs`, ADR-28) into `AGENTS.md` only (CLAUDE.md is never written; creating it when missing; an
 older managed or the exact pre-0.6 snippet is upgraded in place, anything customised is reported for manual
 review), and with `--gate` runs the
 gate install. Every step is skipped when already done; a run that changes nothing reports "already

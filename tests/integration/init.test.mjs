@@ -22,7 +22,7 @@ const SNIPPET = "## Work items (Docket)";
 const BEGIN = "<!-- docket:agent-snippet begin v2 -->";
 
 describe("docket init", () => {
-  test("fresh repo: items dir, docket.json, .gitignore entry, new CLAUDE.md and AGENTS.md; the store checks clean", () => {
+  test("fresh repo: items dir, docket.json, .gitignore entry, new AGENTS.md only; the store checks clean", () => {
     const r = repo();
     const out = init(r);
     assert.equal(out.status, 0, out.stdout + out.stderr);
@@ -31,15 +31,13 @@ describe("docket init", () => {
       "docs/items/",
       "docket.json",
       ".gitignore",
-      "CLAUDE.md",
       "AGENTS.md",
     ]);
     assert.ok(fs.statSync(path.join(r.root, "docs", "items")).isDirectory());
     assert.deepEqual(JSON.parse(text(r, "docket.json")), { version: 1 });
     assert.match(text(r, ".gitignore"), /^\.docket\/$/m);
-    const claude = text(r, "CLAUDE.md");
-    assert.ok(claude.startsWith(`# repo with space\n\n${BEGIN}\n${SNIPPET}\n`));
-    assert.equal(text(r, "AGENTS.md"), claude);
+    assert.ok(text(r, "AGENTS.md").startsWith(`# repo with space\n\n${BEGIN}\n${SNIPPET}\n`));
+    assert.equal(fs.existsSync(path.join(r.root, "CLAUDE.md")), false);
     const result = checkStore(resolveRepo(r.root));
     assert.deepEqual(result.errors, []);
   });
@@ -47,44 +45,41 @@ describe("docket init", () => {
   test("re-run changes nothing and reports already initialised", () => {
     const r = repo();
     init(r);
-    const before = ["docket.json", ".gitignore", "CLAUDE.md"].map((n) => text(r, n));
+    const before = ["docket.json", ".gitignore", "AGENTS.md"].map((n) => text(r, n));
     const again = runCli(["init", "--repo", r.root]);
     assert.equal(again.status, 0);
     assert.match(again.stdout, /already initialised/);
     assert.deepEqual(
-      ["docket.json", ".gitignore", "CLAUDE.md"].map((n) => text(r, n)),
+      ["docket.json", ".gitignore", "AGENTS.md"].map((n) => text(r, n)),
       before,
     );
     assert.equal(init(r).json.data.initialised, false);
-    assert.equal(count(text(r, "CLAUDE.md"), SNIPPET), 1);
+    assert.equal(count(text(r, "AGENTS.md"), SNIPPET), 1);
   });
 
-  test("existing CLAUDE.md and AGENTS.md get the snippet appended once, content and CRLF kept", () => {
+  test("existing AGENTS.md gets the snippet; CLAUDE.md is left alone appended once, content and CRLF kept", () => {
     const r = repo();
     fs.writeFileSync(path.join(r.root, "CLAUDE.md"), "# Mine\r\n\r\nKeep this.\r\n");
     fs.writeFileSync(path.join(r.root, "AGENTS.md"), "Agents rules");
     fs.writeFileSync(path.join(r.root, ".gitignore"), "node_modules/");
     init(r);
     init(r);
-    const claude = text(r, "CLAUDE.md");
-    assert.ok(claude.startsWith(`# Mine\r\n\r\nKeep this.\r\n\r\n${BEGIN}\r\n${SNIPPET}\r\n`));
-    assert.equal(count(claude, SNIPPET), 1);
-    assert.ok(!/(^|[^\r])\n/.test(claude), "CRLF file stays CRLF");
+    assert.equal(text(r, "CLAUDE.md"), "# Mine\r\n\r\nKeep this.\r\n");
     const agents = text(r, "AGENTS.md");
     assert.ok(agents.startsWith(`Agents rules\n\n${BEGIN}\n${SNIPPET}`));
     assert.equal(count(agents, SNIPPET), 1);
     assert.equal(text(r, ".gitignore"), "node_modules/\n.docket/\n");
   });
 
-  test("no agent file creates both; AGENTS.md alone also gets a CLAUDE.md", () => {
+  test("no agent file creates AGENTS.md only", () => {
     const none = repo();
     init(none);
-    assert.ok(fs.existsSync(path.join(none.root, "CLAUDE.md")));
+    assert.equal(fs.existsSync(path.join(none.root, "CLAUDE.md")), false);
     assert.ok(fs.existsSync(path.join(none.root, "AGENTS.md")));
     const agentsOnly = repo();
     fs.writeFileSync(path.join(agentsOnly.root, "AGENTS.md"), "# A\n");
     init(agentsOnly);
-    assert.equal(count(text(agentsOnly, "CLAUDE.md"), SNIPPET), 1);
+    assert.equal(fs.existsSync(path.join(agentsOnly.root, "CLAUDE.md")), false);
     assert.ok(text(agentsOnly, "AGENTS.md").startsWith("# A\n\n"));
     assert.equal(count(text(agentsOnly, "AGENTS.md"), SNIPPET), 1);
   });
@@ -152,7 +147,6 @@ describe("docket init --dry-run and report", () => {
       "docs/items/": "created",
       "docket.json": "created",
       ".gitignore": "created",
-      "CLAUDE.md": "created",
       "AGENTS.md": "created",
     });
     assert.deepEqual(snapshot(r), before);
@@ -162,16 +156,16 @@ describe("docket init --dry-run and report", () => {
   test("text mode names each file's state; a real run then reports unchanged", () => {
     const r = repo();
     fs.writeFileSync(path.join(r.root, ".gitignore"), "node_modules\n");
-    fs.writeFileSync(path.join(r.root, "CLAUDE.md"), "# Mine\n");
+    fs.writeFileSync(path.join(r.root, "AGENTS.md"), "# Mine\n");
     const dry = runCli(["init", "--dry-run", "--repo", r.root]);
     assert.match(dry.stdout, /dry run, nothing written/);
     assert.match(dry.stdout, /\.gitignore: would be updated/);
-    assert.match(dry.stdout, /CLAUDE\.md: would be updated/);
+    assert.match(dry.stdout, /AGENTS.md: would be updated/);
     assert.match(dry.stdout, /docket\.json: would be created/);
     runCli(["init", "--repo", r.root]);
     const again = runCli(["init", "--dry-run", "--repo", r.root]);
     assert.match(again.stdout, /docket\.json: unchanged/);
-    assert.match(again.stdout, /CLAUDE\.md: unchanged/);
+    assert.match(again.stdout, /AGENTS.md: unchanged/);
     assert.equal(
       JSON.parse(runCli(["init", "--dry-run", "--json", "--repo", r.root]).stdout).data.initialised,
       false,
@@ -350,11 +344,11 @@ describe("docket init --no-agent-snippet (0.4.5)", () => {
 
   test("a later run without the flag still appends the snippet, once", () => {
     const r = mk();
-    fs.writeFileSync(path.join(r.root, "CLAUDE.md"), "# Mine\n");
+    fs.writeFileSync(path.join(r.root, "AGENTS.md"), "# Mine\n");
     run(r, "--no-agent-snippet");
     run(r);
     run(r);
-    assert.equal(count(text(r, "CLAUDE.md"), SNIPPET), 1);
-    assert.ok(text(r, "CLAUDE.md").startsWith("# Mine\n"));
+    assert.equal(count(text(r, "AGENTS.md"), SNIPPET), 1);
+    assert.ok(text(r, "AGENTS.md").startsWith("# Mine\n"));
   });
 });

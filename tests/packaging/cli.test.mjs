@@ -100,7 +100,7 @@ test("the packed CLI installs and runs from outside the checkout", { timeout: 30
   spawnSync("git", ["init", "-q", fresh.dir]);
   const init = JSON.parse(run("init", "--json", "--repo", fresh.dir).stdout);
   assert.equal(init.ok, true, JSON.stringify(init));
-  for (const f of ["CLAUDE.md", "AGENTS.md"]) {
+  for (const f of ["AGENTS.md"]) {
     const text = fs.readFileSync(path.join(fresh.dir, f), "utf8");
     assert.match(text, /<!-- docket:agent-snippet begin v2 -->/);
     assert.match(text, /docket guide/);

@@ -1,4 +1,4 @@
-// The managed agent snippet in CLAUDE.md / AGENTS.md: detection, in-place upgrade and persistence.
+// The managed agent snippet in AGENTS.md (never CLAUDE.md): detection, in-place upgrade and persistence.
 // The snippet lives between versioned begin/end comments. A managed block is classified by marker
 // version and exact canonical content: the current canonical block is unchanged, a known older
 // version's exact canonical block is upgraded in place, and everything else (customised, unknown or
@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { atomicWrite } from "../storage/atomic-write.mjs";
 
 export const SNIPPET_VERSION = 2;
-export const AGENT_FILES = Object.freeze(["CLAUDE.md", "AGENTS.md"]);
+export const AGENT_FILES = Object.freeze(["AGENTS.md"]); // CLAUDE.md is never written: the global harness already covers dk
 const SNIPPET_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), "agent-snippet.md");
 const HEADING = "## Work items (Docket)";
 const BEGIN_RE = /^<!-- docket:agent-snippet begin v(\d+) -->\r?$/gm;

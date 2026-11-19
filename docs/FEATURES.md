@@ -17,7 +17,7 @@ in `docs/items/`; this page does not duplicate them. Milestones are in `ROADMAP.
 | `--repo` on every command, `--json` for agents                                               | M1b       | shipped |
 | Tarball install, `docket` and `dk` aliases                                                   | M1b       | shipped |
 | Last-good pre-push gate composed with LFS and structure checks                               | M1c       | shipped |
-| Agent snippet for CLAUDE.md / AGENTS.md (`src/integration/`)                                 | M2a       | shipped |
+| Agent snippet for AGENTS.md (never CLAUDE.md) (`src/integration/`)                                 | M2a       | shipped |
 | `docket init [--gate]`: idempotent repo setup, agent snippet                                 | M3        | shipped |
 | Move-in playbook for existing backlogs (`docs/MOVE-IN.md`)                                   | M3        | shipped |
 | 0.4.0: `add --batch` (all-or-nothing JSON array)                                             | M3        | shipped |
