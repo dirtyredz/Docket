@@ -127,3 +127,4 @@ configPath}`; only `resolveRepo`/`contextAtRoot` add `gitDir`, and nothing in co
   `release-scripts.test.ps1` bans them.
 - **`install.ps1` without `-Tag` installs the latest PUBLISHED release.** The release workflow only drafts;
   install a draft by its tag.
+- **`init` never writes CLAUDE.md** (the harness covers dk). Old managed blocks there are left alone; remove by hand.

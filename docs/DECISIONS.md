@@ -71,7 +71,7 @@ Evidence paths are relative to `docs/research/`.
 - **Context:** The 0.5 snippet was an unmarked block detected by its heading: it could not be upgraded, and
   it carried all agent guidance inline in two instruction files.
 - **Decision:** `init` writes a short block between `<!-- docket:agent-snippet begin v2 -->` and `end`
-  markers into both CLAUDE.md and AGENTS.md (creating either), and re-running upgrades it in place. A managed block
+  markers into AGENTS.md only (creating it; CLAUDE.md untouched, GOTCHAS), and re-running upgrades it in place. A managed block
   is classified by marker version and exact canonical content (blank lines and CR ignored): current-version
   canonical is unchanged; a known older version's exact canonical text, or the exact pre-0.6 unmarked text, is
   migrated; a customised block of any version, an unknown or newer version, duplicate or incomplete markers and

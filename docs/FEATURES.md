@@ -28,7 +28,7 @@ in `docs/items/`; this page does not duplicate them. Milestones are in `ROADMAP.
 | 0.4.1: dry-run reports git config keys as "would be created"; MOVE-IN rules                  | M3        | shipped |
 | 0.4.2: `add --batch` entries take `created`/`since` historical dates (ADR-21)                | M3        | shipped |
 | 0.4.4: `init` lists `docs/items/` in `.prettierignore` when the repo uses Prettier           | M3        | shipped |
-| 0.4.5: `init --no-agent-snippet` skips CLAUDE.md / AGENTS.md (never creates one)             | M3        | shipped |
+| 0.4.5: `init --no-agent-snippet` skips AGENTS.md (never creates it)                          | M3        | shipped |
 | 0.5.0: `docket repo add/list/remove` (aliases, worktree groups, `--doc` metadata)            | M3a       | built   |
 | 0.5.0: `docket repo scan <dir> [--dry-run]` (one-shot, additive)                             | M3b       | built   |
 | 0.5.0: `set`/`link --expect` also guard no-ops (scalar `--expect`)                           | M4c       | built   |
@@ -37,7 +37,7 @@ in `docs/items/`; this page does not duplicate them. Milestones are in `ROADMAP.
 | 0.6.0: `set --body-file` replaces the body (`--expect` required; Notes kept)                 | M6        | built   |
 | 0.6.0: `list --notes open`, `show` facts/notes sections, JSON body, notes, openNoteCount     | M6        | built   |
 | 0.6.0: index v2 (open-note count only); `--all --notes open` covers closed items             | M6        | built   |
-| 0.6.0: managed, versioned agent snippet in CLAUDE.md and AGENTS.md; in-place upgrade         | M6        | built   |
+| 0.6.0: managed, versioned agent snippet in AGENTS.md; in-place upgrade                       | M6        | built   |
 | 0.6.0: `docket guide` prints the tool-neutral agent guide (`docs/AGENT-GUIDE.md`)            | M6        | built   |
 | 0.7.0: viewer and `docket serve` removed (exits 2 with a removal message; ADR-29)            | M7        | built   |
 | 0.8.0: headless library: narrow subpath exports, `docs/LIBRARY.md` contract (ADR-30)         | M8        | built   |
