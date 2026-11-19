@@ -75,7 +75,7 @@ function ensurePrettierIgnore(ctx, dryRun) {
  * that are new or changed), files: [{path, state, reason?}], agentFiles, review, gate}. Throws
  * DOCKET_NOT_A_REPO outside a git worktree (resolveRepo). The managed agent snippet goes into
  * AGENTS.md (created when missing; older snippets upgraded in place, see
- * agent-snippet.mjs); `agentSnippet: false` touches neither. state "manual-review" is not a change.
+ * agent-snippet.mjs); `agentSnippet: false` touches nothing. state "manual-review" is not a change.
  */
 export function initRepo(
   start,
