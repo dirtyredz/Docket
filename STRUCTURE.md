@@ -69,7 +69,7 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `src/library/items/` — facades for `docket/items/*` (index, query, detail, relations, set, body, notes, link)
 - `src/library/repository/` — facades for `docket/repository/*` (context, canonical, containment, registered-checkout)
 - `src/library/registry/` — facades for `docket/registry/*` (paths, source)
-- `src/state/claims/` — common-dir advisory claims and retained work bindings (`store.mjs`, pure persistence, no core imports); `work.mjs` coordinates WIP claims, `mutateWorkStore`, read-only activity and idempotent worktree release, with common-dir-before-item locking
+- `src/state/claims/` — common-dir advisory claims and retained work bindings (`store.mjs`, locked envelope reads/writes; imports only the `core/errors.mjs` leaf, no item operations or callbacks); `work.mjs` coordinates WIP claims, `mutateWorkStore`, the opaque `workClaims` dependency, read-only activity and idempotent worktree release, with common-dir-before-item locking
 - `src/state/index/` — rebuildable per-worktree JSON cache
 - `src/state/registry/` — per-machine repo registry: identity, registration, scan, the last-good source with strict id lookup (`source.mjs`), document-location overrides (metadata only). The `repo list` view is the CLI adapter's
 - `src/cli/` — dispatch, argument handling, output contracts, shared report vocabulary, help, shared file/stdin input, `docket guide`

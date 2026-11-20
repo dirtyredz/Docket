@@ -27,7 +27,7 @@ scans, locks, Git subprocesses): call them off any latency-sensitive thread.
 | `docket/items/body`                     | `replaceBody(ctx, id, body, {expect})` → `{id, noop, revision}`                                                           |
 | `docket/items/notes`                    | `addNote(ctx, id, {text, author}, {expect?})`, `resolveNote(ctx, id, ref, {expect?})`                                     |
 | `docket/items/link`                     | `linkItem(ctx, id, change, {expect?, expectRevisions?})`                                                                  |
-| `docket/claims`                         | `readClaims(commonDir)`, `releaseItem`, `mutateWorkStore(ctx, plan)` (pass the module namespace as `claims`)              |
+| `docket/claims`                         | `readClaims(commonDir)`, `releaseItem`, `workClaims` (opaque; pass it as `claims`)                                        |
 | `docket/repository/context`             | `contextFor(root, commonDir, gitDir?)`, `contextAtRoot(root)`                                                             |
 | `docket/repository/canonical`           | `canonicalPath(p)`, `pathKey(p)`, `sameKey(a, b)`                                                                         |
 | `docket/repository/containment`         | `assertSafeCheckout(ctx)`                                                                                                 |
@@ -92,8 +92,8 @@ blocked_by, relates}, reverse: {children, fixedBy, blocks, relates}, reverseStor
 
 ## Mutations and revisions
 
-The `docket/claims` facade additionally exports `mutateWorkStore(ctx, plan)`, the binding-aware item
-transaction. Pass the whole facade as `claims` to `setItem`: entering WIP then records the current
+The `docket/claims` facade additionally exports `workClaims`, an opaque binding-aware claims dependency
+(its shape is private). Pass it as `claims` to `setItem` and the readers: entering WIP then records the current
 branch and canonical checkout in the common-dir store. Existing `releaseItem` and `readClaims`
 contracts are unchanged; releasing or expiring a claim retains its work evidence. Activity and
 worktree release are CLI-only interfaces.

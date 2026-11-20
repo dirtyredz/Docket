@@ -2,7 +2,9 @@
 // its own lock (never the item lock), replaced atomically. Advisory claims whose worktree path no
 // longer exists expire on read and are dropped on the next write; retained `work` bindings
 // (item -> worktree/branch) outlive claims, and v1 files read their claims as legacy work. Pure
-// persistence: no item mutation here (see work.mjs). Never committed.
+// persistence: locked envelope reads and writes, with no item imports or item-mutation callbacks
+// (work.mjs composes them with item operations); imports only the core/errors.mjs leaf. Never
+// committed.
 import fs from "node:fs";
 import path from "node:path";
 import { CODES, docketError } from "../../core/errors.mjs";
@@ -37,7 +39,8 @@ export function readClaims(commonDir, { exists = fs.existsSync } = {}) {
   return { claims, expired };
 }
 
-function write(commonDir, claims, work = readWork(commonDir)) {
+/** Replace the envelope; callers hold the claims lock (withWorkLock). */
+export function write(commonDir, claims, work = readWork(commonDir)) {
   const sorted = Object.fromEntries(Object.entries(claims).sort(([a], [b]) => (a < b ? -1 : 1)));
   atomicWrite(
     claimsPath(commonDir),
@@ -53,32 +56,35 @@ const claimedError = (id, holder) =>
   );
 
 /**
- * Claim `id` for `worktree`. Re-claiming from the same worktree refreshes it. A live claim held by
- * another worktree is rejected unless `takeover`. Returns {claim, previous}.
+ * Add a claim for `id` to the live `claims` map (callers hold the lock). Re-claiming from the same
+ * worktree refreshes it; a live claim held by another worktree is rejected unless `takeover`.
  */
-export function claimItem(
-  commonDir,
+export function buildClaim(
+  claims,
   id,
-  { worktree, branch = null, agent = null, takeover = false, now = new Date(), enterWip },
+  { worktree, branch = null, agent = null, takeover = false, now = new Date() },
 ) {
+  const previous = claims[id] ?? null;
+  if (previous && !samePath(previous.worktree, worktree) && !takeover) {
+    throw claimedError(id, previous);
+  }
+  const claim = {
+    worktree: toSlash(path.resolve(worktree)),
+    branch,
+    agent,
+    at: now.toISOString(),
+  };
+  claims[id] = claim;
+  return { claim, previous };
+}
+
+/** Claim `id` for `worktree` under the lock. Returns {claim, previous}. */
+export function claimItem(commonDir, id, options) {
   return withLock(lockPath(commonDir), () => {
     const { claims } = readClaims(commonDir);
-    const previous = claims[id] ?? null;
-    if (previous && !samePath(previous.worktree, worktree) && !takeover) {
-      throw claimedError(id, previous);
-    }
-    const claim = {
-      worktree: toSlash(path.resolve(worktree)),
-      branch,
-      agent,
-      at: now.toISOString(),
-    };
-    claims[id] = claim;
-    const work = readWork(commonDir);
-    const result = enterWip?.();
-    recordBinding(work, [id], { worktree: claim.worktree, branch });
-    saveAfterItems(commonDir, claims, work, result?.written ?? []);
-    return { claim, previous };
+    const result = buildClaim(claims, id, options);
+    write(commonDir, claims);
+    return result;
   });
 }
 
@@ -92,18 +98,6 @@ export function readWork(commonDir) {
 /** Record `binding` as the retained work evidence for each of `ids`. */
 export function recordBinding(work, ids, binding) {
   for (const id of ids) work[id] = binding;
-}
-
-export function saveAfterItems(commonDir, claims, work, written) {
-  try {
-    write(commonDir, claims, work);
-  } catch (err) {
-    if (written.length) {
-      err.message = `items saved, but work bindings were not saved: ${err.message}`;
-      Object.assign(err, { partial: true, written });
-    }
-    throw err;
-  }
 }
 
 /** Common-dir before item lock: serialize binding changes with release and takeover. */

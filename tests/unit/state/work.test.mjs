@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { makeRepo, itemText } from "../../helpers/repository.mjs";
 import { resolveRepo } from "../../../src/repository/context.mjs";
 import { claimsPath, readWork } from "../../../src/state/claims/store.mjs";
-import * as claims from "../../../src/library/claims.mjs";
+import { workClaims as claims } from "../../../src/library/claims.mjs";
 import { claimWork } from "../../../src/state/claims/work.mjs";
 import { setItem } from "../../../src/library/items/set.mjs";
 

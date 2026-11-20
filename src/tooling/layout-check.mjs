@@ -34,6 +34,24 @@ export function layoutProblems(files, homes, readLines) {
   return problems;
 }
 
+const PURE_STORE = "src/state/claims/store.mjs";
+const LEAF_CORE = new Set(["core/errors.mjs"]);
+
+/** The claims store is pure persistence: no core/items or item-mutation imports or callbacks. */
+export function storePurityProblems(text, file = PURE_STORE) {
+  const problems = [];
+  for (const m of text.matchAll(/\bfrom\s+"([^"]+)"/g)) {
+    const spec = m[1].replace(/^(\.\.\/)+/, "");
+    if (/(^|\/)core\//.test(spec) && !LEAF_CORE.has(spec.replace(/^.*?(core\/)/, "$1"))) {
+      problems.push(`${file}: imports ${m[1]} (only core/errors.mjs is allowed)`);
+    }
+  }
+  if (/\benterWip\b|\bmutateStore\b/.test(text)) {
+    problems.push(`${file}: item-mutation callback in the persistence layer`);
+  }
+  return problems;
+}
+
 function main(argv) {
   const i = argv.indexOf("--repo");
   const root = path.resolve(i >= 0 ? argv[i + 1] : ".");
@@ -46,6 +64,10 @@ function main(argv) {
   const homes = declaredHomes(fs.readFileSync(path.join(root, "STRUCTURE.md"), "utf8"));
   const count = (f) => fs.readFileSync(path.join(root, f), "utf8").split("\n").length;
   const problems = layoutProblems(files, homes, count);
+  if (fs.existsSync(path.join(root, PURE_STORE))) {
+    const text = fs.readFileSync(path.join(root, PURE_STORE), "utf8");
+    problems.push(...storePurityProblems(text));
+  }
   for (const p of problems) console.log(p);
   console.log(
     `layout check: ${problems.length ? `${problems.length} problem(s)` : "ok"} (${homes.length} homes)`,

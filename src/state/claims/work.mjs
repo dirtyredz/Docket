@@ -8,20 +8,39 @@ import { workingSnapshot } from "../../repository/snapshot.mjs";
 import { sameKey } from "../../repository/canonical.mjs";
 import { branchActivity, workBinding, worktreePath } from "../../repository/work-activity.mjs";
 import {
-  claimItem,
+  buildClaim,
   readClaims,
   readWork,
   recordBinding,
-  saveAfterItems,
+  releaseItem,
   withWorkLock,
+  write,
 } from "./store.mjs";
 
+/** Persist bindings after item writes; a failure here is partial when items were already saved. */
+function saveAfterItems(commonDir, claims, work, written) {
+  try {
+    write(commonDir, claims, work);
+  } catch (err) {
+    if (written.length) {
+      err.message = `items saved, but work bindings were not saved: ${err.message}`;
+      Object.assign(err, { partial: true, written });
+    }
+    throw err;
+  }
+}
+
+/** Claim `id` and enter WIP in one common-dir lock; the binding is saved after the item write. */
 export function claimWork(ctx, id, options) {
-  return claimItem(ctx.commonDir, id, {
-    ...options,
-    ...workBinding(ctx.root),
-    enterWip: () =>
-      mutateStore(ctx, (s) => planSet(s, id, { status: "wip" }, { today: localDate() })),
+  return withWorkLock(ctx.commonDir, (work) => {
+    const { claims } = readClaims(ctx.commonDir);
+    const result = buildClaim(claims, id, { ...options, ...workBinding(ctx.root) });
+    const entered = mutateStore(ctx, (s) =>
+      planSet(s, id, { status: "wip" }, { today: localDate() }),
+    );
+    recordBinding(work, [id], { worktree: result.claim.worktree, branch: result.claim.branch });
+    saveAfterItems(ctx.commonDir, claims, work, entered?.written ?? []);
+    return result;
   });
 }
 
@@ -85,3 +104,6 @@ export function mutateWorkStore(ctx, plan) {
     return result;
   });
 }
+
+/** Opaque claims dependency for the item operations (readItem, setItem, ...); pass it as `claims`. */
+export const workClaims = { readClaims, releaseItem, mutateWorkStore };

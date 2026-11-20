@@ -74,7 +74,7 @@ import { setItem } from "docket/items/set";
 import { replaceBody } from "docket/items/body";
 import { addNote, resolveNote } from "docket/items/notes";
 import { linkItem } from "docket/items/link";
-import * as claims from "docket/claims";
+import { workClaims as claims } from "docket/claims";
 import { createCheckoutOpener, openCheckoutAt } from "docket/repository/registered-checkout";
 import { registryPath } from "docket/registry/paths";
 import { createRegistrySource, findCheckout } from "docket/registry/source";
@@ -203,7 +203,7 @@ test("the tarball passes the build's checks: export map, contract doc, no viewer
 test("the contract table documents the package.json row and parses real names", () => {
   const doc = fs.readFileSync(path.join(ROOT, "docs", "LIBRARY.md"), "utf8");
   assert.ok(doc.includes("`docket/package.json`"), "LIBRARY.md documents docket/package.json");
-  assert.deepEqual(CONTRACT["docket/claims"], ["readClaims", "releaseItem", "mutateWorkStore"]);
+  assert.deepEqual(CONTRACT["docket/claims"], ["readClaims", "releaseItem", "workClaims"]);
   assert.deepEqual(CONTRACT["docket/date"], ["localDate"]);
 });
 
