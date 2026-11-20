@@ -3,10 +3,13 @@
 import { localDate } from "../../../core/identity/date.mjs";
 import { setItem } from "../../../core/items/complete.mjs";
 import { replaceBody } from "../../../core/items/content/body.mjs";
-import * as claims from "../../../state/claims/store.mjs";
+import { releaseItem } from "../../../state/claims/store.mjs";
+import { mutateWorkStore } from "../../../state/claims/work.mjs";
 import { parseCommand, requirePositional, usageError } from "../../args.mjs";
 import { readStrictInput } from "../../input.mjs";
 import { bool, flagNamed, repoOf, str } from "./options.mjs";
+
+const claims = { releaseItem, mutateWorkStore };
 
 const SCALAR_FLAGS = [
   "status",

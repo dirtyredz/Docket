@@ -56,9 +56,6 @@ integration/init  -->  repository, storage, integration/gate (install)
 
 ## Layout
 
-- `src/repository/work-activity.mjs` — canonical worktree identity (including removed paths) and branch-tip committer timestamps
-- `src/cli/commands/activity.mjs`, `worktree.mjs` — thin activity and worktree-release adapters
-
 - `src/bootstrap/` — recovered merge-test validator and a bootstrap adapter (quarantined; not shipped)
 - `src/core/` — the shared error type (`errors.mjs`)
 - `src/core/format/` — schema constants and `assertEnum`, strict parser, canonical serializer, round-trip guard, content grammar and read model (`content.mjs`) and content edits with the title rule (`content-edit.mjs`)
@@ -67,16 +64,16 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `src/core/items/` — add, batch add, set (releases claims on completion), complete, link and `linkItem`, query, detail, the relations view, revision preconditions and the shared mutation transaction (`withWritten`)
 - `src/core/items/content/` — body replacement and note lifecycle (append, resolve), with their shared preserved-prefix write and post-edit check (`write.mjs`); `stopped.mjs` composes status reset and the existing note plan into one write
 - `src/storage/` — content revisions, atomic write, lock, item store and the one store-entry shape (`storeEntry`) every snapshot and parse takes
-- `src/repository/` — checkout contexts (one canonicalisation, `checkoutFacts`), `docket.json`, working-tree or Git-tree snapshot, path identity, canonical paths, containment and the checkout guard, verified opening (`registered-checkout.mjs`; both openers return one context shape)
+- `src/repository/` — checkout contexts (one canonicalisation, `checkoutFacts`), `docket.json`, working-tree or Git-tree snapshot, path identity, canonical paths, containment and the checkout guard, verified opening (`registered-checkout.mjs`; both openers return one context shape), `work-activity.mjs` (canonical worktree identity including removed paths, branch-tip committer timestamps)
 - `src/library/` — public facades for the headless library (ADR-30, `docs/LIBRARY.md`): one re-export-only module per `package.json` `exports` subpath, naming exactly the documented names (errors, schema, date, claims); no logic
 - `src/library/items/` — facades for `docket/items/*` (index, query, detail, relations, set, body, notes, link)
 - `src/library/repository/` — facades for `docket/repository/*` (context, canonical, containment, registered-checkout)
 - `src/library/registry/` — facades for `docket/registry/*` (paths, source)
-- `src/state/claims/` — common-dir advisory claims and retained work bindings (`store.mjs`); `work.mjs` coordinates WIP claims, read-only activity and idempotent worktree release, with common-dir-before-item locking
+- `src/state/claims/` — common-dir advisory claims and retained work bindings (`store.mjs`, pure persistence, no core imports); `work.mjs` coordinates WIP claims, `mutateWorkStore`, read-only activity and idempotent worktree release, with common-dir-before-item locking
 - `src/state/index/` — rebuildable per-worktree JSON cache
 - `src/state/registry/` — per-machine repo registry: identity, registration, scan, the last-good source with strict id lookup (`source.mjs`), document-location overrides (metadata only). The `repo list` view is the CLI adapter's
 - `src/cli/` — dispatch, argument handling, output contracts, shared report vocabulary, help, shared file/stdin input, `docket guide`
-- `src/cli/commands/` — thin adapters per command family (items, validation, coordination, init, gate, registry; `conflicts` arrives with M5, dk-7f473623)
+- `src/cli/commands/` — thin adapters per command family (items, validation, coordination incl. `activity` and `worktree` release, init, gate, registry; `conflicts` arrives with M5, dk-7f473623)
 - `src/cli/commands/items/` — one adapter per item command (add, set, link, list, show, index, notes) plus shared item-flag options
 - `src/integration/` — the managed, versioned agent snippet (`agent-snippet.mjs`, text in `agent-snippet.md`; markers, exact-legacy migration, manual review) and `docket init` (`init.mjs`)
 - `src/integration/gate/` — gate promotion, smoke test, repo opt-in, stable launcher, tarball reader, pre-push validation

@@ -1,14 +1,14 @@
-// Advisory claims shared by the linked worktrees of one clone: <git-common-dir>/docket-claims.json,
-// guarded by its own lock (never the item lock), replaced atomically. A claim whose worktree path no
-// longer exists expires on read and is dropped on the next write. Never committed.
+// Persistence for <git-common-dir>/docket-claims.json (envelope v2: `claims` + `work`), guarded by
+// its own lock (never the item lock), replaced atomically. Advisory claims whose worktree path no
+// longer exists expire on read and are dropped on the next write; retained `work` bindings
+// (item -> worktree/branch) outlive claims, and v1 files read their claims as legacy work. Pure
+// persistence: no item mutation here (see work.mjs). Never committed.
 import fs from "node:fs";
 import path from "node:path";
 import { CODES, docketError } from "../../core/errors.mjs";
 import { samePath, toSlash } from "../../repository/paths.mjs";
 import { atomicWrite } from "../../storage/atomic-write.mjs";
 import { withLock } from "../../storage/lock.mjs";
-import { workBinding } from "../../repository/work-activity.mjs";
-import { mutateStore } from "../../core/items/transaction.mjs";
 
 const FILE = "docket-claims.json";
 
@@ -76,7 +76,7 @@ export function claimItem(
     claims[id] = claim;
     const work = readWork(commonDir);
     const result = enterWip?.();
-    work[id] = { worktree: claim.worktree, branch };
+    recordBinding(work, [id], { worktree: claim.worktree, branch });
     saveAfterItems(commonDir, claims, work, result?.written ?? []);
     return { claim, previous };
   });
@@ -89,7 +89,12 @@ export function readWork(commonDir) {
   return work && typeof work === "object" && !Array.isArray(work) ? work : {};
 }
 
-function saveAfterItems(commonDir, claims, work, written) {
+/** Record `binding` as the retained work evidence for each of `ids`. */
+export function recordBinding(work, ids, binding) {
+  for (const id of ids) work[id] = binding;
+}
+
+export function saveAfterItems(commonDir, claims, work, written) {
   try {
     write(commonDir, claims, work);
   } catch (err) {
@@ -104,38 +109,6 @@ function saveAfterItems(commonDir, claims, work, written) {
 /** Common-dir before item lock: serialize binding changes with release and takeover. */
 export function withWorkLock(commonDir, run) {
   return withLock(lockPath(commonDir), () => run(readWork(commonDir)));
-}
-
-/** Apply an item plan and record only newly entered WIP, including batch additions. */
-export function mutateWorkStore(ctx, plan) {
-  return withWorkLock(ctx.commonDir, (work) => {
-    const binding = workBinding(ctx.root);
-    const entered = new Set();
-    let result;
-    try {
-      result = mutateStore(ctx, (store) => {
-        const planned = plan(store);
-        for (const w of planned.writes) {
-          if (w.fields.status === "wip" && store.byId.get(w.id)?.fields?.status !== "wip") {
-            entered.add(w.id);
-          }
-        }
-        return planned;
-      });
-    } catch (err) {
-      const written = err.written ?? [];
-      for (const { id } of written) if (entered.has(id)) work[id] = binding;
-      if (written.some(({ id }) => entered.has(id))) {
-        saveAfterItems(ctx.commonDir, readClaims(ctx.commonDir).claims, work, written);
-      }
-      throw err;
-    }
-    if (entered.size) {
-      for (const id of entered) work[id] = binding;
-      saveAfterItems(ctx.commonDir, readClaims(ctx.commonDir).claims, work, result.written);
-    }
-    return result;
-  });
 }
 
 /**

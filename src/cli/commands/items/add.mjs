@@ -2,7 +2,7 @@
 import { localDate } from "../../../core/identity/date.mjs";
 import { planAdd } from "../../../core/items/add.mjs";
 import { parseBatch, planAddBatch } from "../../../core/items/batch.mjs";
-import { mutateWorkStore as mutateStore } from "../../../state/claims/store.mjs";
+import { mutateWorkStore as mutateStore } from "../../../state/claims/work.mjs";
 import { many, parseCommand, usageError } from "../../args.mjs";
 import { readInput } from "../../input.mjs";
 import { flagNamed, repeat, repoOf, str } from "./options.mjs";

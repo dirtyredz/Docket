@@ -2,7 +2,7 @@
 
 Non-obvious traps, from `plans/PLAN.md` sections 6 and 7, the merge test, and building M0 to M1c.
 
-- **Bindings outlive claims.** Activity uses branch tips; release sees this checkout's WIP.
+- **Bindings outlive claims.** Claims envelope v2 retains `work` after a claim expires; v1 files read their claims as legacy work. Activity uses branch tips; release sees this checkout's WIP.
 
 - **External-editor race.** Docket locks only cooperating Docket writers. An editor (or an agent
   writing the file directly) can save between the revision check and the rename; that write is lost or

@@ -7,7 +7,14 @@ import { parseEntries } from "../../core/validation/check.mjs";
 import { workingSnapshot } from "../../repository/snapshot.mjs";
 import { sameKey } from "../../repository/canonical.mjs";
 import { branchActivity, workBinding, worktreePath } from "../../repository/work-activity.mjs";
-import { claimItem, readWork, withWorkLock } from "./store.mjs";
+import {
+  claimItem,
+  readClaims,
+  readWork,
+  recordBinding,
+  saveAfterItems,
+  withWorkLock,
+} from "./store.mjs";
 
 export function claimWork(ctx, id, options) {
   return claimItem(ctx.commonDir, id, {
@@ -43,5 +50,38 @@ export function releaseWorktree(ctx, p) {
       )
       .map(([id]) => id);
     return stopWork(ctx, ids, { today: localDate() });
+  });
+}
+
+/** Apply an item plan and record only newly entered WIP, including batch additions. */
+export function mutateWorkStore(ctx, plan) {
+  return withWorkLock(ctx.commonDir, (work) => {
+    const binding = workBinding(ctx.root);
+    const entered = new Set();
+    let result;
+    try {
+      result = mutateStore(ctx, (store) => {
+        const planned = plan(store);
+        for (const w of planned.writes) {
+          if (w.fields.status === "wip" && store.byId.get(w.id)?.fields?.status !== "wip") {
+            entered.add(w.id);
+          }
+        }
+        return planned;
+      });
+    } catch (err) {
+      const written = err.written ?? [];
+      const kept = written.filter(({ id }) => entered.has(id)).map(({ id }) => id);
+      if (kept.length) {
+        recordBinding(work, kept, binding);
+        saveAfterItems(ctx.commonDir, readClaims(ctx.commonDir).claims, work, written);
+      }
+      throw err;
+    }
+    if (entered.size) {
+      recordBinding(work, entered, binding);
+      saveAfterItems(ctx.commonDir, readClaims(ctx.commonDir).claims, work, result.written);
+    }
+    return result;
   });
 }
