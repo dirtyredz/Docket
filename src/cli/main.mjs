@@ -18,6 +18,8 @@ import { show } from "./commands/items/show.mjs";
 import { repo } from "./commands/registry.mjs";
 import { init } from "./commands/init.mjs";
 import * as validation from "./commands/validation.mjs";
+import { activity } from "./commands/activity.mjs";
+import { worktree } from "./commands/worktree.mjs";
 
 // Commands that no longer exist but get a specific explanation instead of "unknown command".
 const RETIRED = {
@@ -25,6 +27,8 @@ const RETIRED = {
 };
 
 const COMMANDS = {
+  activity,
+  worktree,
   check: validation.check,
   add,
   set,

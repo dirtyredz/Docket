@@ -25,7 +25,8 @@ function cleanupClaim(ctx, id, claims) {
  * `claimReleased`.
  */
 export function setItem(ctx, id, changes, { today, expect, claims }) {
-  const data = withWritten(mutateStore(ctx, (s) => planSet(s, id, changes, { today, expect })));
+  const mutate = claims?.mutateWorkStore ?? mutateStore;
+  const data = withWritten(mutate(ctx, (s) => planSet(s, id, changes, { today, expect })));
   const cleanup = data.completed ? cleanupClaim(ctx, id, claims) : { warnings: [] };
   if (data.completed) data.claimReleased = cleanup.claimReleased;
   return { data, warnings: cleanup.warnings };

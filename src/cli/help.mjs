@@ -10,6 +10,16 @@ Values:
 const COMMON = "\nEvery command also takes --repo <path>, --json and --help.";
 
 const HELP = {
+  activity: `Usage: docket activity [--json] [--id ID]...
+
+Read branch-tip committer activity for WIP items in this checkout (no writes).
+JSON: {items: [{id, branch, worktree, lastCommitAt, quietDays, unknownReason}]}.
+Unknown activity has null timestamps/days and an explicit reason; IDs are repeatable.`,
+  worktree: `Usage: docket worktree release --path <path> [--json]
+
+Reset still-WIP items bound to the canonical path to todo, with one "work stopped" discussion note.
+Operates on items in --repo (or this checkout), including after the path was removed.
+Closed or reassigned items are untouched; repeating release is a successful no-op.`,
   init: `Usage: docket init [--gate] [--no-agent-snippet] [--dry-run]
 
 Make this repo a Docket repo (idempotent). Creates docs/items/ and docket.json, ignores .docket/ and
@@ -79,7 +89,7 @@ Lines starting with # inside note text must be fenced or escaped.`,
 Print the agent guide: how any coding agent reads, writes and settles Docket items (facts vs notes,
 status flow, links, --expect, setup, cheat-sheet). --json: {path, text}.`,
   claim:
-    "Usage: docket claim <id> [--takeover] [--agent NAME]\n\nAdvisory claim for this worktree.",
+    "Usage: docket claim <id> [--takeover] [--agent NAME]\n\nClaim for this worktree, enter WIP and record its branch and path.",
   release: "Usage: docket release <id> [--force]\n\nRelease a claim.",
   gate: `Usage: docket gate promote <tarball>
        docket gate install [--dry-run]
@@ -109,6 +119,8 @@ reason. --json always carries the full detail.`,
 
 // One line per command, in display order; the top-level overview is built from this.
 const SUMMARY = {
+  activity: "read WIP branch activity (unknown evidence stays unknown)",
+  worktree: "release stopped work bound to a worktree path",
   init: "make this repo a Docket repo (idempotent)",
   guide: "print the agent guide (read before your first item write)",
   check: "validate every item (errors fail, warnings print)",

@@ -1,7 +1,8 @@
 // `claim` and `release`: advisory work claims for the current worktree (shared by linked worktrees).
 import { notFound } from "../../core/errors.mjs";
-import { claimItem, releaseItem } from "../../state/claims/store.mjs";
-import { currentBranch, resolveRepo } from "../../repository/context.mjs";
+import { releaseItem } from "../../state/claims/store.mjs";
+import { claimWork } from "../../state/claims/work.mjs";
+import { resolveRepo } from "../../repository/context.mjs";
 import { readItemFile } from "../../storage/item-store.mjs";
 import { parseCommand, requirePositional } from "../args.mjs";
 
@@ -17,9 +18,7 @@ export async function claim(argv, io) {
   const id = requirePositional(args, "id");
   const ctx = resolveRepo(args.repo ?? io.cwd);
   requireItem(ctx, id);
-  const { claim: c, previous } = claimItem(ctx.commonDir, id, {
-    worktree: ctx.root,
-    branch: currentBranch(ctx.root),
+  const { claim: c, previous } = claimWork(ctx, id, {
     agent: args.agent ?? io.env?.DOCKET_AGENT ?? null,
     takeover: Boolean(args.takeover),
   });
