@@ -70,8 +70,7 @@ and uploads the built tarball. A release is a `v*` tag; the owner-run scripts be
 # 1. Bump, commit and tag (checks main, clean tree, fast gate). Pushes only after you type the tag.
 powershell -NoProfile -ExecutionPolicy Bypass -File C:\path\to\docket\scripts\release\cut.ps1 -Version 0.8.1 -Push
 # 2. release.yml re-runs the gate and creates a DRAFT release: docket-0.8.1.tgz + docket-0.8.1.tgz.sha256.
-#    Review it on GitHub and publish it, or run scripts
-eleasepublish.ps1 -Tag v0.8.1 (checks draft + assets).
+#    Review it on GitHub and publish it, or run scripts\release\publish.ps1 -Tag v0.8.1 (checks draft + assets).
 # 3. Download, verify the SHA-256, npm install --global, docket gate promote, docket gate install --repo <this clone>
 powershell -NoProfile -ExecutionPolicy Bypass -File C:\path\to\docket\scripts\release\install.ps1 -Tag v0.8.1
 ```
