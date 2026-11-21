@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Docket release helpers shared by install.ps1 and cut.ps1 (dot-source after owner-run.ps1; functions only).
+  Docket release helpers shared by install.ps1, cut.ps1 and publish.ps1 (dot-source after owner-run.ps1; functions only).
 
 .DESCRIPTION
   owner-run.ps1 is the verbatim template copy (logging, final line, Invoke-Native); this file holds what is

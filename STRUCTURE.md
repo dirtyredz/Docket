@@ -28,7 +28,7 @@ tests/
     state/registry/     registry suites (beside claims, index)
   integration/ packaging/ helpers/ fixtures/
 docs/                   living docs, LIBRARY.md (shipped contract), items/, plans/ (frozen), records/, research/ (frozen)
-scripts/release/        owner-run release scripts (cut, install) and their test
+scripts/release/        owner-run release scripts (cut, publish, install) and their test
 .github/workflows/      CI (full gate on Windows) and the tag-driven draft release
 ```
 
@@ -83,7 +83,7 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `tests/integration/`, `tests/packaging/` — real-push suites and installed-tarball acceptance: CLI (`cli.test.mjs`) and library exports (`library.test.mjs`)
 - `tests/helpers/` — disposable-repo, registry/checkout, clock and gate support
 - `tests/fixtures/` — bounded fixtures: hooks (baseline template and the vendored CI snapshot of the harness template, ADR-31)
-- `scripts/release/` — owner-run release scripts (ADR-31): `cut.ps1`, `install.ps1`, shared `docket-release.ps1`, `owner-run.ps1` (verbatim harness template copy) and `release-scripts.test.ps1` (`npm run test:scripts`)
+- `scripts/release/` — owner-run release scripts (ADR-31): `cut.ps1`, `publish.ps1`, `install.ps1`, shared `docket-release.ps1`, `owner-run.ps1` (verbatim harness template copy) and `release-scripts.test.ps1` (`npm run test:scripts`)
 - `.github/workflows/` — `ci.yml` (push and PR to main, also the release gate) and `release.yml` (`v*` tag to a draft release); no other workflows
 - `docs/` — living docs, research evidence and the shipped guides (`MOVE-IN.md`, `AGENT-GUIDE.md`, `LIBRARY.md`)
 - `docs/items/` — Docket's own work items (created in M0; flat, permanent paths)
