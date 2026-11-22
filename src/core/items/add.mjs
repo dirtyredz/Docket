@@ -3,6 +3,7 @@ import { assertEnum } from "../format/schema.mjs";
 import { cleanTitle, newItemRest } from "../format/content-edit.mjs";
 import { allocateId } from "../identity/id.mjs";
 import { rankAtEnd } from "../identity/rank.mjs";
+import { assertCloseable } from "./closing/outcome.mjs";
 
 const unique = (list = []) => [...new Set(list)];
 
@@ -49,5 +50,7 @@ export function planAddOne({ records }, input, { random }, dates) {
     relates: unique(input.relates),
   };
   const rest = newItemRest(title, input.body ?? "");
+  if (fields.status === "done")
+    assertCloseable({ id, rest }, new Map(records.map((r) => [r.id, r])));
   return { write: { id, fields, rest, expectedRevision: null }, value: { id, fields, title } };
 }

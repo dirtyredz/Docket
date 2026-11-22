@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import { after, describe, test } from "node:test";
+import { planAdd } from "../../../src/core/items/add.mjs";
+import { planAddBatch } from "../../../src/core/items/batch.mjs";
 import { planSet } from "../../../src/core/items/set.mjs";
 import { mutateStore } from "../../../src/core/items/transaction.mjs";
 import { parseEntries } from "../../../src/core/validation/check.mjs";
 import { resolveRepo } from "../../../src/repository/context.mjs";
 import { workingSnapshot } from "../../../src/repository/snapshot.mjs";
+import { scriptedRandom } from "../../helpers/clock.mjs";
 import { itemText, makeRepo } from "../../helpers/repository.mjs";
 
 const cleanups = [];
@@ -108,5 +111,48 @@ describe("safety switch-off", () => {
       2: [{}, "Owner: lead\n"],
     });
     assert.throws(() => done(ctx, 1), refused(/is todo/));
+  });
+});
+
+describe("creating an item already done", () => {
+  const input = (body, status = "done") => ({
+    type: "task",
+    priority: "P2",
+    title: "t",
+    status,
+    body,
+  });
+  const opts = () => ({
+    today: "2026-11-22",
+    random: scriptedRandom("aabbccdd", "11223344", "55667788"),
+  });
+  const add = (ctx, i) => mutateStore(ctx, (s) => planAdd(s, i, opts()));
+  const batch = (ctx, i) => mutateStore(ctx, (s) => planAddBatch(s, i, opts()));
+  const unmeasured = "Outcome: yes\n";
+  const measured = "Outcome: yes\nInstalled-measurement: ok\n";
+
+  test("add --status done with an unmeasured outcome is refused", () => {
+    const ctx = setup({});
+    assert.throws(() => add(ctx, input(unmeasured)), refused(/Installed-measurement/));
+  });
+
+  test("add --status done with evidence, or a todo outcome, passes", () => {
+    const ctx = setup({});
+    add(ctx, input(measured));
+    add(ctx, input(unmeasured, "todo"));
+  });
+
+  test("add --status done with an open switch-off follow-up is refused", () => {
+    const ctx = setup({ 2: [{}, "Owner: lead\n"] });
+    const body = `Safety-switch-off: ${id(2)}\n`;
+    assert.throws(() => add(ctx, input(body)), refused(/is todo/));
+  });
+
+  test("batch add with status done runs the same check", () => {
+    const ctx = setup({});
+    assert.throws(
+      () => batch(ctx, [input("fine\n"), input(unmeasured)]),
+      refused(/Installed-measurement/),
+    );
   });
 });
