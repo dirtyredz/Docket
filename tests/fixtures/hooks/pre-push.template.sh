@@ -44,6 +44,9 @@ fi
 # review knows the docs moved), but a docs-ONLY change needs no review and must not gate the push.
 # Gate on content — a non-doc, non-empty marker line — not on the file merely existing, matching the
 # CLI/Claude-hook logic. (A bare legacy path line has no "k" field and counts as code.)
+# Shed marker entries that are now git-ignored or deleted first, so they cannot block (fails open).
+cli="$HOME/.claude/hooks/structure/gate-cli.js"
+[ -f "$cli" ] && command -v node >/dev/null 2>&1 && node "$cli" heal "$root" >/dev/null 2>&1
 for m in "$root"/.structure-review-pending*; do
   [ -e "$m" ] || continue
   if grep -v '"k":"doc"' "$m" 2>/dev/null | grep -qE '[^[:space:]]'; then
