@@ -4,7 +4,8 @@
 //   Installed-measurement: <evidence>    the measurement on the installed result (required to close)
 //   Safety-switch-off: dk-xxxxxxxx       the follow-up item that turns the switch back on
 //   Owner: <name>                        the owner of a follow-up item
-// planSet calls `assertCloseable` on a move to `done`; items without these markers are unaffected.
+// planSet and planAddOne (so add and batch add) call `assertCloseable` on a move to or creation as `done`;
+// items without these markers are unaffected.
 import { CODES, docketError } from "../../errors.mjs";
 import { ID_RE } from "../../format/schema.mjs";
 import { contentView, parseContent, stepFence } from "../../format/content.mjs";
