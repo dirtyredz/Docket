@@ -38,7 +38,7 @@ function* linesOf(text, from) {
 }
 
 /** Fence tracking (backtick and tilde fences, CommonMark-style). Returns the new fence state. */
-function stepFence(fence, line) {
+export function stepFence(fence, line) {
   if (fence) {
     const close = FENCE_CLOSE_RE.exec(line);
     const closes = close && close[1][0] === fence.char && close[1].length >= fence.length;

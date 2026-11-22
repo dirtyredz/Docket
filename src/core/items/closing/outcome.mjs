@@ -7,7 +7,7 @@
 // planSet calls `assertCloseable` on a move to `done`; items without these markers are unaffected.
 import { CODES, docketError } from "../../errors.mjs";
 import { ID_RE } from "../../format/schema.mjs";
-import { contentView, parseContent } from "../../format/content.mjs";
+import { contentView, parseContent, stepFence } from "../../format/content.mjs";
 
 const OUTCOME_RE = /^Outcome:[ \t]*yes[ \t]*$/im;
 const MEASUREMENT_RE = /^Installed-measurement:[ \t]*(.*)$/im;
@@ -20,10 +20,9 @@ function markerText(rec) {
   const out = [];
   let fence = null;
   for (const line of contentView(rec.rest, content).body.split("\n")) {
-    const m = /^ {0,3}(`{3,}|~{3,})/.exec(line);
-    if (m && !fence) fence = m[1][0];
-    else if (m && m[1][0] === fence) fence = null;
-    else if (!fence) out.push(line);
+    const wasFenced = Boolean(fence);
+    fence = stepFence(fence, line);
+    if (!wasFenced && !fence) out.push(line);
   }
   return out.join("\n");
 }

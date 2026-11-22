@@ -58,6 +58,12 @@ describe("outcome items", () => {
     assert.equal(status(ctx, 1), "done");
   });
 
+  test("a shorter fence line does not close a longer fence", () => {
+    const ctx = setup({ 1: [{}, "`````\n```\nOutcome: yes\n`````\n"] });
+    done(ctx, 1);
+    assert.equal(status(ctx, 1), "done");
+  });
+
   test("items without markers are unaffected, and dropping needs no evidence", () => {
     const ctx = setup({ 1: [{}, "plain\n"], 2: [{}, "Outcome: yes\n"] });
     done(ctx, 1);
