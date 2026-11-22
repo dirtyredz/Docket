@@ -45,6 +45,7 @@ in `docs/items/`; this page does not duplicate them. Milestones are in `ROADMAP.
 | 0.8.0: exact-root and registered checkout opening, containment guard, last-good registry           | M8        | built   |
 | 0.10.0 (unreleased): `dk activity [ids] --json` reports branch-tip activity for WIP items          | -         | built   |
 | 0.10.0 (unreleased): `dk worktree release --path <p>` resets that worktree's WIP items, idempotent | -         | built   |
+| Outcome items: `done` needs `Installed-measurement:` and closed switch-off follow-ups              | -         | built   |
 | CI on hosted Windows (full gate, tarball artifact); `v*` tag -> draft release + SHA-256            | -         | built   |
 | Owner scripts: `scripts/release/cut.ps1` (bump, tag, confirmed push), `install.ps1`                | -         | built   |
 | Conflict recording and report (`docket conflicts`)                                                 | M5        | planned |

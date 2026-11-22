@@ -62,6 +62,7 @@ integration/init  -->  repository, storage, integration/gate (install)
 - `src/core/validation/` — item checks, relation graph integrity, warnings, check orchestration, `checkStore`
 - `src/core/identity/` — random ID allocation, fractional rank, local-date rules
 - `src/core/items/` — add, batch add, set (releases claims on completion), complete, link and `linkItem`, query, detail, the relations view, revision preconditions and the shared mutation transaction (`withWritten`)
+- `src/core/items/closing/` — `outcome.mjs`: the done-time rules for outcome items and safety switch-offs (body marker lines; ruling 2026-11-22), called by `planSet`
 - `src/core/items/content/` — body replacement and note lifecycle (append, resolve), with their shared preserved-prefix write and post-edit check (`write.mjs`); `stopped.mjs` composes status reset and the existing note plan into one write
 - `src/storage/` — content revisions, atomic write, lock, item store and the one store-entry shape (`storeEntry`) every snapshot and parse takes
 - `src/repository/` — checkout contexts (one canonicalisation, `checkoutFacts`), `docket.json`, working-tree or Git-tree snapshot, path identity, canonical paths, containment and the checkout guard, verified opening (`registered-checkout.mjs`; both openers return one context shape), `work-activity.mjs` (canonical worktree identity including removed paths, branch-tip committer timestamps)

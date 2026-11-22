@@ -6,6 +6,7 @@ import { cleanTitle, withTitle } from "../format/content-edit.mjs";
 import { rankAtEnd, rankAtStart, rankBetween } from "../identity/rank.mjs";
 import { editableRecord } from "./transaction.mjs";
 import { bandRanks } from "./add.mjs";
+import { assertCloseable } from "./closing/outcome.mjs";
 import { assertRevision } from "./revisions.mjs";
 
 const usage = (message) => docketError(CODES.USAGE, message);
@@ -51,6 +52,7 @@ export function planSet({ records, byId }, id, changes, { today, expect }) {
   if (changes.type !== undefined) f.type = changes.type;
   if (changes.area !== undefined) f.area = changes.area;
   if (changes.status !== undefined && changes.status !== before.status) {
+    if (changes.status === "done") assertCloseable(rec, byId);
     f.status = changes.status;
     f.since = today;
   }

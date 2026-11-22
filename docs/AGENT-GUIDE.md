@@ -56,6 +56,10 @@ them. Every command takes `--repo <path>` and `--json` (one JSON document on std
 - `todo` to `wip` to `done`. Start: `dk claim <id>` then `dk set <id> --status wip`. Finish:
   `dk set <id> --status done` (this releases the claim). `dk release <id>` gives up work without finishing.
   Claims are advisory and per clone.
+- Outcome items (owner ruling 2026-11-22) close on the installed result. Body lines (facts, own line each): `Outcome: yes`
+  marks one; `dk set --status done` is refused until it has `Installed-measurement: <what was measured on the
+installed result>`. A recorded `Safety-switch-off: <dk-id>` must name an existing follow-up whose body has an
+  `Owner: <name>` line, and the item cannot be done until that follow-up is done. Dropping is never gated.
 - Use `dropped` when an item is superseded, will not be done, or is a duplicate: `dk set <id> --status
 dropped`. Drop, never delete.
 
